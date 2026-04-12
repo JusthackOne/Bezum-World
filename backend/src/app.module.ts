@@ -10,6 +10,7 @@ import { AppLoggerModule } from './infrastructure/logger/logger.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AuthModule } from './modules/auth/auth.module';
     RedisModule,
     QueueModule,
     AuthModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

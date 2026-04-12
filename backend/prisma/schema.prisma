@@ -10,6 +10,10 @@ model Account {
   id               String    @id @default(uuid())
   username         String
   avatarUrl        String?
+  strength         Int       @default(0)
+  charisma         Int       @default(0)
+  endurance        Int       @default(0)
+  intelligence     Int       @default(0)
   lastTimeLoggedIn DateTime?
   createdAt        DateTime  @default(now())
   authCode         AuthCode?

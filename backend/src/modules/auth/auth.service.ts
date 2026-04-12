@@ -164,6 +164,10 @@ export class AuthService implements OnModuleInit {
             {
               username: payload.username,
               avatarUrl: payload.avatarUrl,
+              strength: payload.strength,
+              charisma: payload.charisma,
+              endurance: payload.endurance,
+              intelligence: payload.intelligence,
             },
             tx,
           );
@@ -337,6 +341,10 @@ export class AuthService implements OnModuleInit {
       id: account.id,
       username: account.username,
       avatarUrl: account.avatarUrl ?? null,
+      strength: account.strength,
+      charisma: account.charisma,
+      endurance: account.endurance,
+      intelligence: account.intelligence,
       lastTimeLoggedIn: account.lastTimeLoggedIn?.toISOString() ?? null,
       createdAt: account.createdAt.toISOString(),
     };

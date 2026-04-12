@@ -20,6 +20,38 @@ export class AuthenticatedUserDto {
   })
   avatarUrl!: string | null;
 
+  @ApiProperty({
+    description: 'Strength attribute value in range 0..100',
+    example: 10,
+    minimum: 0,
+    maximum: 100,
+  })
+  strength!: number;
+
+  @ApiProperty({
+    description: 'Charisma attribute value in range 0..100',
+    example: 25,
+    minimum: 0,
+    maximum: 100,
+  })
+  charisma!: number;
+
+  @ApiProperty({
+    description: 'Endurance attribute value in range 0..100',
+    example: 40,
+    minimum: 0,
+    maximum: 100,
+  })
+  endurance!: number;
+
+  @ApiProperty({
+    description: 'Intelligence attribute value in range 0..100',
+    example: 30,
+    minimum: 0,
+    maximum: 100,
+  })
+  intelligence!: number;
+
   @ApiPropertyOptional({
     description: 'Time of last successful login',
     example: '2026-04-12T15:33:21.412Z',
