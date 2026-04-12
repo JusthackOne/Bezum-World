@@ -21,5 +21,6 @@ import { AuthCodeRepository } from './repositories/auth-code.repository';
     AccessTokenGuard,
     AdminOnlyGuard,
   ],
+  exports: [JwtModule, AccessTokenGuard, AdminOnlyGuard],
 })
 export class AuthModule {}
