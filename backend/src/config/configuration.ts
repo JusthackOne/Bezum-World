@@ -16,6 +16,15 @@ export interface AppConfig {
   queue: {
     defaultName: string;
   };
+  auth: {
+    jwtAccessSecret: string;
+    jwtRefreshSecret: string;
+    accessTokenTtlSeconds: number;
+    refreshTokenTtlSeconds: number;
+    refreshCookieName: string;
+    refreshCookieSecure: boolean;
+    adminApiKey: string;
+  };
 }
 
 export const configFactory = (): AppConfig => ({
@@ -35,5 +44,14 @@ export const configFactory = (): AppConfig => ({
   },
   queue: {
     defaultName: process.env.QUEUE_DEFAULT_NAME ?? 'default',
+  },
+  auth: {
+    jwtAccessSecret: process.env.AUTH_JWT_ACCESS_SECRET ?? '',
+    jwtRefreshSecret: process.env.AUTH_JWT_REFRESH_SECRET ?? '',
+    accessTokenTtlSeconds: Number(process.env.AUTH_ACCESS_TOKEN_TTL_SECONDS ?? 900),
+    refreshTokenTtlSeconds: Number(process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS ?? 604800),
+    refreshCookieName: process.env.AUTH_REFRESH_COOKIE_NAME ?? 'refresh_token',
+    refreshCookieSecure: process.env.AUTH_REFRESH_COOKIE_SECURE === 'true',
+    adminApiKey: process.env.AUTH_ADMIN_API_KEY ?? '',
   },
 });

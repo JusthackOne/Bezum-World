@@ -1,6 +1,8 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { Logger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
@@ -11,7 +13,11 @@ import type { AppConfig } from './config/configuration';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
+  app.use(cookieParser());
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({
@@ -27,9 +33,36 @@ async function bootstrap(): Promise<void> {
 
   const configService = app.get<ConfigService<AppConfig, true>>(ConfigService);
   const port = configService.get('app.port', { infer: true });
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Social RPG API')
+    .setDescription('API documentation for Social RPG backend.')
+    .setVersion('1.0.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Access token in Authorization header',
+      },
+      'access-token',
+    )
+    .addCookieAuth(
+      configService.get('auth.refreshCookieName', { infer: true }),
+      {
+        type: 'apiKey',
+        in: 'cookie',
+        name: configService.get('auth.refreshCookieName', { infer: true }),
+        description: 'Refresh token cookie',
+      },
+      'refresh-token',
+    )
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, document);
 
   await app.listen(port);
   app.get(Logger).log(`Backend is running on http://localhost:${port}/api/health`, 'Bootstrap');
+  app.get(Logger).log(`Swagger docs available on http://localhost:${port}/docs`, 'Bootstrap');
 }
 
 void bootstrap();

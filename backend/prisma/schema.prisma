@@ -5,3 +5,20 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model Account {
+  id               String    @id @default(uuid())
+  username         String
+  avatarUrl        String?
+  lastTimeLoggedIn DateTime?
+  createdAt        DateTime  @default(now())
+  authCode         AuthCode?
+}
+
+model AuthCode {
+  id        String   @id @default(uuid())
+  code      String   @unique @db.VarChar(6)
+  accountId String   @unique
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}

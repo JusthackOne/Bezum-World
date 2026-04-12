@@ -117,6 +117,13 @@ Core mechanics:
 
 ---
 
+## Task Files Rules
+
+- Every new task must be created in the `tasks/` directory.
+- Every new task must be written in English.
+
+---
+
 ## Output Format (for agent responses)
 
 When generating code or solutions:

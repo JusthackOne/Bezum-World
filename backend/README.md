@@ -2,7 +2,7 @@
 
 ## Quick start
 
-1. Copy env:
+1. Copy env and set real secrets:
 
 ```bash
 cp .env.example .env
@@ -14,14 +14,20 @@ cp .env.example .env
 docker compose up -d postgres redis
 ```
 
-3. Install and generate Prisma client:
+3. Install dependencies:
 
 ```bash
 bun install
+```
+
+4. Apply migrations and generate Prisma client:
+
+```bash
+bun run prisma:migrate:dev
 bun run prisma:generate
 ```
 
-4. Start app:
+5. Start app:
 
 ```bash
 bun run start:dev
@@ -30,7 +36,12 @@ bun run start:dev
 ## Endpoints
 
 - `GET /api/health`
-- `GET /api/auth/status`
+- `POST /api/auth/login/code`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+- `POST /api/auth/admin/accounts`
+- `GET /api/auth/me`
+- Swagger UI: `GET /docs`
 
 ## What is included
 
@@ -41,4 +52,8 @@ bun run start:dev
 - BullMQ root configuration + default queue
 - `nestjs-pino` logging
 - Global validation, response envelope, and base error filter
-- `auth` stub module (placeholder only)
+- Swagger / OpenAPI documentation
+- Code-based authentication (6-char unique auth code)
+- Access token + refresh token flow (`httpOnly` cookie for refresh)
+- Admin account creation with automatic unique code generation
+- Prisma models for `Account` and `AuthCode`
