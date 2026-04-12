@@ -13,6 +13,7 @@ import { CreateItemDto } from './dto/create-item.dto';
 import { CreateItemResponseDto } from './dto/create-item-response.dto';
 import { PurchaseItemResponseDto } from './dto/purchase-item-response.dto';
 import { ItemRepository } from './repositories/item.repository';
+import type { ItemLocation } from './types/item-location.type';
 
 @Injectable()
 export class ItemsService {
@@ -38,6 +39,12 @@ export class ItemsService {
     });
 
     return this.toItemResponse(item);
+  }
+
+  async getItems(location?: ItemLocation): Promise<CreateItemResponseDto[]> {
+    const items = await this.itemRepository.findAll(location);
+
+    return items.map((item) => this.toItemResponse(item));
   }
 
   async purchaseByUser(itemId: string, accountId: string): Promise<PurchaseItemResponseDto> {

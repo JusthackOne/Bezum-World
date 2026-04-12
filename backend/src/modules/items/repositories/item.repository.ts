@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ItemRarity, type Item, type Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma/prisma.service';
+import type { ItemLocation } from '../types/item-location.type';
 
 export interface CreateItemInput {
   ownerUserId: string | null;
@@ -42,6 +43,30 @@ export class ItemRepository {
   async findById(id: string, tx?: Prisma.TransactionClient): Promise<Item | null> {
     return this.getClient(tx).item.findUnique({
       where: { id },
+    });
+  }
+
+  async findAll(location?: ItemLocation): Promise<Item[]> {
+    const where: Prisma.ItemWhereInput | undefined =
+      location === 'shop'
+        ? { ownerUserId: null }
+        : location === 'inventory'
+          ? { ownerUserId: { not: null } }
+          : undefined;
+
+    if (where) {
+      return this.prisma.item.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    }
+
+    return this.prisma.item.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 

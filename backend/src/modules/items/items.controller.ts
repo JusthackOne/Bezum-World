@@ -1,31 +1,63 @@
-import { Body, Controller, ForbiddenException, Param, Post, Req, UseGuards } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
-  ApiCreatedResponse,
-  ApiBadRequestResponse,
   ApiConflictResponse,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { Public } from '../../common/decorators/public.decorator';
 import type { RequestWithAuthUser } from '../auth/types/request-with-auth-user.type';
 import { CreateItemDto } from './dto/create-item.dto';
 import { CreateItemResponseDto } from './dto/create-item-response.dto';
+import { GetItemsQueryDto } from './dto/get-items-query.dto';
 import { PurchaseItemParamsDto } from './dto/purchase-item-params.dto';
 import { PurchaseItemResponseDto } from './dto/purchase-item-response.dto';
 import { ItemsService } from './items.service';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import { AdminOnlyGuard } from '../auth/guards/admin-only.guard';
+import { ITEM_LOCATION_VALUES } from './types/item-location.type';
 
 @ApiTags('items')
 @Controller()
 export class ItemsController {
   constructor(private readonly itemsService: ItemsService) {}
+
+  @Public()
+  @Get('items')
+  @ApiOperation({
+    summary: 'Get items with optional location filter',
+    description: 'Returns all items or filtered items by location.',
+  })
+  @ApiQuery({
+    name: 'location',
+    required: false,
+    enum: ITEM_LOCATION_VALUES,
+    description: 'shop = owner is null, inventory = owner is not null',
+  })
+  @ApiOkResponse({ type: CreateItemResponseDto, isArray: true })
+  async getItems(@Query() query: GetItemsQueryDto): Promise<CreateItemResponseDto[]> {
+    return this.itemsService.getItems(query.location);
+  }
 
   @Post('admin/items')
   @UseGuards(AccessTokenGuard, AdminOnlyGuard)
