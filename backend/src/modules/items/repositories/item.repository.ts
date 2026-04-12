@@ -39,6 +39,30 @@ export class ItemRepository {
     });
   }
 
+  async findById(id: string, tx?: Prisma.TransactionClient): Promise<Item | null> {
+    return this.getClient(tx).item.findUnique({
+      where: { id },
+    });
+  }
+
+  async assignOwnerIfUnowned(
+    id: string,
+    ownerUserId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const result = await this.getClient(tx).item.updateMany({
+      where: {
+        id,
+        ownerUserId: null,
+      },
+      data: {
+        ownerUserId,
+      },
+    });
+
+    return result.count > 0;
+  }
+
   private getClient(tx?: Prisma.TransactionClient): PrismaService | Prisma.TransactionClient {
     return tx ?? this.prisma;
   }

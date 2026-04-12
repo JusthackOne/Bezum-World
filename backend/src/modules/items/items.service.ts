@@ -1,12 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { Item } from '@prisma/client';
 
+import { PrismaService } from '../../database/prisma/prisma.service';
+import { AccountRepository } from '../auth/repositories/account.repository';
 import { CreateItemDto } from './dto/create-item.dto';
 import { CreateItemResponseDto } from './dto/create-item-response.dto';
+import { PurchaseItemResponseDto } from './dto/purchase-item-response.dto';
 import { ItemRepository } from './repositories/item.repository';
 
 @Injectable()
 export class ItemsService {
-  constructor(private readonly itemRepository: ItemRepository) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly itemRepository: ItemRepository,
+    private readonly accountRepository: AccountRepository,
+  ) {}
 
   async createByAdmin(payload: CreateItemDto): Promise<CreateItemResponseDto> {
     const item = await this.itemRepository.create({
@@ -23,6 +37,60 @@ export class ItemsService {
       durability: payload.durability ?? null,
     });
 
+    return this.toItemResponse(item);
+  }
+
+  async purchaseByUser(itemId: string, accountId: string): Promise<PurchaseItemResponseDto> {
+    return this.prisma.$transaction(async (tx) => {
+      const account = await this.accountRepository.findByIdInTransaction(accountId, tx);
+
+      if (!account) {
+        throw new UnauthorizedException('Account is not found');
+      }
+
+      const item = await this.itemRepository.findById(itemId, tx);
+
+      if (!item) {
+        throw new NotFoundException('Item is not found');
+      }
+
+      if (item.ownerUserId !== null) {
+        throw new ConflictException('Item is not available for purchase');
+      }
+
+      const wasBalanceUpdated = await this.accountRepository.decrementBalanceIfEnough(
+        account.id,
+        item.price,
+        tx,
+      );
+
+      if (!wasBalanceUpdated) {
+        throw new BadRequestException('Insufficient balance');
+      }
+
+      const wasItemAssigned = await this.itemRepository.assignOwnerIfUnowned(item.id, account.id, tx);
+
+      if (!wasItemAssigned) {
+        throw new ConflictException('Item is not available for purchase');
+      }
+
+      const [purchasedItem, updatedAccount] = await Promise.all([
+        this.itemRepository.findById(item.id, tx),
+        this.accountRepository.findByIdInTransaction(account.id, tx),
+      ]);
+
+      if (!purchasedItem || !updatedAccount) {
+        throw new NotFoundException('Purchase result is not found');
+      }
+
+      return {
+        item: this.toItemResponse(purchasedItem),
+        balance: updatedAccount.balance,
+      };
+    });
+  }
+
+  private toItemResponse(item: Item): CreateItemResponseDto {
     return {
       id: item.id,
       owner_user_id: item.ownerUserId,

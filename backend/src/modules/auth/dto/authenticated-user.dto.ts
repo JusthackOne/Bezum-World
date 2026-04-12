@@ -21,6 +21,13 @@ export class AuthenticatedUserDto {
   avatarUrl!: string | null;
 
   @ApiProperty({
+    description: 'User account balance',
+    example: 0,
+    minimum: 0,
+  })
+  balance!: number;
+
+  @ApiProperty({
     description: 'Strength attribute value in range 0..100',
     example: 10,
     minimum: 0,

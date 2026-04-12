@@ -35,6 +35,37 @@ export class AccountRepository {
     });
   }
 
+  async findByIdInTransaction(
+    id: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<Account | null> {
+    return this.getClient(tx).account.findUnique({
+      where: { id },
+    });
+  }
+
+  async decrementBalanceIfEnough(
+    id: string,
+    amount: number,
+    tx: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const result = await this.getClient(tx).account.updateMany({
+      where: {
+        id,
+        balance: {
+          gte: amount,
+        },
+      },
+      data: {
+        balance: {
+          decrement: amount,
+        },
+      },
+    });
+
+    return result.count > 0;
+  }
+
   async updateLastTimeLoggedIn(
     id: string,
     lastTimeLoggedIn: Date,

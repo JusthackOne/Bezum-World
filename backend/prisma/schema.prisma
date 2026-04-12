@@ -10,6 +10,7 @@ model Account {
   id               String    @id @default(uuid())
   username         String
   avatarUrl        String?
+  balance          Int       @default(0)
   strength         Int       @default(0)
   charisma         Int       @default(0)
   endurance        Int       @default(0)
