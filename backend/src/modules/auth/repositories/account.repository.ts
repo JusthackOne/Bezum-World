@@ -12,6 +12,16 @@ export interface CreateAccountInput {
   intelligence: number;
 }
 
+export interface UpdateAccountInput {
+  username?: string;
+  avatarUrl?: string | null;
+  balance?: number;
+  strength?: number;
+  charisma?: number;
+  endurance?: number;
+  intelligence?: number;
+}
+
 @Injectable()
 export class AccountRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -32,6 +42,14 @@ export class AccountRepository {
   async findById(id: string): Promise<Account | null> {
     return this.prisma.account.findUnique({
       where: { id },
+    });
+  }
+
+  async findAll(): Promise<Account[]> {
+    return this.prisma.account.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 
@@ -75,6 +93,21 @@ export class AccountRepository {
       where: { id },
       data: { lastTimeLoggedIn },
     });
+  }
+
+  async updateById(id: string, input: UpdateAccountInput): Promise<Account> {
+    return this.prisma.account.update({
+      where: { id },
+      data: input,
+    });
+  }
+
+  async deleteById(id: string): Promise<boolean> {
+    const result = await this.prisma.account.deleteMany({
+      where: { id },
+    });
+
+    return result.count > 0;
   }
 
   private getClient(tx?: Prisma.TransactionClient): PrismaService | Prisma.TransactionClient {
