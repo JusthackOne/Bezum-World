@@ -4,7 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { configFactory } from './config/configuration';
-import { envValidationSchema } from './config/validation';
+import { validateEnvironment } from './config/validation';
 import { PrismaModule } from './database/prisma/prisma.module';
 import { AppLoggerModule } from './infrastructure/logger/logger.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
@@ -18,7 +18,7 @@ import { AuthModule } from './modules/auth/auth.module';
       cache: true,
       expandVariables: true,
       load: [configFactory],
-      validationSchema: envValidationSchema,
+      validate: validateEnvironment,
     }),
     AppLoggerModule,
     PrismaModule,
