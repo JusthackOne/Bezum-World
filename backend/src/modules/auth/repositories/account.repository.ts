@@ -6,10 +6,10 @@ import { PrismaService } from '../../../database/prisma/prisma.service';
 export interface CreateAccountInput {
   username: string;
   avatarUrl?: string | undefined;
-  strength?: number | undefined;
-  charisma?: number | undefined;
-  endurance?: number | undefined;
-  intelligence?: number | undefined;
+  strength: number;
+  charisma: number;
+  endurance: number;
+  intelligence: number;
 }
 
 @Injectable()
@@ -21,10 +21,10 @@ export class AccountRepository {
       data: {
         username: input.username,
         ...(input.avatarUrl !== undefined ? { avatarUrl: input.avatarUrl } : {}),
-        ...(input.strength !== undefined ? { strength: input.strength } : {}),
-        ...(input.charisma !== undefined ? { charisma: input.charisma } : {}),
-        ...(input.endurance !== undefined ? { endurance: input.endurance } : {}),
-        ...(input.intelligence !== undefined ? { intelligence: input.intelligence } : {}),
+        strength: input.strength,
+        charisma: input.charisma,
+        endurance: input.endurance,
+        intelligence: input.intelligence,
       },
     });
   }

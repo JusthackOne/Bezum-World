@@ -20,51 +20,47 @@ export class AdminCreateAccountDto {
   @MaxLength(2048)
   avatarUrl?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Strength attribute value in range 0..100',
     example: 10,
     minimum: 0,
     maximum: 100,
   })
-  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
-  strength?: number;
+  strength!: number;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Charisma attribute value in range 0..100',
     example: 25,
     minimum: 0,
     maximum: 100,
   })
-  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
-  charisma?: number;
+  charisma!: number;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Endurance attribute value in range 0..100',
     example: 40,
     minimum: 0,
     maximum: 100,
   })
-  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
-  endurance?: number;
+  endurance!: number;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Intelligence attribute value in range 0..100',
     example: 30,
     minimum: 0,
     maximum: 100,
   })
-  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
-  intelligence?: number;
+  intelligence!: number;
 }
