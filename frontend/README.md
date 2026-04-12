@@ -16,15 +16,15 @@ Minimal, production-ready frontend foundation for the Social RPG project.
 ## Run
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 ## Quality
 
 ```bash
-npm run lint
-npm run build
+bun run lint
+bun run build
 ```
 
 ## Environment

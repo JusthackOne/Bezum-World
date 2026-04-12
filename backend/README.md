@@ -17,14 +17,14 @@ docker compose up -d postgres redis
 3. Install and generate Prisma client:
 
 ```bash
-npm install
-npm run prisma:generate
+bun install
+bun run prisma:generate
 ```
 
 4. Start app:
 
 ```bash
-npm run start:dev
+bun run start:dev
 ```
 
 ## Endpoints

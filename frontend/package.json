@@ -2,13 +2,14 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.3.11",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "node .next/standalone/server.js",
-    "lint": "eslint",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "dev": "bunx --bun next dev",
+    "build": "bunx --bun next build",
+    "start": "bun .next/standalone/server.js",
+    "lint": "bunx --bun eslint .",
+    "format": "bunx --bun prettier --write .",
+    "format:check": "bunx --bun prettier --check ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

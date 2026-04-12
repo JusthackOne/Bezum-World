@@ -1,23 +1,23 @@
 install:
-	npm install
+	bun install
 
 dev:
-	npm run start:dev
+	bun run start:dev
 
 build:
-	npm run build
+	bun run build
 
 lint:
-	npm run lint
+	bun run lint
 
 format:
-	npm run format
+	bun run format
 
 prisma-generate:
-	npm run prisma:generate
+	bun run prisma:generate
 
 prisma-migrate:
-	npm run prisma:migrate:dev
+	bun run prisma:migrate:dev
 
 docker-up:
 	docker compose up -d postgres redis
