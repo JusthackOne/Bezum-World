@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { useAuthStatusQuery } from "@/features/auth/api/use-auth-status-query";
-import { useAuthUiStore } from "@/features/auth/model/auth-ui.store";
+import { useAuthStatusQuery } from "@/features/auth/api";
+import { useAuthUiStore } from "@/features/auth/model";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";

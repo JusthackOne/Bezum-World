@@ -1,4 +1,4 @@
-import { AuthStubCard } from "@/features/auth/ui/auth-stub-card";
+import { AuthStubCard } from "@/features/auth/ui";
 import { AppShell } from "@/widgets/layout/app-shell";
 
 export default function HomePage() {
