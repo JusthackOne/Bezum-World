@@ -38,10 +38,20 @@ bun run start:dev
 - `GET /api/health`
 - `POST /api/auth/login/code`
 - `POST /api/auth/refresh`
+- `POST /api/auth/admin/login`
+- `POST /api/auth/admin/refresh`
 - `POST /api/auth/logout`
 - `POST /api/auth/admin/accounts`
+- `GET /api/auth/admin/me`
 - `GET /api/auth/me`
 - Swagger UI: `GET /docs`
+
+## Required env vars
+
+- `AUTH_JWT_ACCESS_SECRET`
+- `AUTH_JWT_REFRESH_SECRET`
+- `AUTH_ADMIN_USERNAME`
+- `AUTH_ADMIN_PASSWORD`
 
 ## What is included
 
@@ -55,5 +65,7 @@ bun run start:dev
 - Swagger / OpenAPI documentation
 - Code-based authentication (6-char unique auth code)
 - Access token + refresh token flow (`httpOnly` cookie for refresh)
-- Admin account creation with automatic unique code generation
-- Prisma models for `Account` and `AuthCode`
+- Single admin bootstrap from `.env` on app startup
+- Admin authentication by username/password from `.env`
+- Admin-only account creation with automatic unique code generation
+- Prisma models for `Account`, `AuthCode`, and `Admin`

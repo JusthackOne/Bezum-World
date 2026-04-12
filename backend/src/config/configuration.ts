@@ -23,7 +23,8 @@ export interface AppConfig {
     refreshTokenTtlSeconds: number;
     refreshCookieName: string;
     refreshCookieSecure: boolean;
-    adminApiKey: string;
+    adminUsername: string;
+    adminPassword: string;
   };
 }
 
@@ -52,6 +53,7 @@ export const configFactory = (): AppConfig => ({
     refreshTokenTtlSeconds: Number(process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS ?? 604800),
     refreshCookieName: process.env.AUTH_REFRESH_COOKIE_NAME ?? 'refresh_token',
     refreshCookieSecure: process.env.AUTH_REFRESH_COOKIE_SECURE === 'true',
-    adminApiKey: process.env.AUTH_ADMIN_API_KEY ?? '',
+    adminUsername: process.env.AUTH_ADMIN_USERNAME ?? '',
+    adminPassword: process.env.AUTH_ADMIN_PASSWORD ?? '',
   },
 });

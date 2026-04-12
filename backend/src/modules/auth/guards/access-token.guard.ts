@@ -49,7 +49,7 @@ export class AccessTokenGuard implements CanActivate {
         secret: this.configService.get('auth.jwtAccessSecret', { infer: true }),
       });
 
-      if (!payload.sub || !payload.username) {
+      if (!payload.sub || !payload.username || !payload.actorType) {
         throw new UnauthorizedException('Access token payload is invalid');
       }
 

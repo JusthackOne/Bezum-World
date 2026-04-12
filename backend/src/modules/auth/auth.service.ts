@@ -1,22 +1,22 @@
-import {
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, type Account } from '@prisma/client';
-import { randomInt, timingSafeEqual } from 'crypto';
+import { Prisma, type Account, type Admin } from '@prisma/client';
+import { compare, hash } from 'bcryptjs';
+import { randomInt } from 'crypto';
 import type { Response } from 'express';
 
 import type { AppConfig } from '../../config/configuration';
 import { PrismaService } from '../../database/prisma/prisma.service';
+import { AdminAuthTokensResponseDto } from './dto/admin-auth-tokens-response.dto';
 import { AdminCreateAccountDto } from './dto/admin-create-account.dto';
 import { AdminCreateAccountResponseDto } from './dto/admin-create-account-response.dto';
+import { AdminLoginDto } from './dto/admin-login.dto';
+import { AuthenticatedAdminDto } from './dto/authenticated-admin.dto';
 import { AuthenticatedUserDto } from './dto/authenticated-user.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { AccountRepository } from './repositories/account.repository';
+import { AdminRepository } from './repositories/admin.repository';
 import { AuthCodeRepository } from './repositories/auth-code.repository';
 import type { AccessTokenPayload } from './types/access-token-payload.type';
 import type { RefreshTokenPayload } from './types/refresh-token-payload.type';
@@ -24,28 +24,42 @@ import type { RefreshTokenPayload } from './types/refresh-token-payload.type';
 const AUTH_CODE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const AUTH_CODE_LENGTH = 6;
 const MAX_AUTH_CODE_GENERATION_ATTEMPTS = 10;
+const ADMIN_PASSWORD_SALT_ROUNDS = 12;
 
-interface TokenPairResult {
+interface UserTokenPairResult {
+  actorType: 'user';
   account: Account;
   accessToken: string;
   refreshToken: string;
 }
 
+interface AdminTokenPairResult {
+  actorType: 'admin';
+  admin: Admin;
+  accessToken: string;
+  refreshToken: string;
+}
+
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService<AppConfig, true>,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly accountRepository: AccountRepository,
     private readonly authCodeRepository: AuthCodeRepository,
+    private readonly adminRepository: AdminRepository,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.ensureAdminExists();
+  }
 
   getRefreshCookieName(): string {
     return this.configService.get('auth.refreshCookieName', { infer: true });
   }
 
-  async loginByCode(code: string): Promise<TokenPairResult> {
+  async loginByCode(code: string): Promise<UserTokenPairResult> {
     const normalizedCode = this.normalizeCode(code);
     const codeRecord = await this.authCodeRepository.findByCodeWithAccount(normalizedCode);
 
@@ -58,22 +72,66 @@ export class AuthService {
       new Date(),
     );
 
-    return this.issueTokenPair(account);
+    return this.issueUserTokenPair(account);
   }
 
-  async refreshTokens(refreshToken: string | undefined): Promise<TokenPairResult> {
+  async loginAdmin(payload: AdminLoginDto): Promise<AdminTokenPairResult> {
+    const username = payload.username.trim();
+    const admin = await this.adminRepository.findByUsername(username);
+
+    if (!admin) {
+      throw new UnauthorizedException('Admin credentials are invalid');
+    }
+
+    const isPasswordValid = await compare(payload.password, admin.passwordHash);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Admin credentials are invalid');
+    }
+
+    const updatedAdmin = await this.adminRepository.updateLastTimeLoggedIn(admin.id, new Date());
+
+    return this.issueAdminTokenPair(updatedAdmin);
+  }
+
+  async refreshUserTokens(refreshToken: string | undefined): Promise<UserTokenPairResult> {
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token is required');
     }
 
     const payload = await this.verifyRefreshToken(refreshToken);
+
+    if (payload.actorType !== 'user') {
+      throw new UnauthorizedException('Refresh token actor type is invalid');
+    }
+
     const account = await this.accountRepository.findById(payload.sub);
 
     if (!account) {
       throw new UnauthorizedException('Account is not found');
     }
 
-    return this.issueTokenPair(account);
+    return this.issueUserTokenPair(account);
+  }
+
+  async refreshAdminTokens(refreshToken: string | undefined): Promise<AdminTokenPairResult> {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+
+    const payload = await this.verifyRefreshToken(refreshToken);
+
+    if (payload.actorType !== 'admin') {
+      throw new UnauthorizedException('Refresh token actor type is invalid');
+    }
+
+    const admin = await this.adminRepository.findById(payload.sub);
+
+    if (!admin) {
+      throw new UnauthorizedException('Admin is not found');
+    }
+
+    return this.issueAdminTokenPair(admin);
   }
 
   async getAuthenticatedUser(accountId: string): Promise<AuthenticatedUserDto> {
@@ -86,12 +144,17 @@ export class AuthService {
     return this.toAuthenticatedUser(account);
   }
 
-  async createAccountByAdmin(
-    adminApiKey: string | undefined,
-    payload: AdminCreateAccountDto,
-  ): Promise<AdminCreateAccountResponseDto> {
-    this.assertAdminAccess(adminApiKey);
+  async getAuthenticatedAdmin(adminId: string): Promise<AuthenticatedAdminDto> {
+    const admin = await this.adminRepository.findById(adminId);
 
+    if (!admin) {
+      throw new UnauthorizedException('Admin is not found');
+    }
+
+    return this.toAuthenticatedAdmin(admin);
+  }
+
+  async createAccountByAdmin(payload: AdminCreateAccountDto): Promise<AdminCreateAccountResponseDto> {
     for (let attempt = 1; attempt <= MAX_AUTH_CODE_GENERATION_ATTEMPTS; attempt += 1) {
       const generatedCode = this.generateAuthCode();
 
@@ -129,10 +192,17 @@ export class AuthService {
     throw new InternalServerErrorException('Failed to generate unique account code');
   }
 
-  toAuthTokensResponse(result: TokenPairResult): AuthTokensResponseDto {
+  toUserAuthTokensResponse(result: UserTokenPairResult): AuthTokensResponseDto {
     return {
       accessToken: result.accessToken,
       user: this.toAuthenticatedUser(result.account),
+    };
+  }
+
+  toAdminAuthTokensResponse(result: AdminTokenPairResult): AdminAuthTokensResponseDto {
+    return {
+      accessToken: result.accessToken,
+      admin: this.toAuthenticatedAdmin(result.admin),
     };
   }
 
@@ -155,21 +225,28 @@ export class AuthService {
     });
   }
 
-  private assertAdminAccess(adminApiKey: string | undefined): void {
-    if (!adminApiKey) {
-      throw new ForbiddenException('Admin API key is required');
+  private async ensureAdminExists(): Promise<void> {
+    const existingAdmin = await this.adminRepository.findSingleton();
+
+    if (existingAdmin) {
+      return;
     }
 
-    const expectedAdminKey = this.configService.get('auth.adminApiKey', { infer: true });
-    const providedBuffer = Buffer.from(adminApiKey);
-    const expectedBuffer = Buffer.from(expectedAdminKey);
+    const username = this.configService.get('auth.adminUsername', { infer: true }).trim();
+    const password = this.configService.get('auth.adminPassword', { infer: true });
+    const passwordHash = await hash(password, ADMIN_PASSWORD_SALT_ROUNDS);
 
-    if (providedBuffer.length !== expectedBuffer.length) {
-      throw new ForbiddenException('Admin API key is invalid');
-    }
+    try {
+      await this.adminRepository.createSingleton({
+        username,
+        passwordHash,
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        return;
+      }
 
-    if (!timingSafeEqual(providedBuffer, expectedBuffer)) {
-      throw new ForbiddenException('Admin API key is invalid');
+      throw new InternalServerErrorException('Failed to initialize admin account');
     }
   }
 
@@ -179,7 +256,11 @@ export class AuthService {
         secret: this.configService.get('auth.jwtRefreshSecret', { infer: true }),
       });
 
-      if (payload.tokenType !== 'refresh' || !payload.sub) {
+      if (
+        payload.tokenType !== 'refresh' ||
+        !payload.sub ||
+        (payload.actorType !== 'user' && payload.actorType !== 'admin')
+      ) {
         throw new UnauthorizedException('Refresh token is invalid');
       }
 
@@ -189,14 +270,16 @@ export class AuthService {
     }
   }
 
-  private async issueTokenPair(account: Account): Promise<TokenPairResult> {
+  private async issueUserTokenPair(account: Account): Promise<UserTokenPairResult> {
     const accessPayload: AccessTokenPayload = {
       sub: account.id,
       username: account.username,
+      actorType: 'user',
     };
     const refreshPayload: RefreshTokenPayload = {
       sub: account.id,
       tokenType: 'refresh',
+      actorType: 'user',
     };
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -211,7 +294,39 @@ export class AuthService {
     ]);
 
     return {
+      actorType: 'user',
       account,
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  private async issueAdminTokenPair(admin: Admin): Promise<AdminTokenPairResult> {
+    const accessPayload: AccessTokenPayload = {
+      sub: admin.id,
+      username: admin.username,
+      actorType: 'admin',
+    };
+    const refreshPayload: RefreshTokenPayload = {
+      sub: admin.id,
+      tokenType: 'refresh',
+      actorType: 'admin',
+    };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(accessPayload, {
+        secret: this.configService.get('auth.jwtAccessSecret', { infer: true }),
+        expiresIn: this.configService.get('auth.accessTokenTtlSeconds', { infer: true }),
+      }),
+      this.jwtService.signAsync(refreshPayload, {
+        secret: this.configService.get('auth.jwtRefreshSecret', { infer: true }),
+        expiresIn: this.configService.get('auth.refreshTokenTtlSeconds', { infer: true }),
+      }),
+    ]);
+
+    return {
+      actorType: 'admin',
+      admin,
       accessToken,
       refreshToken,
     };
@@ -224,6 +339,15 @@ export class AuthService {
       avatarUrl: account.avatarUrl ?? null,
       lastTimeLoggedIn: account.lastTimeLoggedIn?.toISOString() ?? null,
       createdAt: account.createdAt.toISOString(),
+    };
+  }
+
+  private toAuthenticatedAdmin(admin: Admin): AuthenticatedAdminDto {
+    return {
+      id: admin.id,
+      username: admin.username,
+      lastTimeLoggedIn: admin.lastTimeLoggedIn?.toISOString() ?? null,
+      createdAt: admin.createdAt.toISOString(),
     };
   }
 
@@ -258,5 +382,9 @@ export class AuthService {
     }
 
     return typeof target === 'string' && target.includes('code');
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
   }
 }

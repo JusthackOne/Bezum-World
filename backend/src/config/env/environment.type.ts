@@ -14,5 +14,6 @@ export interface EnvironmentVariables {
   AUTH_REFRESH_TOKEN_TTL_SECONDS: number;
   AUTH_REFRESH_COOKIE_NAME: string;
   AUTH_REFRESH_COOKIE_SECURE: boolean;
-  AUTH_ADMIN_API_KEY: string;
+  AUTH_ADMIN_USERNAME: string;
+  AUTH_ADMIN_PASSWORD: string;
 }

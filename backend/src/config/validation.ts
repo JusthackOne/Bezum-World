@@ -20,5 +20,6 @@ export const envValidationSchema = Joi.object<EnvironmentVariables, true>({
   AUTH_REFRESH_TOKEN_TTL_SECONDS: Joi.number().integer().min(300).default(604800),
   AUTH_REFRESH_COOKIE_NAME: Joi.string().min(1).default('refresh_token'),
   AUTH_REFRESH_COOKIE_SECURE: Joi.boolean().default(false),
-  AUTH_ADMIN_API_KEY: Joi.string().min(16).required(),
+  AUTH_ADMIN_USERNAME: Joi.string().trim().min(3).max(64).required(),
+  AUTH_ADMIN_PASSWORD: Joi.string().min(8).required(),
 });
