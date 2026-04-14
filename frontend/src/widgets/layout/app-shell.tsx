@@ -1,5 +1,6 @@
+import { SidebarInset } from "@/shared/ui/sidebar";
 import { Header } from "@/widgets/layout/header/header";
-import { Sidebar } from "@/widgets/layout/sidebar/sidebar";
+import { AdminSidebar } from "@/widgets/layout/sidebar/admin-sidebar";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -7,12 +8,12 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="mx-auto grid max-w-6xl grid-cols-1 md:grid-cols-[220px_1fr]">
-        <Sidebar />
-        <main className="p-4 md:p-8">{children}</main>
-      </div>
-    </div>
+    <>
+      <AdminSidebar />
+      <SidebarInset>
+        <Header />
+        <main className="mx-auto w-full max-w-6xl flex-1 p-4 md:p-8">{children}</main>
+      </SidebarInset>
+    </>
   );
 }

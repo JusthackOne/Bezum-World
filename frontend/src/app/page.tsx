@@ -1,9 +1,7 @@
 import { AuthStubCard } from "@/features/auth/ui";
-import { AppShell } from "@/widgets/layout/app-shell";
 
 export default function HomePage() {
   return (
-    <AppShell>
       <section className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Frontend Blueprint</h1>
@@ -14,6 +12,5 @@ export default function HomePage() {
         </div>
         <AuthStubCard />
       </section>
-    </AppShell>
   );
 }
