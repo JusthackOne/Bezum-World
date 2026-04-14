@@ -48,6 +48,16 @@ export class ItemRepository {
     });
   }
 
+  async deleteById(id: string): Promise<boolean> {
+    const result = await this.prisma.item.deleteMany({
+      where: {
+        id,
+      },
+    });
+
+    return result.count > 0;
+  }
+
   async findAll(location?: ItemLocation): Promise<Item[]> {
     const where: Prisma.ItemWhereInput | undefined =
       location === 'shop'

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -39,6 +40,7 @@ import { AdminOnlyGuard } from '../auth/guards/admin-only.guard';
 import type { RequestWithAuthUser } from '../auth/types/request-with-auth-user.type';
 import { Public } from '../../common/decorators/public.decorator';
 import {
+  AdminDeleteItemResponseDto,
   CreateItemDto,
   CreateItemResponseDto,
   GetItemsQueryDto,
@@ -138,6 +140,25 @@ export class ItemsController {
     };
 
     return this.itemsService.createByAdmin(payload);
+  }
+
+  @Delete('admin/items/:itemId')
+  @UseGuards(AccessTokenGuard, AdminOnlyGuard)
+  @ApiOperation({
+    summary: 'Delete item by id (admin only)',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiParam({
+    name: 'itemId',
+    description: 'Unique item identifier',
+    example: '2df8c39f-3255-4b40-9cb2-7f236c0b62e3',
+  })
+  @ApiOkResponse({ type: AdminDeleteItemResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Admin access is required' })
+  @ApiNotFoundResponse({ description: 'Item is not found' })
+  async deleteItemByAdmin(@Param() params: PurchaseItemParamsDto): Promise<AdminDeleteItemResponseDto> {
+    return this.itemsService.deleteByAdmin(params.itemId);
   }
 
   @Post('items/:itemId/purchase')

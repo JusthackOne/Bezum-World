@@ -30,12 +30,46 @@ function normalizeRewardAttributes(
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
-export async function createAdminTask(payload: CreateAdminTaskInput): Promise<AdminTask> {
+function buildMultipartPayload(payload: CreateAdminTaskInput): FormData {
+  const formData = new FormData();
   const rewardAttributes = normalizeRewardAttributes(payload);
 
-  return requestApiData(
-    () =>
-      adminHttpClient.post<ApiSuccessResponse<AdminTask>>(adminTasksEndpoints.list, {
+  formData.append("type", payload.type);
+  formData.append("title", payload.title);
+  formData.append("rewardMoney", String(payload.rewardMoney));
+  formData.append("requiresProofImage", String(payload.requiresProofImage));
+
+  if (payload.description) {
+    formData.append("description", payload.description);
+  }
+
+  if (payload.rewardGameScore !== undefined) {
+    formData.append("rewardGameScore", String(payload.rewardGameScore));
+  }
+
+  if (rewardAttributes) {
+    formData.append("rewardAttributes", JSON.stringify(rewardAttributes));
+  }
+
+  if (payload.type === "daily" && payload.submissionLimit !== undefined) {
+    formData.append("submissionLimit", String(payload.submissionLimit));
+  }
+
+  if (payload.imageFile instanceof File) {
+    formData.append("image", payload.imageFile, payload.imageFile.name);
+  } else if (payload.image) {
+    formData.append("image", payload.image);
+  }
+
+  return formData;
+}
+
+export async function createAdminTask(payload: CreateAdminTaskInput): Promise<AdminTask> {
+  const rewardAttributes = normalizeRewardAttributes(payload);
+  const hasImageFile = payload.imageFile instanceof File;
+  const requestBody = hasImageFile
+    ? buildMultipartPayload(payload)
+    : {
         type: payload.type,
         title: payload.title,
         ...(payload.description ? { description: payload.description } : {}),
@@ -49,7 +83,11 @@ export async function createAdminTask(payload: CreateAdminTaskInput): Promise<Ad
         ...(payload.type === "daily" && payload.submissionLimit !== undefined
           ? { submissionLimit: payload.submissionLimit }
           : {}),
-      }),
+      };
+
+  return requestApiData(
+    () =>
+      adminHttpClient.post<ApiSuccessResponse<AdminTask>>(adminTasksEndpoints.list, requestBody),
     "Failed to create task",
   );
 }

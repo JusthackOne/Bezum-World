@@ -37,3 +37,8 @@ export interface AdminCreateItemInput {
   intelligence?: number;
   durability?: number;
 }
+
+export interface AdminDeleteItemResponse {
+  message: string;
+  itemId: string;
+}

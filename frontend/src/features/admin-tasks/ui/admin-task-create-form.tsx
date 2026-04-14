@@ -70,13 +70,14 @@ export function AdminTaskCreateForm() {
           submitPendingLabel="Creating..."
           isSubmitting={createTaskMutation.isPending}
           errorMessage={createTaskMutation.isError ? mutationError : null}
-          onSubmit={async (values: AdminTaskFormValues) => {
+          onSubmit={async (values: AdminTaskFormValues, imageFile: File | null) => {
             const rewardAttributes = buildRewardAttributes(values);
             const payload: CreateAdminTaskInput = {
               type: values.type,
               title: values.title.trim(),
               ...(values.description ? { description: values.description.trim() } : {}),
               ...(values.image ? { image: values.image.trim() } : {}),
+              ...(imageFile ? { imageFile } : {}),
               rewardMoney: values.rewardMoney,
               ...(values.rewardGameScore !== undefined
                 ? { rewardGameScore: values.rewardGameScore }

@@ -10,6 +10,7 @@ import { Prisma, TaskType, type Task, type TaskSubmission } from '@prisma/client
 import type { AccessTokenPayload } from '../auth/types/access-token-payload.type';
 import { AccountRepository } from '../auth/repositories';
 import type {
+  AdminDeleteTaskResponseDto,
   AdminTasksListResponseDto,
   CreateTaskDto,
   GetAdminTasksQueryDto,
@@ -54,7 +55,21 @@ export class TasksService {
     return this.toTaskResponse(createdTask);
   }
 
-  async updateTaskByAdmin(taskId: string, payload: UpdateTaskDto): Promise<TaskResponseDto> {
+  async createTaskByAdminWithUploadedImage(
+    payload: CreateTaskDto,
+    uploadedImageUrl?: string,
+  ): Promise<TaskResponseDto> {
+    return this.createTaskByAdmin({
+      ...payload,
+      ...(uploadedImageUrl ? { image: uploadedImageUrl } : {}),
+    });
+  }
+
+  async updateTaskByAdmin(
+    taskId: string,
+    payload: UpdateTaskDto,
+    uploadedImageUrl?: string,
+  ): Promise<TaskResponseDto> {
     const existingTask = await this.taskRepository.findById(taskId);
 
     if (!existingTask) {
@@ -73,6 +88,7 @@ export class TasksService {
         ? { description: this.normalizeNullableString(payload.description) }
         : {}),
       ...(payload.image !== undefined ? { image: this.normalizeNullableString(payload.image) } : {}),
+      ...(uploadedImageUrl !== undefined ? { image: uploadedImageUrl } : {}),
       ...(payload.rewardMoney !== undefined ? { rewardMoney: payload.rewardMoney } : {}),
       ...(payload.rewardGameScore !== undefined
         ? { rewardGameScore: payload.rewardGameScore }
@@ -97,6 +113,19 @@ export class TasksService {
     const updatedTask = await this.taskRepository.updateById(taskId, updateInput);
 
     return this.toTaskResponse(updatedTask);
+  }
+
+  async deleteTaskByAdmin(taskId: string): Promise<AdminDeleteTaskResponseDto> {
+    const wasDeleted = await this.taskRepository.deleteById(taskId);
+
+    if (!wasDeleted) {
+      throw new NotFoundException('Task is not found');
+    }
+
+    return {
+      message: 'Task deleted',
+      taskId,
+    };
   }
 
   async getAdminTasks(query: GetAdminTasksQueryDto): Promise<AdminTasksListResponseDto> {

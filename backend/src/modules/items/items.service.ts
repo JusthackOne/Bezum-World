@@ -9,7 +9,12 @@ import type { Item } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { AccountRepository } from '../auth/repositories';
-import { CreateItemDto, CreateItemResponseDto, PurchaseItemResponseDto } from './dto';
+import {
+  type AdminDeleteItemResponseDto,
+  CreateItemDto,
+  CreateItemResponseDto,
+  PurchaseItemResponseDto,
+} from './dto';
 import { ItemRepository } from './repositories';
 import type { ItemLocation } from './types/item-location.type';
 import { ConfigService } from '@nestjs/config';
@@ -100,6 +105,19 @@ export class ItemsService {
         balance: updatedAccount.balance,
       };
     });
+  }
+
+  async deleteByAdmin(itemId: string): Promise<AdminDeleteItemResponseDto> {
+    const wasDeleted = await this.itemRepository.deleteById(itemId);
+
+    if (!wasDeleted) {
+      throw new NotFoundException('Item is not found');
+    }
+
+    return {
+      message: 'Item deleted',
+      itemId,
+    };
   }
 
   private toItemResponse(item: Item): CreateItemResponseDto {

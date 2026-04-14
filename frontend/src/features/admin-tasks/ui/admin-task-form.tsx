@@ -1,10 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { CameraIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
+import { env } from "@/shared/config/env";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
@@ -45,7 +47,7 @@ interface AdminTaskFormProps {
   isSubmitting: boolean;
   errorMessage?: string | null;
   initialValues?: AdminTaskFormValues;
-  onSubmit: (values: AdminTaskFormValues) => Promise<void>;
+  onSubmit: (values: AdminTaskFormValues, imageFile: File | null) => Promise<void>;
 }
 
 const defaultFormValues: AdminTaskFormInputValues = {
@@ -71,6 +73,8 @@ export function AdminTaskForm({
   initialValues,
   onSubmit,
 }: AdminTaskFormProps) {
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const form = useForm<AdminTaskFormInputValues, unknown, AdminTaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: initialValues ?? defaultFormValues,
@@ -84,12 +88,85 @@ export function AdminTaskForm({
     form.reset(initialValues ?? defaultFormValues);
   }, [form, initialValues]);
 
+  const imagePreviewUrl = useMemo(
+    () => (imageFile ? URL.createObjectURL(imageFile) : null),
+    [imageFile],
+  );
+
+  useEffect(() => {
+    if (!imagePreviewUrl) {
+      return;
+    }
+
+    return () => {
+      URL.revokeObjectURL(imagePreviewUrl);
+    };
+  }, [imagePreviewUrl]);
+
+  const displayImageUrl = useMemo(() => {
+    if (imagePreviewUrl) {
+      return imagePreviewUrl;
+    }
+
+    const existingImage = initialValues?.image;
+    if (!existingImage) {
+      return null;
+    }
+
+    if (existingImage.startsWith("http://") || existingImage.startsWith("https://")) {
+      return existingImage;
+    }
+
+    return `${env.NEXT_PUBLIC_API_BASE_URL}${existingImage}`;
+  }, [imagePreviewUrl, initialValues?.image]);
+
   const submitForm = form.handleSubmit(async (values) => {
-    await onSubmit(values);
+    await onSubmit(values, imageFile);
   });
 
   return (
     <form onSubmit={submitForm} className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Task Image (optional)</label>
+
+        <div className="relative h-28 w-28">
+          <button
+            type="button"
+            className="group relative h-full w-full overflow-hidden rounded-full border border-dashed border-muted-foreground/40 bg-muted/20"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {displayImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={displayImageUrl} alt="Task image preview" className="h-full w-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                <CameraIcon className="size-7" />
+              </div>
+            )}
+
+            <div className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+              <span className="inline-flex items-center gap-2 rounded-md bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground">
+                <CameraIcon className="size-4" />
+                {displayImageUrl ? "Change" : "Select"}
+              </span>
+            </div>
+          </button>
+        </div>
+
+        <Input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          className="hidden"
+          onChange={(event) => {
+            const nextFile = event.target.files?.[0] ?? null;
+            setImageFile(nextFile);
+          }}
+        />
+
+        <p className="text-muted-foreground text-xs">Allowed: JPG, PNG, WEBP, GIF (up to 5MB).</p>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="type" className="text-sm font-medium">
@@ -147,16 +224,6 @@ export function AdminTaskForm({
         />
         {form.formState.errors.description ? (
           <p className="text-xs text-destructive">{form.formState.errors.description.message}</p>
-        ) : null}
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="image" className="text-sm font-medium">
-          Image URL (optional)
-        </label>
-        <Input id="image" placeholder="https://cdn.example.com/tasks/workout.jpg" {...form.register("image")} />
-        {form.formState.errors.image ? (
-          <p className="text-xs text-destructive">{form.formState.errors.image.message}</p>
         ) : null}
       </div>
 

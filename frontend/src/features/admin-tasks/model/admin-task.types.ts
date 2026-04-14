@@ -43,6 +43,7 @@ export interface CreateAdminTaskInput {
   title: string;
   description?: string;
   image?: string;
+  imageFile?: File | null;
   rewardMoney: number;
   rewardGameScore?: number;
   rewardAttributes?: AdminTaskRewardAttributes;
@@ -56,9 +57,15 @@ export interface UpdateAdminTaskInput {
   title?: string;
   description?: string;
   image?: string;
+  imageFile?: File | null;
   rewardMoney?: number;
   rewardGameScore?: number;
   rewardAttributes?: AdminTaskRewardAttributes;
   requiresProofImage?: boolean;
   submissionLimit?: number;
+}
+
+export interface AdminDeleteTaskResponse {
+  message: string;
+  taskId: string;
 }

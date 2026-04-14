@@ -2,15 +2,17 @@ import { AdminTaskEditForm } from "@/features/admin-tasks/ui";
 import { AppShell } from "@/widgets/layout/app-shell";
 
 interface AdminTaskEditPageProps {
-  params: {
+  params: Promise<{
     taskId: string;
-  };
+  }>;
 }
 
-export default function AdminTaskEditPage({ params }: AdminTaskEditPageProps) {
+export default async function AdminTaskEditPage({ params }: AdminTaskEditPageProps) {
+  const { taskId } = await params;
+
   return (
     <AppShell>
-      <AdminTaskEditForm taskId={params.taskId} />
+      <AdminTaskEditForm taskId={taskId} />
     </AppShell>
   );
 }

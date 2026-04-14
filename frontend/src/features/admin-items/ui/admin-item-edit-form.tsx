@@ -1,10 +1,11 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
-import { useAdminItemsQuery } from "@/features/admin-items/api";
+import { useAdminItemsQuery, useDeleteAdminItemMutation } from "@/features/admin-items/api";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 
@@ -14,7 +15,9 @@ interface AdminItemEditFormProps {
 
 export function AdminItemEditForm({ itemId }: AdminItemEditFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const itemsQuery = useAdminItemsQuery(true, true, "all");
+  const deleteItemMutation = useDeleteAdminItemMutation();
   const item = useMemo(
     () => (itemsQuery.data ?? []).find((nextItem) => nextItem.id === itemId) ?? null,
     [itemId, itemsQuery.data],
@@ -79,6 +82,27 @@ export function AdminItemEditForm({ itemId }: AdminItemEditFormProps) {
           <Button type="button" variant="outline" onClick={() => router.push("/admin/items")}>
             <ArrowLeftIcon className="size-4" />
             Back to items
+          </Button>
+
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={deleteItemMutation.isPending}
+            onClick={async () => {
+              const shouldDelete = window.confirm("Delete this item? This action cannot be undone.");
+              if (!shouldDelete) {
+                return;
+              }
+
+              await deleteItemMutation.mutateAsync(item.id);
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ["admin", "items"] }),
+                queryClient.invalidateQueries({ queryKey: ["shop", "items"] }),
+              ]);
+              router.push("/admin/items");
+            }}
+          >
+            {deleteItemMutation.isPending ? "Deleting..." : "Delete Item"}
           </Button>
         </div>
 

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -77,6 +77,17 @@ export class CreateTaskDto {
     type: TaskRewardAttributesDto,
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+
+    try {
+      return JSON.parse(value) as unknown;
+    } catch {
+      return value;
+    }
+  })
   @ValidateNested()
   @Type(() => TaskRewardAttributesDto)
   rewardAttributes?: TaskRewardAttributesDto;
@@ -85,7 +96,7 @@ export class CreateTaskDto {
     description: 'Whether proof image is required on submission',
     example: true,
   })
-  @Type(() => Boolean)
+  @Transform(({ value }: { value: unknown }) => value === true || value === 'true')
   @IsBoolean()
   requiresProofImage!: boolean;
 

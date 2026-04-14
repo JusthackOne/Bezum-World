@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 
 import {
   useAdminTaskByIdQuery,
+  useDeleteAdminTaskMutation,
   useUpdateAdminTaskMutation,
 } from "@/features/admin-tasks/api";
 import type {
@@ -58,6 +59,7 @@ export function AdminTaskEditForm({ taskId }: AdminTaskEditFormProps) {
   const queryClient = useQueryClient();
   const taskQuery = useAdminTaskByIdQuery(true, true, taskId);
   const updateTaskMutation = useUpdateAdminTaskMutation();
+  const deleteTaskMutation = useDeleteAdminTaskMutation();
   const [showSuccess, setShowSuccess] = useState(false);
 
   const initialFormValues = useMemo(
@@ -144,7 +146,7 @@ export function AdminTaskEditForm({ taskId }: AdminTaskEditFormProps) {
           submitPendingLabel="Saving..."
           isSubmitting={updateTaskMutation.isPending}
           errorMessage={updateTaskMutation.isError ? mutationError : null}
-          onSubmit={async (values: AdminTaskFormValues) => {
+          onSubmit={async (values: AdminTaskFormValues, imageFile: File | null) => {
             setShowSuccess(false);
             const rewardAttributes = buildRewardAttributes(values);
 
@@ -154,6 +156,7 @@ export function AdminTaskEditForm({ taskId }: AdminTaskEditFormProps) {
               title: values.title.trim(),
               description: values.description.trim(),
               image: values.image.trim(),
+              ...(imageFile ? { imageFile } : {}),
               rewardMoney: values.rewardMoney,
               ...(values.rewardGameScore !== undefined
                 ? { rewardGameScore: values.rewardGameScore }
@@ -175,6 +178,26 @@ export function AdminTaskEditForm({ taskId }: AdminTaskEditFormProps) {
             setShowSuccess(true);
           }}
         />
+
+        <div className="border-t pt-4">
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={deleteTaskMutation.isPending}
+            onClick={async () => {
+              const shouldDelete = window.confirm("Delete this task? This action cannot be undone.");
+              if (!shouldDelete) {
+                return;
+              }
+
+              await deleteTaskMutation.mutateAsync(taskId);
+              await queryClient.invalidateQueries({ queryKey: ["admin", "tasks"] });
+              router.push("/admin/tasks");
+            }}
+          >
+            {deleteTaskMutation.isPending ? "Deleting..." : "Delete Task"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

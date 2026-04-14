@@ -1,3 +1,4 @@
+export * from './admin-delete-item-response.dto';
 export * from './create-item-response.dto';
 export * from './create-item.dto';
 export * from './get-items-query.dto';

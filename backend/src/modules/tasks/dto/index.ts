@@ -1,3 +1,4 @@
+export * from './admin-delete-task-response.dto';
 export * from './admin-tasks-list-response.dto';
 export * from './create-task.dto';
 export * from './get-admin-tasks-query.dto';

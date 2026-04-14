@@ -84,6 +84,14 @@ export class TaskRepository {
     });
   }
 
+  async deleteById(id: string, tx?: Prisma.TransactionClient): Promise<boolean> {
+    const result = await this.getClient(tx).task.deleteMany({
+      where: { id },
+    });
+
+    return result.count > 0;
+  }
+
   async findByIdForUpdate(id: string, tx: Prisma.TransactionClient): Promise<Task | null> {
     const lockedRows = await tx.$queryRaw<Array<{ id: string }>>`
       SELECT "id"
