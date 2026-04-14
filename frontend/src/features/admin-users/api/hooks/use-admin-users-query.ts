@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/shared/config/query-keys";
 
-import { getAdminUsers } from "./get-admin-users";
+import { getAdminUsers } from "../requests/get-admin-users";
 
 export function useAdminUsersQuery(accessToken: string | null, isSessionInitialized: boolean) {
   return useQuery({

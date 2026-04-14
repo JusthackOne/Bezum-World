@@ -2,7 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 
-import { deleteAdminUser } from "./delete-admin-user";
+import { deleteAdminUser } from "../requests/delete-admin-user";
 
 export function useDeleteAdminUserMutation(accessToken: string | null) {
   return useMutation({
