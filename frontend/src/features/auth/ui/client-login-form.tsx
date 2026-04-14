@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { useClientLoginMutation } from "@/features/auth/api/use-client-login-mutation";
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
+import { publicUserRoutes } from "@/features/public-user/routes";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
@@ -21,10 +22,6 @@ const clientLoginSchema = z.object({
 });
 
 type ClientLoginFormValues = z.infer<typeof clientLoginSchema>;
-
-function getPublicUserRoute(username: string): string {
-  return `/users/${encodeURIComponent(username)}`;
-}
 
 export function ClientLoginForm() {
   const router = useRouter();
@@ -55,7 +52,7 @@ export function ClientLoginForm() {
       return;
     }
 
-    router.replace(getPublicUserRoute(username));
+    router.replace(publicUserRoutes.profile(username));
   }, [isInitialized, router, session?.accessToken, session?.user.username]);
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -69,7 +66,7 @@ export function ClientLoginForm() {
       return;
     }
 
-    router.replace(getPublicUserRoute(username));
+    router.replace(publicUserRoutes.profile(username));
   });
 
   const mutationError =

@@ -4,10 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
-
-function getPublicUserRoute(username: string): string {
-  return `/users/${encodeURIComponent(username)}`;
-}
+import { publicUserRoutes } from "@/features/public-user/routes";
 
 export default function ClientUserPage() {
   const router = useRouter();
@@ -30,7 +27,7 @@ export default function ClientUserPage() {
       return;
     }
 
-    router.replace(getPublicUserRoute(username));
+    router.replace(publicUserRoutes.profile(username));
   }, [isInitialized, router, session?.user.username]);
 
   return null;
