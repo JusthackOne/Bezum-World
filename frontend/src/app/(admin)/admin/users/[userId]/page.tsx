@@ -1,4 +1,4 @@
-import { AdminUserEditStub } from "@/features/admin-users/ui";
+import { AdminUserEditForm } from "@/features/admin-users/ui";
 import { AppShell } from "@/widgets/layout/app-shell";
 
 interface AdminUserEditPageProps {
@@ -10,7 +10,7 @@ interface AdminUserEditPageProps {
 export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
   return (
     <AppShell>
-      <AdminUserEditStub userId={params.userId} />
+      <AdminUserEditForm userId={params.userId} />
     </AppShell>
   );
 }

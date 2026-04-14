@@ -24,6 +24,13 @@ export class PublicUserProfileDto {
   profilePhoto!: string | null;
 
   @ApiProperty({
+    description: 'Current user balance',
+    example: 500,
+    minimum: 0,
+  })
+  balance!: number;
+
+  @ApiProperty({
     description: 'Public user attributes',
     type: PublicUserAttributesDto,
   })

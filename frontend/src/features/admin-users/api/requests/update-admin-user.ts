@@ -1,0 +1,81 @@
+import { isAxiosError } from "axios";
+
+import { getErrorMessage, isApiSuccessResponse } from "@/shared/lib/api-response";
+import { adminHttpClient } from "@/shared/lib/admin-http-client";
+import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
+
+import type { AdminUpdateUserInput, AdminUpdateUserResponse } from "../../model/admin-user.types";
+
+function buildJsonPayload(payload: AdminUpdateUserInput): Record<string, unknown> {
+  return {
+    ...(payload.username !== undefined ? { username: payload.username } : {}),
+    ...(payload.avatarUrl !== undefined ? { avatarUrl: payload.avatarUrl } : {}),
+    ...(payload.balance !== undefined ? { balance: payload.balance } : {}),
+    ...(payload.strength !== undefined ? { strength: payload.strength } : {}),
+    ...(payload.charisma !== undefined ? { charisma: payload.charisma } : {}),
+    ...(payload.endurance !== undefined ? { endurance: payload.endurance } : {}),
+    ...(payload.intelligence !== undefined ? { intelligence: payload.intelligence } : {}),
+  };
+}
+
+function buildMultipartPayload(payload: AdminUpdateUserInput): FormData {
+  const formData = new FormData();
+
+  if (payload.username !== undefined) {
+    formData.append("username", payload.username);
+  }
+
+  if (payload.avatarUrl !== undefined && payload.avatarUrl !== null) {
+    formData.append("avatarUrl", payload.avatarUrl);
+  }
+
+  if (payload.balance !== undefined) {
+    formData.append("balance", String(payload.balance));
+  }
+
+  if (payload.strength !== undefined) {
+    formData.append("strength", String(payload.strength));
+  }
+
+  if (payload.charisma !== undefined) {
+    formData.append("charisma", String(payload.charisma));
+  }
+
+  if (payload.endurance !== undefined) {
+    formData.append("endurance", String(payload.endurance));
+  }
+
+  if (payload.intelligence !== undefined) {
+    formData.append("intelligence", String(payload.intelligence));
+  }
+
+  if (payload.avatarFile instanceof File) {
+    formData.append("avatar", payload.avatarFile, payload.avatarFile.name);
+  }
+
+  return formData;
+}
+
+export async function updateAdminUser(payload: AdminUpdateUserInput): Promise<AdminUpdateUserResponse> {
+  try {
+    const hasAvatarFile = payload.avatarFile instanceof File;
+    const requestBody = hasAvatarFile ? buildMultipartPayload(payload) : buildJsonPayload(payload);
+
+    const response = await adminHttpClient.patch<ApiSuccessResponse<AdminUpdateUserResponse>>(
+      `/admin/users/${payload.userId}`,
+      requestBody,
+    );
+
+    if (!isApiSuccessResponse(response.data)) {
+      throw new Error("Unexpected server response");
+    }
+
+    return response.data.data;
+  } catch (error: unknown) {
+    if (isAxiosError(error)) {
+      throw new Error(getErrorMessage(error.response?.data, "Failed to update user"));
+    }
+
+    throw error;
+  }
+}

@@ -6,6 +6,7 @@ export interface PublicUserProfileRecord {
   username: string;
   avatarUrl: string | null;
   lastTimeLoggedIn: Date | null;
+  balance: number;
   strength: number;
   charisma: number;
   endurance: number;
@@ -23,6 +24,7 @@ export class UserProfileRepository {
         username: true,
         avatarUrl: true,
         lastTimeLoggedIn: true,
+        balance: true,
         strength: true,
         charisma: true,
         endurance: true,

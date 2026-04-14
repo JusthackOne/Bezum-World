@@ -32,6 +32,7 @@ export class UsersService {
       username: account.username,
       lastLoginAt: account.lastTimeLoggedIn?.toISOString() ?? null,
       profilePhoto: account.avatarUrl,
+      balance: account.balance,
       attributes: {
         strength: account.strength,
         charisma: account.charisma,
