@@ -12,6 +12,7 @@ import { AccountRepository } from '../auth/repositories';
 import { CreateItemDto, CreateItemResponseDto, PurchaseItemResponseDto } from './dto';
 import { ItemRepository } from './repositories';
 import type { ItemLocation } from './types/item-location.type';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ItemsService {
@@ -19,6 +20,7 @@ export class ItemsService {
     private readonly prisma: PrismaService,
     private readonly itemRepository: ItemRepository,
     private readonly accountRepository: AccountRepository,
+    private readonly configService: ConfigService,
   ) {}
 
   async createByAdmin(payload: CreateItemDto): Promise<CreateItemResponseDto> {
@@ -73,7 +75,11 @@ export class ItemsService {
         throw new BadRequestException('Insufficient balance');
       }
 
-      const wasItemAssigned = await this.itemRepository.assignOwnerIfUnowned(item.id, account.id, tx);
+      const wasItemAssigned = await this.itemRepository.assignOwnerIfUnowned(
+        item.id,
+        account.id,
+        tx,
+      );
 
       if (!wasItemAssigned) {
         throw new ConflictException('Item is not available for purchase');
@@ -101,7 +107,8 @@ export class ItemsService {
       owner_user_id: item.ownerUserId,
       name: item.name,
       description: item.description,
-      image_url: item.imageUrl,
+      image_url:
+        this.configService.get('APP_DOMAIN') + ':' + this.configService.get('PORT') + item.imageUrl,
       strength: item.strength,
       charisma: item.charisma,
       agility: item.agility,

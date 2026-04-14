@@ -11,6 +11,7 @@ import {
   UserItemsResponseDto,
 } from './dto';
 import { UserItemsRepository, UserProfileRepository } from './repositories';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UsersService {
@@ -18,6 +19,7 @@ export class UsersService {
     private readonly userProfileRepository: UserProfileRepository,
     private readonly userItemsRepository: UserItemsRepository,
     private readonly accountRepository: AccountRepository,
+    private readonly configService: ConfigService,
   ) {}
 
   async getPublicProfileByUsername(username: string): Promise<PublicUserProfileDto> {
@@ -56,7 +58,11 @@ export class UsersService {
         id: item.id,
         name: item.name,
         description: item.description,
-        image_url: item.imageUrl,
+        image_url:
+          this.configService.get('APP_DOMAIN') +
+          ':' +
+          this.configService.get('PORT') +
+          item.imageUrl,
         strength: item.strength,
         charisma: item.charisma,
         agility: item.agility,

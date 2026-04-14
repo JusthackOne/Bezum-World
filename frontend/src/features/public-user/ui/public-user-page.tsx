@@ -11,8 +11,16 @@ import {
 import { useMemo, useState, type ComponentType } from "react";
 
 import { usePublicUserItemsQuery, usePublicUserProfileQuery } from "@/features/public-user/api";
-import type { PublicUserItem, PublicUserProfile } from "@/features/public-user/model/public-user.types";
-import { formatBalance, getItemAttributeRows, itemRarityStyles, resolveAssetUrl } from "@/shared/lib/item-display";
+import type {
+  PublicUserItem,
+  PublicUserProfile,
+} from "@/features/public-user/model/public-user.types";
+import {
+  formatBalance,
+  getItemAttributeRows,
+  itemRarityStyles,
+  resolveAssetUrl,
+} from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -100,7 +108,9 @@ function UserInfoCard({
               <CoinsIcon className="size-4" />
               Balance
             </span>
-            <span className="text-base font-semibold tabular-nums">{formatBalance(profile.balance)}</span>
+            <span className="text-base font-semibold tabular-nums">
+              {formatBalance(profile.balance)}
+            </span>
           </div>
         </div>
 
@@ -139,12 +149,6 @@ function UserItemsCard({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex justify-end">
-            <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={isRefetching}>
-              Refresh items
-            </Button>
-          </div>
-
           {isPending ? (
             <p className="text-muted-foreground text-sm">Loading items...</p>
           ) : items.length === 0 ? (
@@ -180,7 +184,11 @@ function UserItemsCard({
                     <div className="aspect-[4/3] w-full overflow-hidden bg-muted/35">
                       {imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                        <img
+                          src={imageUrl}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                           No image
@@ -202,7 +210,9 @@ function UserItemsCard({
                                 className="flex items-center justify-between rounded-md border bg-muted/15 px-2 py-1.5"
                               >
                                 <Icon className="size-3.5 text-muted-foreground" />
-                                <span className="text-xs font-medium tabular-nums">{attribute.value}</span>
+                                <span className="text-xs font-medium tabular-nums">
+                                  {attribute.value}
+                                </span>
                               </div>
                             );
                           })}

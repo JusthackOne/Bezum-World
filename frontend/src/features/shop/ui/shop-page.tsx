@@ -7,7 +7,12 @@ import { CoinsIcon } from "lucide-react";
 import { usePurchaseShopItemMutation, useShopItemsQuery } from "@/features/shop/api";
 import type { ShopItem } from "@/features/shop/model/shop-item.types";
 import { queryKeys } from "@/shared/config/query-keys";
-import { formatBalance, getItemAttributeRows, itemRarityStyles, resolveAssetUrl } from "@/shared/lib/item-display";
+import {
+  formatBalance,
+  getItemAttributeRows,
+  itemRarityStyles,
+  resolveAssetUrl,
+} from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -66,16 +71,12 @@ export function ShopPage() {
         <CardHeader>
           <CardTitle>Shop</CardTitle>
           <CardDescription>
-            {itemsQuery.isPending ? "Loading items..." : `${items.length} item${items.length === 1 ? "" : "s"} in shop`}
+            {itemsQuery.isPending
+              ? "Loading items..."
+              : `${items.length} item${items.length === 1 ? "" : "s"} in shop`}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex justify-end">
-            <Button type="button" variant="outline" size="sm" onClick={() => itemsQuery.refetch()} disabled={itemsQuery.isRefetching}>
-              Refresh items
-            </Button>
-          </div>
-
           {purchaseError ? <p className="text-sm text-destructive">{purchaseError}</p> : null}
 
           {itemsQuery.isPending ? (
@@ -114,7 +115,11 @@ export function ShopPage() {
                     <div className="aspect-[4/3] w-full overflow-hidden bg-muted/35">
                       {imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                        <img
+                          src={imageUrl}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                           No image
@@ -136,7 +141,9 @@ export function ShopPage() {
                                 className="flex items-center justify-between rounded-md border bg-muted/15 px-2 py-1.5"
                               >
                                 <Icon className="size-3.5 text-muted-foreground" />
-                                <span className="text-xs font-medium tabular-nums">{attribute.value}</span>
+                                <span className="text-xs font-medium tabular-nums">
+                                  {attribute.value}
+                                </span>
                               </div>
                             );
                           })}
@@ -172,7 +179,11 @@ export function ShopPage() {
         </CardContent>
       </Card>
 
-      <ItemDetailsModal item={selectedItem} open={selectedItem !== null} onOpenChange={(open) => !open && setSelectedItem(null)} />
+      <ItemDetailsModal
+        item={selectedItem}
+        open={selectedItem !== null}
+        onOpenChange={(open) => !open && setSelectedItem(null)}
+      />
     </>
   );
 }
