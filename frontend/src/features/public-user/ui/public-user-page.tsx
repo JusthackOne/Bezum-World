@@ -8,14 +8,15 @@ import {
   SparklesIcon,
   UserCircle2Icon,
 } from "lucide-react";
-import { useMemo, type ComponentType } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 
 import { usePublicUserItemsQuery, usePublicUserProfileQuery } from "@/features/public-user/api";
 import type { PublicUserItem, PublicUserProfile } from "@/features/public-user/model/public-user.types";
-import { env } from "@/shared/config/env";
+import { formatBalance, getItemAttributeRows, itemRarityStyles, resolveAssetUrl } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { ItemDetailsModal } from "@/shared/ui/item-details-modal";
 
 interface PublicUserPageProps {
   username: string;
@@ -33,72 +34,12 @@ const attributeVisuals: AttributeVisualConfig[] = [
   { key: "intelligence", icon: BrainIcon },
 ];
 
-const itemRarityStyles: Record<string, { borderClassName: string; glowClassName: string }> = {
-  unterlyanskiy: {
-    borderClassName: "border-slate-300",
-    glowClassName: "shadow-[0_0_0_1px_rgba(148,163,184,0.25),0_8px_24px_rgba(15,23,42,0.08)]",
-  },
-  basic_minimum: {
-    borderClassName: "border-emerald-300",
-    glowClassName: "shadow-[0_0_0_1px_rgba(16,185,129,0.25),0_10px_28px_rgba(16,185,129,0.16)]",
-  },
-  sigma: {
-    borderClassName: "border-sky-300",
-    glowClassName: "shadow-[0_0_0_1px_rgba(14,165,233,0.3),0_10px_28px_rgba(14,165,233,0.2)]",
-  },
-  bezumnyy: {
-    borderClassName: "border-amber-300",
-    glowClassName: "shadow-[0_0_0_1px_rgba(245,158,11,0.32),0_10px_30px_rgba(245,158,11,0.26)]",
-  },
-};
-
-function resolveAssetUrl(value: string): string {
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("blob:")) {
-    return value;
-  }
-
-  return `${env.NEXT_PUBLIC_API_BASE_URL}${value}`;
-}
-
-function formatBalance(value: number): string {
-  return new Intl.NumberFormat("en-US").format(value);
-}
-
-function getItemEnduranceValue(item: PublicUserItem): number | null {
-  if (typeof item.endurance === "number") {
-    return item.endurance;
-  }
-
-  if (typeof item.agility === "number") {
-    return item.agility;
-  }
-
-  return null;
-}
-
 function getUserAttributeRows(profile: PublicUserProfile) {
   return attributeVisuals.map(({ key, icon: Icon }) => ({
     key,
     icon: Icon,
     value: profile.attributes[key],
   }));
-}
-
-function getItemAttributeRows(item: PublicUserItem) {
-  const mappedValues = {
-    strength: item.strength,
-    charisma: item.charisma,
-    endurance: getItemEnduranceValue(item),
-    intelligence: item.intelligence,
-  };
-
-  return attributeVisuals
-    .map(({ key, icon: Icon }) => ({
-      key,
-      icon: Icon,
-      value: mappedValues[key],
-    }))
-    .filter((attribute) => typeof attribute.value === "number");
 }
 
 function UserInfoCard({
@@ -184,94 +125,113 @@ function UserItemsCard({
   isPending: boolean;
   isRefetching: boolean;
 }) {
+  const [selectedItem, setSelectedItem] = useState<PublicUserItem | null>(null);
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{profileUsername} Items</CardTitle>
-        <CardDescription>
-          {isPending
-            ? "Loading items..."
-            : `${items.length} item${items.length === 1 ? "" : "s"} in inventory`}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex justify-end">
-          <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={isRefetching}>
-            Refresh items
-          </Button>
-        </div>
-
-        {isPending ? (
-          <p className="text-muted-foreground text-sm">Loading items...</p>
-        ) : items.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No items found for this user.</p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {items.map((item) => {
-              const rarityStyle = itemRarityStyles[item.rarity] ?? {
-                borderClassName: "border-border",
-                glowClassName: "shadow-sm",
-              };
-              const itemAttributes = getItemAttributeRows(item);
-              const imageUrl = item.image_url ? resolveAssetUrl(item.image_url) : null;
-
-              return (
-                <article
-                  key={item.id}
-                  className={cn(
-                    "flex h-full flex-col overflow-hidden rounded-xl border bg-card transition-shadow",
-                    rarityStyle.borderClassName,
-                    rarityStyle.glowClassName,
-                  )}
-                >
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-muted/35">
-                    {imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={imageUrl} alt={item.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                        No image
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex h-full flex-col gap-3 p-4">
-                    <h2 className="text-base leading-tight font-semibold">{item.name}</h2>
-
-                    {itemAttributes.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        {itemAttributes.map((attribute) => {
-                          const Icon = attribute.icon;
-
-                          return (
-                            <div
-                              key={attribute.key}
-                              className="flex items-center justify-between rounded-md border bg-muted/15 px-2 py-1.5"
-                            >
-                              <Icon className="size-3.5 text-muted-foreground" />
-                              <span className="text-xs font-medium tabular-nums">{attribute.value}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground text-xs">No attributes</p>
-                    )}
-
-                    <div className="mt-auto flex items-center justify-center pt-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold">
-                        <CoinsIcon className="size-4" />
-                        {formatBalance(item.price)}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>{profileUsername} Items</CardTitle>
+          <CardDescription>
+            {isPending
+              ? "Loading items..."
+              : `${items.length} item${items.length === 1 ? "" : "s"} in inventory`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={isRefetching}>
+              Refresh items
+            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {isPending ? (
+            <p className="text-muted-foreground text-sm">Loading items...</p>
+          ) : items.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No items found for this user.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {items.map((item) => {
+                const rarityStyle = itemRarityStyles[item.rarity] ?? {
+                  borderClassName: "border-border",
+                  glowClassName: "shadow-sm",
+                };
+                const itemAttributes = getItemAttributeRows(item);
+                const imageUrl = item.image_url ? resolveAssetUrl(item.image_url) : null;
+
+                return (
+                  <article
+                    key={item.id}
+                    className={cn(
+                      "flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border bg-card transition-shadow",
+                      rarityStyle.borderClassName,
+                      rarityStyle.glowClassName,
+                    )}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedItem(item)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedItem(item);
+                      }
+                    }}
+                  >
+                    <div className="aspect-[4/3] w-full overflow-hidden bg-muted/35">
+                      {imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                          No image
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex h-full flex-col gap-3 p-4">
+                      <h2 className="text-base leading-tight font-semibold">{item.name}</h2>
+
+                      {itemAttributes.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {itemAttributes.map((attribute) => {
+                            const Icon = attribute.icon;
+
+                            return (
+                              <div
+                                key={attribute.key}
+                                className="flex items-center justify-between rounded-md border bg-muted/15 px-2 py-1.5"
+                              >
+                                <Icon className="size-3.5 text-muted-foreground" />
+                                <span className="text-xs font-medium tabular-nums">{attribute.value}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">No attributes</p>
+                      )}
+
+                      <div className="mt-auto flex items-center justify-center pt-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold">
+                          <CoinsIcon className="size-4" />
+                          {formatBalance(item.price)}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <ItemDetailsModal
+        item={selectedItem}
+        open={selectedItem !== null}
+        onOpenChange={(open) => !open && setSelectedItem(null)}
+      />
+    </>
   );
 }
 
