@@ -10,9 +10,24 @@ export async function createAdminUser(
   payload: AdminCreateUserInput,
 ): Promise<AdminCreateUserResponse> {
   try {
+    const formData = new FormData();
+    formData.append("username", payload.username);
+    formData.append("strength", String(payload.strength));
+    formData.append("charisma", String(payload.charisma));
+    formData.append("endurance", String(payload.endurance));
+    formData.append("intelligence", String(payload.intelligence));
+
+    if (payload.balance !== undefined) {
+      formData.append("balance", String(payload.balance));
+    }
+
+    if (payload.avatarFile instanceof File) {
+      formData.append("avatar", payload.avatarFile, payload.avatarFile.name);
+    }
+
     const response = await adminHttpClient.post<ApiSuccessResponse<AdminCreateUserResponse>>(
       "/users",
-      payload,
+      formData,
     );
 
     if (!isApiSuccessResponse(response.data)) {

@@ -9,6 +9,7 @@ export type AccountWithAuthCode = Prisma.AccountGetPayload<{
 export interface CreateAccountInput {
   username: string;
   avatarUrl?: string | undefined;
+  balance?: number;
   strength: number;
   charisma: number;
   endurance: number;
@@ -34,6 +35,7 @@ export class AccountRepository {
       data: {
         username: input.username,
         ...(input.avatarUrl !== undefined ? { avatarUrl: input.avatarUrl } : {}),
+        ...(input.balance !== undefined ? { balance: input.balance } : {}),
         strength: input.strength,
         charisma: input.charisma,
         endurance: input.endurance,

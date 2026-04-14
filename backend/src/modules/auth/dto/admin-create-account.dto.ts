@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class AdminCreateAccountDto {
@@ -20,12 +21,24 @@ export class AdminCreateAccountDto {
   @MaxLength(2048)
   avatarUrl?: string;
 
+  @ApiPropertyOptional({
+    description: 'Initial user account balance',
+    example: 500,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  balance?: number;
+
   @ApiProperty({
     description: 'Strength attribute value in range 0..100',
     example: 10,
     minimum: 0,
     maximum: 100,
   })
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -37,6 +50,7 @@ export class AdminCreateAccountDto {
     minimum: 0,
     maximum: 100,
   })
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -48,6 +62,7 @@ export class AdminCreateAccountDto {
     minimum: 0,
     maximum: 100,
   })
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -59,6 +74,7 @@ export class AdminCreateAccountDto {
     minimum: 0,
     maximum: 100,
   })
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)

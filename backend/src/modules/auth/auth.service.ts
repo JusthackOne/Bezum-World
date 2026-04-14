@@ -154,7 +154,10 @@ export class AuthService implements OnModuleInit {
     return this.toAuthenticatedAdmin(admin);
   }
 
-  async createAccountByAdmin(payload: AdminCreateAccountDto): Promise<AdminCreateAccountResponseDto> {
+  async createAccountByAdmin(
+    payload: AdminCreateAccountDto,
+    uploadedAvatarUrl?: string,
+  ): Promise<AdminCreateAccountResponseDto> {
     for (let attempt = 1; attempt <= MAX_AUTH_CODE_GENERATION_ATTEMPTS; attempt += 1) {
       const generatedCode = this.generateAuthCode();
 
@@ -163,7 +166,8 @@ export class AuthService implements OnModuleInit {
           const account = await this.accountRepository.create(
             {
               username: payload.username,
-              avatarUrl: payload.avatarUrl,
+              avatarUrl: uploadedAvatarUrl ?? payload.avatarUrl,
+              ...(payload.balance !== undefined ? { balance: payload.balance } : {}),
               strength: payload.strength,
               charisma: payload.charisma,
               endurance: payload.endurance,

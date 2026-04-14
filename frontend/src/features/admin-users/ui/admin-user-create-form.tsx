@@ -17,7 +17,7 @@ import { Input } from "@/shared/ui/input";
 
 const createUserSchema = z.object({
   username: z.string().trim().min(1, "Username is required").max(64),
-  avatarUrl: z.string().max(2048).optional(),
+  balance: z.number().int().min(0),
   strength: z.number().int().min(0).max(100),
   charisma: z.number().int().min(0).max(100),
   endurance: z.number().int().min(0).max(100),
@@ -28,7 +28,7 @@ type CreateUserFormValues = z.infer<typeof createUserSchema>;
 
 const defaultFormValues: CreateUserFormValues = {
   username: "",
-  avatarUrl: "",
+  balance: 0,
   strength: 0,
   charisma: 0,
   endurance: 0,
@@ -40,6 +40,7 @@ export function AdminUserCreateForm() {
   const queryClient = useQueryClient();
   const createUserMutation = useCreateAdminUserMutation();
   const [createdCode, setCreatedCode] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const session = useAdminAuthStore((state) => state.session);
   const isInitialized = useAdminAuthStore((state) => state.isInitialized);
@@ -67,16 +68,18 @@ export function AdminUserCreateForm() {
   const onSubmit = form.handleSubmit(async (values) => {
     const payload = {
       username: values.username.trim(),
-      ...(values.avatarUrl?.trim() ? { avatarUrl: values.avatarUrl.trim() } : {}),
+      balance: values.balance,
       strength: values.strength,
       charisma: values.charisma,
       endurance: values.endurance,
       intelligence: values.intelligence,
+      avatarFile,
     };
 
     const result = await createUserMutation.mutateAsync(payload);
     setCreatedCode(result.code);
     await queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
+    setAvatarFile(null);
     form.reset(defaultFormValues);
   });
 
@@ -134,16 +137,37 @@ export function AdminUserCreateForm() {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="avatarUrl" className="text-sm font-medium">
-              Avatar URL (optional)
+            <label htmlFor="avatar" className="text-sm font-medium">
+              Avatar (optional)
             </label>
-            <Input id="avatarUrl" placeholder="https://cdn.example.com/avatar.png" {...form.register("avatarUrl")} />
-            {form.formState.errors.avatarUrl ? (
-              <p className="text-xs text-destructive">{form.formState.errors.avatarUrl.message}</p>
-            ) : null}
+            <Input
+              id="avatar"
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={(event) => {
+                const nextFile = event.target.files?.[0] ?? null;
+                setAvatarFile(nextFile);
+              }}
+            />
+            <p className="text-muted-foreground text-xs">Allowed: JPG, PNG, WEBP, GIF (up to 5MB).</p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label htmlFor="balance" className="text-sm font-medium">
+                Balance
+              </label>
+              <Input
+                id="balance"
+                type="number"
+                min={0}
+                {...form.register("balance", { valueAsNumber: true })}
+              />
+              {form.formState.errors.balance ? (
+                <p className="text-xs text-destructive">{form.formState.errors.balance.message}</p>
+              ) : null}
+            </div>
+
             <div className="space-y-2">
               <label htmlFor="strength" className="text-sm font-medium">
                 Strength

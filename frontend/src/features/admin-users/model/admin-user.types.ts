@@ -19,7 +19,8 @@ export interface AdminDeleteUserResponse {
 
 export interface AdminCreateUserInput {
   username: string;
-  avatarUrl?: string;
+  avatarFile?: File | null;
+  balance?: number;
   strength: number;
   charisma: number;
   endurance: number;

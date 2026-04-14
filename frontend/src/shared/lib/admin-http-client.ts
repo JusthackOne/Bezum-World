@@ -177,9 +177,6 @@ async function refreshAdminAccessToken(): Promise<string> {
 export const adminHttpClient = axios.create({
   baseURL: env.NEXT_PUBLIC_API_BASE_URL,
   withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 adminHttpClient.interceptors.request.use((config) => {
