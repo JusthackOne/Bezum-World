@@ -13,7 +13,6 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
-  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
@@ -25,8 +24,6 @@ import type { Request, Response } from 'express';
 
 import { Public } from '../../common/decorators/public.decorator';
 import { AdminAuthTokensResponseDto } from './dto/admin-auth-tokens-response.dto';
-import { AdminCreateAccountDto } from './dto/admin-create-account.dto';
-import { AdminCreateAccountResponseDto } from './dto/admin-create-account-response.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { AuthenticatedAdminDto } from './dto/authenticated-admin.dto';
 import { AuthenticatedUserDto } from './dto/authenticated-user.dto';
@@ -139,21 +136,6 @@ export class AuthController {
     return {
       message: 'Logged out',
     };
-  }
-
-  @Post('admin/accounts')
-  @UseGuards(AccessTokenGuard, AdminOnlyGuard)
-  @ApiOperation({
-    summary: 'Create account and auto-generate unique login code',
-    description: 'Available only for authenticated admin.',
-  })
-  @ApiBearerAuth('access-token')
-  @ApiBody({ type: AdminCreateAccountDto })
-  @ApiCreatedResponse({ type: AdminCreateAccountResponseDto })
-  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
-  @ApiForbiddenResponse({ description: 'Admin access is required' })
-  async createAccount(@Body() body: AdminCreateAccountDto): Promise<AdminCreateAccountResponseDto> {
-    return this.authService.createAccountByAdmin(body);
   }
 
   @Get('admin/me')

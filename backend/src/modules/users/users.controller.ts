@@ -1,6 +1,9 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import {
+  ApiBody,
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -10,7 +13,11 @@ import {
 } from '@nestjs/swagger';
 
 import { Public } from '../../common/decorators/public.decorator';
+import { AdminCreateAccountDto } from '../auth/dto/admin-create-account.dto';
+import { AdminCreateAccountResponseDto } from '../auth/dto/admin-create-account-response.dto';
+import { AuthService } from '../auth/auth.service';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import { AdminOnlyGuard } from '../auth/guards/admin-only.guard';
 import { GetPublicUserProfileParamsDto } from './dto/get-public-user-profile-params.dto';
 import { PublicUserProfileDto } from './dto/public-user-profile.dto';
 import { UserItemsResponseDto } from './dto/user-items-response.dto';
@@ -19,7 +26,25 @@ import { UsersService } from './users.service';
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly authService: AuthService,
+  ) {}
+
+  @Post()
+  @UseGuards(AccessTokenGuard, AdminOnlyGuard)
+  @ApiOperation({
+    summary: 'Create account and auto-generate unique login code',
+    description: 'Available only for authenticated admin.',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiBody({ type: AdminCreateAccountDto })
+  @ApiCreatedResponse({ type: AdminCreateAccountResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Admin access is required' })
+  async createUser(@Body() body: AdminCreateAccountDto): Promise<AdminCreateAccountResponseDto> {
+    return this.authService.createAccountByAdmin(body);
+  }
 
   @Get(':username/items')
   @UseGuards(AccessTokenGuard)

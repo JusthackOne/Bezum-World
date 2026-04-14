@@ -41,7 +41,7 @@ bun run start:dev
 - `POST /api/auth/admin/login`
 - `POST /api/auth/admin/refresh`
 - `POST /api/auth/logout`
-- `POST /api/auth/admin/accounts`
+- `POST /api/users`
 - `GET /api/auth/admin/me`
 - `GET /api/auth/me`
 - Swagger UI: `GET /docs`
