@@ -3,4 +3,6 @@ export const queryKeys = {
   adminUsers: ["admin", "users"] as const,
   adminItems: (location: "all" | "shop" | "inventory") => ["admin", "items", location] as const,
   userProfile: (username: string) => ["users", "profile", username] as const,
+  publicUserProfile: (username: string) => ["users", "public-profile", username] as const,
+  publicUserItems: (username: string) => ["users", "items", username] as const,
 };

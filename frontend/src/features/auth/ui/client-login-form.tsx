@@ -22,6 +22,10 @@ const clientLoginSchema = z.object({
 
 type ClientLoginFormValues = z.infer<typeof clientLoginSchema>;
 
+function getPublicUserRoute(username: string): string {
+  return `/users/${encodeURIComponent(username)}`;
+}
+
 export function ClientLoginForm() {
   const router = useRouter();
   const loginMutation = useClientLoginMutation();
@@ -46,8 +50,13 @@ export function ClientLoginForm() {
       return;
     }
 
-    router.replace("/user");
-  }, [isInitialized, router, session?.accessToken]);
+    const username = session.user.username.trim();
+    if (!username) {
+      return;
+    }
+
+    router.replace(getPublicUserRoute(username));
+  }, [isInitialized, router, session?.accessToken, session?.user.username]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     const result = await loginMutation.mutateAsync({
@@ -55,7 +64,12 @@ export function ClientLoginForm() {
     });
 
     setSession(result);
-    router.replace("/user");
+    const username = result.user.username.trim();
+    if (!username) {
+      return;
+    }
+
+    router.replace(getPublicUserRoute(username));
   });
 
   const mutationError =
