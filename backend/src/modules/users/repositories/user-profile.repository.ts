@@ -8,6 +8,7 @@ export interface PublicUserProfileRecord {
   avatarUrl: string | null;
   lastTimeLoggedIn: Date | null;
   balance: number;
+  gameScore: number;
   strength: number;
   charisma: number;
   endurance: number;
@@ -27,6 +28,7 @@ export class UserProfileRepository {
         avatarUrl: true,
         lastTimeLoggedIn: true,
         balance: true,
+        gameScore: true,
         strength: true,
         charisma: true,
         endurance: true,

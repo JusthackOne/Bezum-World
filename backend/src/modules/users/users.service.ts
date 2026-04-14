@@ -54,6 +54,7 @@ export class UsersService {
       lastLoginAt: account.lastTimeLoggedIn?.toISOString() ?? null,
       profilePhoto: account.avatarUrl,
       balance: account.balance,
+      gameScore: account.gameScore,
       attributes: {
         strength: account.strength,
         charisma: account.charisma,
@@ -210,6 +211,7 @@ export class UsersService {
       username: account.username,
       avatarUrl: account.avatarUrl ?? null,
       balance: account.balance,
+      gameScore: account.gameScore,
       strength: account.strength,
       charisma: account.charisma,
       endurance: account.endurance,

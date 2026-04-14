@@ -28,6 +28,13 @@ export class AuthenticatedUserDto {
   balance!: number;
 
   @ApiProperty({
+    description: 'Total accumulated game score',
+    example: 1200,
+    minimum: 0,
+  })
+  gameScore!: number;
+
+  @ApiProperty({
     description: 'Strength attribute value in range 0..100',
     example: 10,
     minimum: 0,

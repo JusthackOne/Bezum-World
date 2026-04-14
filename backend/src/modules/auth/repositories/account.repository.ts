@@ -10,6 +10,7 @@ export interface CreateAccountInput {
   username: string;
   avatarUrl?: string | undefined;
   balance?: number;
+  gameScore?: number;
   strength: number;
   charisma: number;
   endurance: number;
@@ -20,10 +21,20 @@ export interface UpdateAccountInput {
   username?: string;
   avatarUrl?: string | null;
   balance?: number;
+  gameScore?: number;
   strength?: number;
   charisma?: number;
   endurance?: number;
   intelligence?: number;
+}
+
+export interface ApplyTaskRewardsInput {
+  rewardMoney: number;
+  rewardGameScore: number;
+  rewardStrength: number;
+  rewardIntelligence: number;
+  rewardCharisma: number;
+  rewardEndurance: number;
 }
 
 @Injectable()
@@ -36,6 +47,7 @@ export class AccountRepository {
         username: input.username,
         ...(input.avatarUrl !== undefined ? { avatarUrl: input.avatarUrl } : {}),
         ...(input.balance !== undefined ? { balance: input.balance } : {}),
+        ...(input.gameScore !== undefined ? { gameScore: input.gameScore } : {}),
         strength: input.strength,
         charisma: input.charisma,
         endurance: input.endurance,
@@ -95,6 +107,36 @@ export class AccountRepository {
     });
 
     return result.count > 0;
+  }
+
+  async applyTaskRewards(
+    id: string,
+    input: ApplyTaskRewardsInput,
+    tx: Prisma.TransactionClient,
+  ): Promise<Account> {
+    return this.getClient(tx).account.update({
+      where: { id },
+      data: {
+        balance: {
+          increment: input.rewardMoney,
+        },
+        gameScore: {
+          increment: input.rewardGameScore,
+        },
+        strength: {
+          increment: input.rewardStrength,
+        },
+        intelligence: {
+          increment: input.rewardIntelligence,
+        },
+        charisma: {
+          increment: input.rewardCharisma,
+        },
+        endurance: {
+          increment: input.rewardEndurance,
+        },
+      },
+    });
   }
 
   async updateLastTimeLoggedIn(

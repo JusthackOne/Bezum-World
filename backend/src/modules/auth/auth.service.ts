@@ -356,6 +356,7 @@ export class AuthService implements OnModuleInit {
       username: account.username,
       avatarUrl: account.avatarUrl ?? null,
       balance: account.balance,
+      gameScore: account.gameScore,
       strength: account.strength,
       charisma: account.charisma,
       endurance: account.endurance,

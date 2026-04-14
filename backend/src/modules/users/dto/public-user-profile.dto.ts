@@ -37,6 +37,13 @@ export class PublicUserProfileDto {
   balance!: number;
 
   @ApiProperty({
+    description: 'Total accumulated game score',
+    example: 2300,
+    minimum: 0,
+  })
+  gameScore!: number;
+
+  @ApiProperty({
     description: 'Public user attributes',
     type: PublicUserAttributesDto,
   })

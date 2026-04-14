@@ -4,6 +4,7 @@ export interface PublicUserProfile {
   lastLoginAt: string | null;
   profilePhoto: string | null;
   balance: number;
+  gameScore: number;
   attributes: {
     strength: number;
     charisma: number;

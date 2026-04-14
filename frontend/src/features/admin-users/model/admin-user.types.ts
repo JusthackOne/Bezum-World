@@ -4,6 +4,7 @@ export interface AdminUser {
   code: string | null;
   avatarUrl: string | null;
   balance: number;
+  gameScore: number;
   strength: number;
   charisma: number;
   endurance: number;
@@ -33,6 +34,7 @@ export interface AdminCreateUserResponse {
     username: string;
     avatarUrl: string | null;
     balance: number;
+    gameScore: number;
     strength: number;
     charisma: number;
     endurance: number;
@@ -60,6 +62,7 @@ export interface AdminUpdateUserResponse {
   username: string;
   avatarUrl: string | null;
   balance: number;
+  gameScore: number;
   strength: number;
   charisma: number;
   endurance: number;
@@ -73,6 +76,7 @@ export interface UserProfileByUsername {
   lastLoginAt: string | null;
   profilePhoto: string | null;
   balance: number;
+  gameScore: number;
   attributes: {
     strength: number;
     charisma: number;

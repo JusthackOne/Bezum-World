@@ -20,6 +20,7 @@ model Account {
   username         String    @unique
   avatarUrl        String?
   balance          Int       @default(0)
+  gameScore        Int       @default(0)
   strength         Int       @default(0)
   charisma         Int       @default(0)
   endurance        Int       @default(0)
@@ -28,7 +29,8 @@ model Account {
   createdAt        DateTime  @default(now())
   authCode         AuthCode?
   items            Item[]
-   equipment UserEquipmentSlot[]
+  equipment        UserEquipmentSlot[]
+  taskSubmissions  TaskSubmission[]
 }
 
 model AuthCode {
@@ -91,4 +93,46 @@ model UserEquipmentSlot {
   item      Item?                @relation(fields: [itemId], references: [id])
 
   @@unique([userId, slotType])
+}
+
+enum TaskType {
+  daily
+  weekly
+  event
+}
+
+model Task {
+  id                 String           @id @default(uuid())
+  type               TaskType
+  title              String
+  description        String?
+  image              String?
+  rewardMoney        Int              @map("reward_money")
+  rewardGameScore    Int?             @map("reward_game_score")
+  rewardAttributes   Json?            @map("reward_attributes")
+  requiresProofImage Boolean          @default(false) @map("requires_proof_image")
+  submissionLimit    Int?             @map("submission_limit")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  submissions        TaskSubmission[]
+
+  @@index([type])
+  @@index([createdAt])
+  @@map("tasks")
+}
+
+model TaskSubmission {
+  id         String   @id @default(uuid())
+  taskId     String   @map("task_id")
+  userId     String   @map("user_id")
+  proofImage String?  @map("proof_image")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  task Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user Account @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([taskId, userId, createdAt])
+  @@map("task_submissions")
 }
