@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2Icon } from "lucide-react";
+import { PlusIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -246,15 +246,22 @@ export function AdminUsersDataTable() {
             <p className="text-muted-foreground text-sm">Manage player accounts and base attributes.</p>
           </div>
 
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={isDeleteDisabled}
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            <Trash2Icon className="size-4" />
-            {isDeleting ? "Deleting..." : deletionLabel}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" onClick={() => router.push("/admin/users/create")}>
+              <PlusIcon className="size-4" />
+              Add user
+            </Button>
+
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isDeleteDisabled}
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2Icon className="size-4" />
+              {isDeleting ? "Deleting..." : deletionLabel}
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -277,6 +284,7 @@ export function AdminUsersDataTable() {
                   </TableHead>
                   <TableHead>ID</TableHead>
                   <TableHead>Username</TableHead>
+                  <TableHead>Auth Code</TableHead>
                   <TableHead>Avatar URL</TableHead>
                   <TableHead>Balance</TableHead>
                   <TableHead>Strength</TableHead>
@@ -290,13 +298,13 @@ export function AdminUsersDataTable() {
               <TableBody>
                 {usersQuery.isPending ? (
                   <TableRow>
-                    <TableCell className="text-muted-foreground text-center" colSpan={11}>
+                    <TableCell className="text-muted-foreground text-center" colSpan={12}>
                       Loading users...
                     </TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell className="text-muted-foreground text-center" colSpan={11}>
+                    <TableCell className="text-muted-foreground text-center" colSpan={12}>
                       No users found.
                     </TableCell>
                   </TableRow>
@@ -322,6 +330,7 @@ export function AdminUsersDataTable() {
                         </TableCell>
                         <TableCell className="max-w-[160px] truncate font-mono text-xs">{user.id}</TableCell>
                         <TableCell>{user.username}</TableCell>
+                        <TableCell className="font-mono text-xs">{user.code ?? "N/A"}</TableCell>
                         <TableCell className="max-w-[220px] truncate">
                           {user.avatarUrl ?? "N/A"}
                         </TableCell>

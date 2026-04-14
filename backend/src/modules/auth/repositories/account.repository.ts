@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import type { Account, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma/prisma.service';
+export type AccountWithAuthCode = Prisma.AccountGetPayload<{
+  include: { authCode: true };
+}>;
 
 export interface CreateAccountInput {
   username: string;
@@ -47,6 +50,17 @@ export class AccountRepository {
 
   async findAll(): Promise<Account[]> {
     return this.prisma.account.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async findAllWithAuthCode(): Promise<AccountWithAuthCode[]> {
+    return this.prisma.account.findMany({
+      include: {
+        authCode: true,
+      },
       orderBy: {
         createdAt: 'desc',
       },

@@ -7,6 +7,7 @@ import {
   type UpdateAccountInput,
 } from '../auth/repositories/account.repository';
 import { AdminDeleteUserResponseDto } from './dto/admin-delete-user-response.dto';
+import { AdminUserWithCodeDto } from './dto/admin-user-with-code.dto';
 import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 import { PublicUserProfileDto } from './dto/public-user-profile.dto';
 import { UserItemsResponseDto } from './dto/user-items-response.dto';
@@ -69,10 +70,13 @@ export class UsersService {
     };
   }
 
-  async getAllUsersByAdmin(): Promise<AuthenticatedUserDto[]> {
-    const accounts = await this.accountRepository.findAll();
+  async getAllUsersByAdmin(): Promise<AdminUserWithCodeDto[]> {
+    const accounts = await this.accountRepository.findAllWithAuthCode();
 
-    return accounts.map((account) => this.toAuthenticatedUser(account));
+    return accounts.map((account) => ({
+      ...this.toAuthenticatedUser(account),
+      code: account.authCode?.code ?? null,
+    }));
   }
 
   async updateUserByAdmin(userId: string, payload: AdminUpdateUserDto): Promise<AuthenticatedUserDto> {

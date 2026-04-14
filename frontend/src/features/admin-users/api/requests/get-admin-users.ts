@@ -7,7 +7,7 @@ import {
 import { adminHttpClient } from "@/shared/lib/admin-http-client";
 import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
 
-import type { AdminUser } from "../model/admin-user.types";
+import type { AdminUser } from "../../model/admin-user.types";
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
   try {
