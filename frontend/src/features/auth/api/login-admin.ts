@@ -1,28 +1,13 @@
 import { isAxiosError } from "axios";
 
 import { httpClient } from "@/shared/lib/http-client";
-import { isRecord } from "@/shared/lib/type-guards";
-import type { ApiErrorResponse, ApiSuccessResponse } from "@/shared/types/backend-api-response";
+import {
+  getErrorMessage,
+  isApiSuccessResponse,
+} from "@/shared/lib/api-response";
+import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
 
 import type { AdminAuthTokensResponse, AdminLoginPayload } from "../model/admin-auth.types";
-
-const isApiSuccessResponse = (
-  value: unknown,
-): value is ApiSuccessResponse<AdminAuthTokensResponse> => {
-  return isRecord(value) && value.success === true && "data" in value;
-};
-
-const isApiErrorResponse = (value: unknown): value is ApiErrorResponse => {
-  return isRecord(value) && value.success === false && "error" in value;
-};
-
-function getErrorMessage(payload: unknown, fallbackMessage: string): string {
-  if (!isApiErrorResponse(payload)) {
-    return fallbackMessage;
-  }
-
-  return payload.error.message;
-}
 
 export async function loginAdmin(payload: AdminLoginPayload): Promise<AdminAuthTokensResponse> {
   try {
