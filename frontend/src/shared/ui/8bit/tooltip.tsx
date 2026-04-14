@@ -40,27 +40,25 @@ function TooltipContent({
   const color = tooltipVariants({ font });
 
   return (
-    <div className={cn("relative inline-flex", className)}>
-      <ShadcnTooltipContent
-        {...props}
-        data-slot="tooltip-content"
-        className={cn("rounded-none", color, className)}
-      >
-        {children}
-        <div
-          className={cn(
-            "absolute top-1.5 bottom-1.5 -left-1.5 w-1.5 bg-primary",
-            color
-          )}
-        />
-        <div
-          className={cn(
-            "absolute top-1.5 bottom-1.5 -right-1.5 w-1.5 bg-primary ",
-            color
-          )}
-        />
-      </ShadcnTooltipContent>
-    </div>
+    <ShadcnTooltipContent
+      {...props}
+      data-slot="tooltip-content"
+      className={cn("rounded-none", color, className)}
+    >
+      {children}
+      <div
+        className={cn(
+          "absolute top-1.5 bottom-1.5 -left-1.5 w-1.5 bg-primary",
+          color
+        )}
+      />
+      <div
+        className={cn(
+          "absolute top-1.5 bottom-1.5 -right-1.5 w-1.5 bg-primary ",
+          color
+        )}
+      />
+    </ShadcnTooltipContent>
   );
 }
 
@@ -110,4 +108,3 @@ function TooltipTrigger({
 }
 
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };
-

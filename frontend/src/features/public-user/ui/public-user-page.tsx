@@ -7,12 +7,10 @@ import {
   FootprintsIcon,
   HardHatIcon,
   PersonStandingIcon,
-  ShieldCheckIcon,
   ShieldIcon,
   ShirtIcon,
   SparklesIcon,
   SwordIcon,
-  UserCircle2Icon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
@@ -30,15 +28,11 @@ import type {
   PublicUserProfile,
 } from "@/features/public-user/model/public-user.types";
 import { queryKeys } from "@/shared/config/query-keys";
-import {
-  formatBalance,
-  getItemAttributeRows,
-  itemRarityStyles,
-  resolveAssetUrl,
-} from "@/shared/lib/item-display";
+import { formatBalance, getItemAttributeRows, resolveAssetUrl } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { AvatarImage } from "@/shared/ui/avatar-image";
 import { GameScoreIcon } from "@/shared/ui";
 import { ItemDetailsModal } from "@/shared/ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
@@ -102,35 +96,140 @@ function getUserAttributeRows(profile: PublicUserProfile) {
   }));
 }
 
+const inventoryRarityStyles: Record<string, { borderClassName: string; glowClassName: string }> = {
+  unterlyanskiy: {
+    borderClassName: "border-amber-900/85",
+    glowClassName: "shadow-[0_0_0_1px_rgba(120,53,15,0.35),0_12px_30px_rgba(69,26,3,0.28)]",
+  },
+  basic_minimum: {
+    borderClassName: "border-emerald-400/90",
+    glowClassName: "shadow-[0_0_0_1px_rgba(16,185,129,0.34),0_12px_30px_rgba(6,95,70,0.26)]",
+  },
+  sigma: {
+    borderClassName: "border-violet-400/90",
+    glowClassName: "shadow-[0_0_0_1px_rgba(167,139,250,0.36),0_12px_30px_rgba(91,33,182,0.28)]",
+  },
+  bezumnyy: {
+    borderClassName: "border-amber-300/95",
+    glowClassName: "shadow-[0_0_0_1px_rgba(251,191,36,0.4),0_12px_32px_rgba(180,83,9,0.3)]",
+  },
+};
+
+const equipmentRarityStyles: Record<
+  string,
+  {
+    slotBorderClassName: string;
+    slotGlowClassName: string;
+    tooltipBorderClassName: string;
+    tooltipSideAccentClassName: string;
+  }
+> = {
+  unterlyanskiy: {
+    slotBorderClassName: "border-amber-900/95",
+    slotGlowClassName: "shadow-[0_0_0_1px_rgba(120,53,15,0.42),0_0_18px_rgba(69,26,3,0.28)]",
+    tooltipBorderClassName: "border-amber-900/95 shadow-[0_0_0_1px_rgba(120,53,15,0.38),0_10px_24px_rgba(69,26,3,0.25)]",
+    tooltipSideAccentClassName: "[&>div]:bg-amber-900",
+  },
+  basic_minimum: {
+    slotBorderClassName: "border-emerald-400/95",
+    slotGlowClassName: "shadow-[0_0_0_1px_rgba(16,185,129,0.38),0_0_18px_rgba(6,95,70,0.26)]",
+    tooltipBorderClassName:
+      "border-emerald-400/95 shadow-[0_0_0_1px_rgba(16,185,129,0.34),0_10px_24px_rgba(6,95,70,0.24)]",
+    tooltipSideAccentClassName: "[&>div]:bg-emerald-400",
+  },
+  sigma: {
+    slotBorderClassName: "border-violet-400/95",
+    slotGlowClassName: "shadow-[0_0_0_1px_rgba(167,139,250,0.4),0_0_20px_rgba(91,33,182,0.28)]",
+    tooltipBorderClassName:
+      "border-violet-400/95 shadow-[0_0_0_1px_rgba(167,139,250,0.36),0_10px_24px_rgba(91,33,182,0.24)]",
+    tooltipSideAccentClassName: "[&>div]:bg-violet-400",
+  },
+  bezumnyy: {
+    slotBorderClassName: "border-amber-300/95",
+    slotGlowClassName: "shadow-[0_0_0_1px_rgba(251,191,36,0.42),0_0_20px_rgba(180,83,9,0.3)]",
+    tooltipBorderClassName:
+      "border-amber-300/95 shadow-[0_0_0_1px_rgba(251,191,36,0.38),0_10px_24px_rgba(180,83,9,0.25)]",
+    tooltipSideAccentClassName: "[&>div]:bg-amber-300",
+  },
+};
+
+const itemAttributeVisuals: Record<
+  "strength" | "intelligence" | "charisma" | "endurance",
+  {
+    iconClassName: string;
+    badgeClassName: string;
+    valueClassName: string;
+  }
+> = {
+  strength: {
+    iconClassName: "text-red-400",
+    badgeClassName:
+      "border-red-400/65 bg-red-500/12 shadow-[0_0_0_1px_rgba(248,113,113,0.24),0_0_14px_rgba(239,68,68,0.14)]",
+    valueClassName: "text-red-100",
+  },
+  intelligence: {
+    iconClassName: "text-blue-400",
+    badgeClassName:
+      "border-blue-400/65 bg-blue-500/12 shadow-[0_0_0_1px_rgba(96,165,250,0.24),0_0_14px_rgba(59,130,246,0.14)]",
+    valueClassName: "text-blue-100",
+  },
+  charisma: {
+    iconClassName: "text-emerald-400",
+    badgeClassName:
+      "border-emerald-400/65 bg-emerald-500/12 shadow-[0_0_0_1px_rgba(52,211,153,0.22),0_0_14px_rgba(16,185,129,0.14)]",
+    valueClassName: "text-emerald-100",
+  },
+  endurance: {
+    iconClassName: "text-violet-400",
+    badgeClassName:
+      "border-violet-400/65 bg-violet-500/12 shadow-[0_0_0_1px_rgba(196,181,253,0.24),0_0_14px_rgba(139,92,246,0.14)]",
+    valueClassName: "text-violet-100",
+  },
+};
+
+const itemRarityTextStyles: Record<string, string> = {
+  unterlyanskiy: "text-amber-700 dark:text-amber-300",
+  basic_minimum: "text-emerald-600 dark:text-emerald-300",
+  sigma: "text-violet-600 dark:text-violet-300",
+  bezumnyy: "text-amber-500 dark:text-amber-300",
+};
+
+const hiddenScrollbarClass =
+  "overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
 function ItemQuickTooltip({ item }: { item: PublicUserItem }) {
   const itemAttributes = getItemAttributeRows(item);
+  const rarityTextClassName = itemRarityTextStyles[item.rarity] ?? "text-foreground";
 
   return (
     <div className="space-y-2">
-      <div className="space-y-1">
-        <p className="text-sm font-semibold">{item.name}</p>
-        <p className="text-muted-foreground text-xs">
-          {item.description ?? "No description available."}
-        </p>
-      </div>
+      <p className="text-sm font-semibold">{item.name}</p>
 
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Rarity</span>
-        <span className="font-semibold capitalize">{item.rarity.replaceAll("_", " ")}</span>
+      <div className="flex items-center justify-between">
+        <span className="text-muted-foreground text-[10px]">Rarity</span>
+        <span className={cn("text-[11px] font-semibold capitalize", rarityTextClassName)}>
+          {item.rarity.replaceAll("_", " ")}
+        </span>
       </div>
 
       {itemAttributes.length > 0 ? (
         <div className="grid grid-cols-2 gap-1.5">
           {itemAttributes.map((attribute) => {
             const Icon = attribute.icon;
+            const visual = itemAttributeVisuals[attribute.key];
 
             return (
               <div
                 key={attribute.key}
-                className="bg-muted/20 flex items-center justify-between rounded border px-1.5 py-1"
+                className={cn(
+                  "flex items-center justify-between rounded border px-1.5 py-1",
+                  visual.badgeClassName,
+                )}
               >
-                <Icon className="text-muted-foreground size-3" />
-                <span className="text-xs font-medium tabular-nums">{attribute.value}</span>
+                <Icon className={cn("size-3", visual.iconClassName)} />
+                <span className={cn("text-[10px] font-semibold tabular-nums", visual.valueClassName)}>
+                  +{attribute.value}
+                </span>
               </div>
             );
           })}
@@ -152,12 +251,33 @@ function EquipmentSlot({
   icon: ComponentType<{ className?: string }>;
 }) {
   const imageUrl = item?.image_url ? resolveAssetUrl(item.image_url) : null;
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const hasImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
+  const rarityStyle = item
+    ? equipmentRarityStyles[item.rarity] ?? {
+        slotBorderClassName: "border-border/70",
+        slotGlowClassName: "shadow-sm",
+        tooltipBorderClassName: "border-border shadow-sm",
+        tooltipSideAccentClassName: "",
+      }
+    : null;
 
   const trigger = (
-    <div className="bg-muted/20 hover:border-primary/50 relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border transition-colors">
-      {imageUrl ? (
+    <div
+      className={cn(
+        "bg-muted/20 relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 transition-colors",
+        rarityStyle?.slotBorderClassName ?? "border-border/70",
+        rarityStyle?.slotGlowClassName,
+      )}
+    >
+      {hasImage ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={item?.name ?? label} className="h-full w-full object-cover" />
+        <img
+          src={imageUrl ?? ""}
+          alt={item?.name ?? label}
+          className="h-full w-full object-cover"
+          onError={() => setFailedImageUrl(imageUrl)}
+        />
       ) : (
         <>
           <Icon className="text-muted-foreground/45 size-9" />
@@ -176,7 +296,13 @@ function EquipmentSlot({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-      <TooltipContent className="border bg-card text-foreground w-64 p-3" sideOffset={8}>
+      <TooltipContent
+        className={cn(
+          "border-2 bg-card text-foreground w-64 p-3",
+          rarityStyle.tooltipBorderClassName,
+        )}
+        sideOffset={8}
+      >
         <ItemQuickTooltip item={item} />
       </TooltipContent>
     </Tooltip>
@@ -213,23 +339,33 @@ function UserEquipmentSection({
 
   return (
     <TooltipProvider>
-      <div className="mx-auto grid max-w-72.5 grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2.5">
-        <div className="col-start-2 row-start-1 flex justify-center">
+      <div
+        className="mx-auto inline-grid grid-cols-[repeat(3,5rem)] grid-rows-[repeat(4,5rem)] place-items-center gap-x-3 gap-y-2.5"
+        style={{
+          gridTemplateAreas: `
+            ". helmet ."
+            "left chest right"
+            ". pants ."
+            ". boots ."
+          `,
+        }}
+      >
+        <div className="flex justify-center" style={{ gridArea: "helmet" }}>
           <EquipmentSlot label="Helmet" icon={HardHatIcon} item={equipment.helmet} />
         </div>
-        <div className="col-start-1 row-start-2 flex items-center justify-center">
+        <div className="flex items-center justify-center" style={{ gridArea: "left" }}>
           <EquipmentSlot label="Left" icon={ShieldIcon} item={equipment.leftWeapon} />
         </div>
-        <div className="col-start-2 row-start-2 flex justify-center">
+        <div className="flex justify-center" style={{ gridArea: "chest" }}>
           <EquipmentSlot label="Chest" icon={ShirtIcon} item={equipment.chest} />
         </div>
-        <div className="col-start-3 row-start-2 flex items-center justify-center">
+        <div className="flex items-center justify-center" style={{ gridArea: "right" }}>
           <EquipmentSlot label="Right" icon={SwordIcon} item={equipment.rightWeapon} />
         </div>
-        <div className="col-start-2 row-start-3 flex justify-center">
+        <div className="flex justify-center" style={{ gridArea: "pants" }}>
           <EquipmentSlot label="Pants" icon={PersonStandingIcon} item={equipment.pants} />
         </div>
-        <div className="col-start-2 row-start-4 flex justify-center">
+        <div className="flex justify-center" style={{ gridArea: "boots" }}>
           <EquipmentSlot label="Boots" icon={FootprintsIcon} item={equipment.boots} />
         </div>
       </div>
@@ -255,32 +391,24 @@ function UserInfoCard({
   isRetrying: boolean;
 }) {
   const userAttributeRows = useMemo(() => getUserAttributeRows(profile), [profile]);
-  const avatarUrl = profile.profilePhoto ? resolveAssetUrl(profile.profilePhoto) : null;
 
   return (
-    <Card className="h-fit">
+    <Card className="flex h-full min-h-0 flex-col lg:max-h-full">
       <CardHeader className="pb-0">
         <CardTitle>User Profile</CardTitle>
         <CardDescription>Public information and base attributes.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className={cn("min-h-0 flex-1 space-y-5 pr-4", hiddenScrollbarClass)}>
         <div className="flex justify-center">
-          <div className="flex h-52 w-52 items-center justify-center overflow-hidden rounded-2xl border bg-muted/30">
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt={`${profile.username} avatar`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <UserCircle2Icon className="size-24 text-muted-foreground/70" />
-            )}
-          </div>
+          <AvatarImage
+            avatarUrl={profile.profilePhoto}
+            alt={`${profile.username} avatar`}
+            sizeClassName="h-52 w-52"
+          />
         </div>
         <h1 className="text-2xl font-semibold break-all">{profile.username}</h1>
         <Separator />
-        <div className="space-y-2">
+        <div className="flex justify-center">
           <UserEquipmentSection
             equipment={equipment}
             isPending={isEquipmentPending}
@@ -365,6 +493,7 @@ function UserInfoCard({
 function UserItemsCard({
   profileUsername,
   items,
+  equipment,
   canEquip,
   isEquipping,
   onEquip,
@@ -372,16 +501,29 @@ function UserItemsCard({
 }: {
   profileUsername: string;
   items: PublicUserItem[];
+  equipment: PublicUserEquipment;
   canEquip: boolean;
   isEquipping: boolean;
   onEquip: (itemId: string) => void;
   isPending: boolean;
 }) {
   const [selectedItem, setSelectedItem] = useState<PublicUserItem | null>(null);
+  const equippedItemIds = useMemo(() => {
+    return new Set(
+      [
+        equipment.helmet?.id,
+        equipment.chest?.id,
+        equipment.pants?.id,
+        equipment.boots?.id,
+        equipment.leftWeapon?.id,
+        equipment.rightWeapon?.id,
+      ].filter((itemId): itemId is string => Boolean(itemId)),
+    );
+  }, [equipment]);
 
   return (
     <>
-      <Card>
+      <Card className="flex h-full min-h-0 flex-col lg:max-h-full">
         <CardHeader>
           <CardTitle>{profileUsername} Items</CardTitle>
           <CardDescription>
@@ -390,26 +532,28 @@ function UserItemsCard({
               : `${items.length} item${items.length === 1 ? "" : "s"} in inventory`}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className={cn("min-h-0 flex-1 space-y-4 overflow-x-hidden pr-4", hiddenScrollbarClass)}>
           {isPending ? (
             <p className="text-muted-foreground text-sm">Loading items...</p>
           ) : items.length === 0 ? (
             <p className="text-muted-foreground text-sm">No items found for this user.</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
               {items.map((item) => {
-                const rarityStyle = itemRarityStyles[item.rarity] ?? {
+                const rarityStyle = inventoryRarityStyles[item.rarity] ?? {
                   borderClassName: "border-border",
                   glowClassName: "shadow-sm",
                 };
                 const itemAttributes = getItemAttributeRows(item);
                 const imageUrl = item.image_url ? resolveAssetUrl(item.image_url) : null;
+                const isEquipped = equippedItemIds.has(item.id);
+                const actionLabel = isEquipped ? "Unequip" : "Equip";
 
                 return (
                   <article
                     key={item.id}
                     className={cn(
-                      "flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border bg-card transition-shadow",
+                      "group isolate relative flex min-h-84 cursor-pointer overflow-hidden rounded-2xl border transition-shadow",
                       rarityStyle.borderClassName,
                       rarityStyle.glowClassName,
                     )}
@@ -423,67 +567,81 @@ function UserItemsCard({
                       }
                     }}
                   >
-                    <div className="aspect-4/3 w-full overflow-hidden bg-muted/35">
+                    <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
                       {imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={imageUrl}
                           alt={item.name}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full rounded-[inherit] object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                        <div className="flex h-full items-center justify-center bg-muted/45 text-sm text-muted-foreground">
                           No image
                         </div>
                       )}
                     </div>
 
-                    <div className="flex h-full flex-col gap-3 p-4">
-                      <h2 className="text-base leading-tight font-semibold">{item.name}</h2>
+                    <div className="absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_center,rgba(2,6,23,0.1)_0%,rgba(2,6,23,0.46)_72%,rgba(2,6,23,0.74)_100%)]" />
+                    <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(2,6,23,0.16)_0%,rgba(2,6,23,0.04)_38%,rgba(2,6,23,0.74)_100%)]" />
 
-                      {itemAttributes.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          {itemAttributes.map((attribute) => {
-                            const Icon = attribute.icon;
-
-                            return (
-                              <div
-                                key={attribute.key}
-                                className="flex items-center justify-between rounded-md border bg-muted/15 px-2 py-1.5"
-                              >
-                                <Icon className="size-3.5 text-muted-foreground" />
-                                <span className="text-xs font-medium tabular-nums">
-                                  {attribute.value}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-muted-foreground text-xs">No attributes</p>
-                      )}
-
-                      <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold">
-                          <CoinsIcon className="size-4" />
+                    <div className="absolute top-3 left-1/2 z-20 -translate-x-1/2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.2),rgba(251,191,36,0.12))] px-2.5 py-0.5 shadow-[0_0_0_1px_rgba(245,158,11,0.24),0_0_16px_rgba(245,158,11,0.18)]">
+                        <CoinsIcon className="size-3.5 text-amber-300" />
+                        <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-[10px] font-semibold tabular-nums text-transparent">
                           {formatBalance(item.price)}
                         </span>
+                      </span>
+                    </div>
 
+                    <div className="absolute inset-x-3 bottom-3 z-20 rounded-lg border border-white/20 bg-slate-950/56 p-3 backdrop-blur-[2px]">
+                      <div className="flex flex-col-reverse gap-2.5">
                         {canEquip ? (
                           <Button
                             type="button"
-                            size="icon"
-                            variant="outline"
+                            size="sm"
+                            variant="ghost"
                             disabled={isEquipping}
+                            className="h-7 w-full rounded-md border-none bg-white/12 px-2 text-[8px] text-white shadow-none ring-0 outline-none hover:bg-white/20 hover:text-white focus-visible:ring-0 focus-visible:outline-none"
                             onClick={(event) => {
                               event.stopPropagation();
                               onEquip(item.id);
                             }}
-                            aria-label={`Equip ${item.name}`}
+                            aria-label={`${actionLabel} ${item.name}`}
                           >
-                            <ShieldCheckIcon className="size-4" />
+                            {actionLabel}
                           </Button>
                         ) : null}
+
+                        {itemAttributes.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {itemAttributes.map((attribute) => {
+                              const Icon = attribute.icon;
+                              const visual = itemAttributeVisuals[attribute.key];
+
+                              return (
+                                <div
+                                  key={attribute.key}
+                                  className={cn(
+                                    "flex items-center justify-between rounded-md border px-2 py-1",
+                                    visual.badgeClassName,
+                                  )}
+                                >
+                                  <Icon className={cn("size-3", visual.iconClassName)} />
+                                  <span className="text-[8px] font-semibold tabular-nums">
+                                    {attribute.value}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-center text-[8px] text-slate-200/90">No attributes</p>
+                        )}
+
+                        <h2 className="text-center text-[10px] leading-tight font-semibold text-white drop-shadow-[0_1px_6px_rgba(2,6,23,0.9)]">
+                          {item.name}
+                        </h2>
                       </div>
                     </div>
                   </article>
@@ -564,8 +722,8 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
   }
 
   return (
-    <section className="min-h-screen bg-muted/20 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+    <section className="min-h-screen overflow-x-hidden p-4 sm:p-6 lg:h-[100dvh] lg:overflow-hidden lg:p-8">
+      <div className="mx-auto grid w-full max-w-[110rem] gap-6 lg:h-full lg:grid-cols-[320px_minmax(0,1fr)]">
         <UserInfoCard
           profile={profileQuery.data}
           equipment={equipmentQuery.data ?? {}}
@@ -597,6 +755,7 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
           <UserItemsCard
             profileUsername={profileQuery.data.username}
             items={itemsQuery.data?.items ?? []}
+            equipment={equipmentQuery.data ?? {}}
             canEquip={isOwnProfile}
             isEquipping={equipMutation.isPending}
             onEquip={(itemId) => {

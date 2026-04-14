@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CrownIcon, MedalIcon, UserCircle2Icon } from "lucide-react";
+import { CrownIcon, MedalIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useLeaderboardQuery } from "@/features/leaderboard/api";
@@ -10,11 +10,12 @@ import type {
   LeaderboardPeriod,
 } from "@/features/leaderboard/model/leaderboard.types";
 import { publicUserRoutes } from "@/features/public-user/routes";
-import { formatBalance, resolveAssetUrl } from "@/shared/lib/item-display";
+import { formatBalance } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { GameScoreIcon } from "@/shared/ui";
+import { AvatarImage } from "@/shared/ui/avatar-image";
 
 const periodFilters: Array<{ label: string; value: LeaderboardPeriod }> = [
   { label: "All Time", value: "all" },
@@ -50,28 +51,12 @@ function LeaderAvatar({
   username: string;
   sizeClassName: string;
 }) {
-  if (!avatar) {
-    return (
-      <div
-        className={cn(
-          "flex items-center justify-center rounded-full border bg-muted/30",
-          sizeClassName,
-        )}
-      >
-        <UserCircle2Icon className="size-2/3 text-muted-foreground/75" />
-      </div>
-    );
-  }
-
   return (
-    <div className={cn("overflow-hidden rounded-full border", sizeClassName)}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={resolveAssetUrl(avatar)}
-        alt={`${username} avatar`}
-        className="h-full w-full object-cover"
-      />
-    </div>
+    <AvatarImage
+      avatarUrl={avatar}
+      alt={`${username} avatar`}
+      sizeClassName={sizeClassName}
+    />
   );
 }
 

@@ -12,14 +12,12 @@ import {
   ShoppingBagIcon,
   SwordsIcon,
   TrophyIcon,
-  UserCircle2Icon,
   type LucideIcon,
 } from "lucide-react";
 
 import { logoutClient } from "@/features/auth/api";
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { publicUserRoutes } from "@/features/public-user/routes";
-import { resolveAssetUrl } from "@/shared/lib/item-display";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
+import { AvatarImage } from "@/shared/ui/avatar-image";
 import { Button } from "@/shared/ui/button";
 import {
   Sidebar,
@@ -183,20 +182,12 @@ export function ClientSidebar() {
           <SidebarSeparator />
           <div className="flex items-center gap-3 rounded-md border border-sidebar-border/60 p-2">
             <Link href={profileHref} className="shrink-0">
-              {session?.user.avatarUrl ? (
-                <div className="h-10 w-10 overflow-hidden rounded-full border border-sidebar-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={resolveAssetUrl(session.user.avatarUrl)}
-                    alt={`${username} avatar`}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-sidebar-border bg-muted/35">
-                  <UserCircle2Icon className="size-6 text-sidebar-foreground/70" />
-                </div>
-              )}
+              <AvatarImage
+                avatarUrl={session?.user.avatarUrl ?? null}
+                alt={`${username} avatar`}
+                sizeClassName="h-10 w-10"
+                className="border-sidebar-border"
+              />
             </Link>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium" title={username}>

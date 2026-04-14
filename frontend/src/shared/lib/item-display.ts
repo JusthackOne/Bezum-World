@@ -74,11 +74,34 @@ export function getItemAttributeRows(item: ItemDisplay): ItemAttributeRow[] {
 }
 
 export function resolveAssetUrl(value: string): string {
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("blob:")) {
-    return value;
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
+    return normalizedValue;
   }
 
-  return `${env.NEXT_PUBLIC_API_BASE_URL}${value}`;
+  if (
+    normalizedValue.startsWith("http://") ||
+    normalizedValue.startsWith("https://") ||
+    normalizedValue.startsWith("blob:") ||
+    normalizedValue.startsWith("data:")
+  ) {
+    return normalizedValue;
+  }
+
+  const apiUrl = new URL(env.NEXT_PUBLIC_API_BASE_URL);
+
+  if (normalizedValue.startsWith("/")) {
+    return new URL(normalizedValue, apiUrl.origin).toString();
+  }
+
+  const normalizedBasePath = apiUrl.pathname.replace(/\/+$/, "");
+  const normalizedRelativePath = normalizedValue.replace(/^\/+/, "");
+  const baseWithTrailingSlash = normalizedBasePath.length > 0
+    ? `${normalizedBasePath}/`
+    : "/";
+
+  return new URL(normalizedRelativePath, `${apiUrl.origin}${baseWithTrailingSlash}`).toString();
 }
 
 export function formatBalance(value: number): string {
