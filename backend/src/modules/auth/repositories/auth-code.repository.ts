@@ -18,11 +18,7 @@ export class AuthCodeRepository {
     });
   }
 
-  async create(
-    code: string,
-    accountId: string,
-    tx?: Prisma.TransactionClient,
-  ): Promise<AuthCode> {
+  async create(code: string, accountId: string, tx?: Prisma.TransactionClient): Promise<AuthCode> {
     return this.getClient(tx).authCode.create({
       data: {
         code,

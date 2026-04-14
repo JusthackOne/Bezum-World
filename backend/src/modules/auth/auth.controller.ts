@@ -88,7 +88,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Authenticate admin by login and password',
-    description: 'Returns admin access token in response and sets refresh token as httpOnly cookie.',
+    description:
+      'Returns admin access token in response and sets refresh token as httpOnly cookie.',
   })
   @ApiBody({ type: AdminLoginDto })
   @ApiOkResponse({ type: AdminAuthTokensResponseDto })

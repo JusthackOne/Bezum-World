@@ -7,3 +7,5 @@ export * from './public-user-attributes.dto';
 export * from './public-user-profile.dto';
 export * from './user-items-response.dto';
 export * from './user-owned-item.dto';
+export * from './equip-item-params.dto';
+export * from './equip-item-response.dto';

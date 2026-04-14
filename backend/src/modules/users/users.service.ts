@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Prisma, type Account } from '@prisma/client';
 
 import { AuthenticatedUserDto } from '../auth/dto';
@@ -7,17 +13,27 @@ import {
   AdminDeleteUserResponseDto,
   AdminUpdateUserDto,
   AdminUserWithCodeDto,
+  EquipItemByUserResponse,
   PublicUserProfileDto,
   UserItemsResponseDto,
 } from './dto';
-import { UserItemsRepository, UserProfileRepository } from './repositories';
+import {
+  UserEquipmentRepository,
+  UserItemsRepository,
+  UserProfileRepository,
+} from './repositories';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../../database/prisma/prisma.service';
+import { ItemRepository } from '../items/repositories';
 
 @Injectable()
 export class UsersService {
   constructor(
+    private readonly prisma: PrismaService,
+    private readonly itemRepository: ItemRepository,
     private readonly userProfileRepository: UserProfileRepository,
     private readonly userItemsRepository: UserItemsRepository,
+    private readonly userEquipmentRepository: UserEquipmentRepository,
     private readonly accountRepository: AccountRepository,
     private readonly configService: ConfigService,
   ) {}
@@ -139,6 +155,70 @@ export class UsersService {
       message: 'User deleted',
       userId,
     };
+  }
+
+  async equipItemByUser(itemId: string, accountId: string): Promise<EquipItemByUserResponse> {
+    return this.prisma.$transaction(async (tx) => {
+      const account = await this.accountRepository.findByIdInTransaction(accountId, tx);
+
+      if (!account) {
+        throw new UnauthorizedException('Account is not found');
+      }
+
+      const item = await this.itemRepository.findById(itemId, tx);
+
+      if (!item) {
+        throw new NotFoundException('Item is not found');
+      }
+
+      if (item.ownerUserId !== accountId) {
+        throw new ForbiddenException('Item does not belong to user');
+      }
+
+      await this.userEquipmentRepository.setEquipmentByItemIdForUser(
+        itemId,
+        item.slotType,
+        accountId,
+        tx,
+      );
+
+      const equipments = await this.userEquipmentRepository.getEquipmentByUserId(accountId, tx);
+
+      const equipmentBySlot = equipments.reduce<EquipItemByUserResponse['equipment']>(
+        (accumulator, equipment) => {
+          if (!equipment.item) {
+            return accumulator;
+          }
+
+          accumulator[equipment.slotType] = {
+            id: equipment.item.id,
+            name: equipment.item.name,
+            description: equipment.item.description,
+            image_url: equipment.item.imageUrl
+              ? this.configService.get('APP_DOMAIN') +
+                ':' +
+                this.configService.get('PORT') +
+                equipment.item.imageUrl
+              : null,
+            strength: equipment.item.strength,
+            charisma: equipment.item.charisma,
+            agility: equipment.item.agility,
+            intelligence: equipment.item.intelligence,
+            price: equipment.item.price,
+            rarity: equipment.item.rarity,
+            durability: equipment.item.durability,
+            created_at: equipment.item.createdAt.toISOString(),
+          };
+
+          return accumulator;
+        },
+        {},
+      );
+
+      return {
+        equipment: equipmentBySlot,
+      };
+    });
   }
 
   private toAuthenticatedUser(account: Account): AuthenticatedUserDto {

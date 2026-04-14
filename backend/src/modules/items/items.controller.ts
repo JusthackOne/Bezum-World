@@ -13,7 +13,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ItemRarity } from '@prisma/client';
+import { EquipmentSlotType, ItemRarity } from '@prisma/client';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -115,9 +115,13 @@ export class ItemsController {
         intelligence: { type: 'integer', minimum: 0, maximum: 100 },
         price: { type: 'integer', minimum: 0, maximum: 1000 },
         rarity: { type: 'string', enum: Object.values(ItemRarity) },
+        slotType: {
+          type: 'string',
+          enum: Object.values(EquipmentSlotType),
+        },
         durability: { type: 'integer', minimum: 0, maximum: 100 },
       },
-      required: ['name', 'description', 'price', 'rarity'],
+      required: ['name', 'description', 'price', 'rarity', 'slotType'],
     },
   })
   @ApiCreatedResponse({ type: CreateItemResponseDto })

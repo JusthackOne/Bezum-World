@@ -1,4 +1,4 @@
-import { ItemRarity } from '@prisma/client';
+import { EquipmentSlotType, ItemRarity } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateItemResponseDto {
@@ -84,6 +84,13 @@ export class CreateItemResponseDto {
     example: ItemRarity.sigma,
   })
   rarity!: ItemRarity;
+
+  @ApiProperty({
+    description: 'Equipment slot type for this item',
+    enum: EquipmentSlotType,
+    example: EquipmentSlotType.ARMOR,
+  })
+  slotType!: EquipmentSlotType;
 
   @ApiPropertyOptional({
     description: 'Durability in range 0..100',

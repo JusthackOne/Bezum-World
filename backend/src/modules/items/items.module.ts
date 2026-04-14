@@ -10,5 +10,6 @@ import { ItemRepository } from './repositories';
   imports: [PrismaModule, AuthModule],
   controllers: [ItemsController],
   providers: [ItemsService, ItemRepository],
+  exports: [ItemRepository],
 })
 export class ItemsModule {}

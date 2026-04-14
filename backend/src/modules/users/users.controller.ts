@@ -2,9 +2,12 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Post,
+  Put,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -32,8 +35,15 @@ import { AdminCreateAccountDto, AdminCreateAccountResponseDto } from '../auth/dt
 import { AuthService } from '../auth/auth.service';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import { AdminOnlyGuard } from '../auth/guards/admin-only.guard';
-import { GetPublicUserProfileParamsDto, PublicUserProfileDto, UserItemsResponseDto } from './dto';
+import {
+  EquipItemByUserParamsDto,
+  EquipItemByUserResponse,
+  GetPublicUserProfileParamsDto,
+  PublicUserProfileDto,
+  UserItemsResponseDto,
+} from './dto';
 import { UsersService } from './users.service';
+import { RequestWithAuthUser } from '../auth/types/request-with-auth-user.type';
 
 const AVATARS_UPLOAD_DIR = join(process.cwd(), 'uploads', 'avatars');
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
@@ -139,6 +149,32 @@ export class UsersController {
     @Param() params: GetPublicUserProfileParamsDto,
   ): Promise<PublicUserProfileDto> {
     return this.usersService.getPublicProfileByUsername(params.username);
+  }
+
+  @Put('user/equipment/:itemId')
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Equip owned item for authenticated user',
+    description: 'Equips an owned item into its configured slot and returns current equipment.',
+  })
+  @ApiParam({
+    name: 'itemId',
+    description: 'Item identifier to equip',
+    example: '2df8c39f-3255-4b40-9cb2-7f236c0b62e3',
+  })
+  @ApiOkResponse({ type: EquipItemByUserResponse })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Only user accounts can equip items' })
+  @ApiNotFoundResponse({ description: 'Item is not found' })
+  async equipItem(
+    @Param() params: EquipItemByUserParamsDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<EquipItemByUserResponse> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can equip items');
+    }
+    return this.usersService.equipItemByUser(params.itemId, request.user.sub);
   }
 
   private async storeAvatar(file: UploadedAvatarFile): Promise<string> {

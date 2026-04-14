@@ -1,7 +1,16 @@
-import { ItemRarity } from '@prisma/client';
+import { EquipmentSlotType, ItemRarity } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class CreateItemDto {
   @ApiProperty({
@@ -102,6 +111,14 @@ export class CreateItemDto {
   })
   @IsEnum(ItemRarity)
   rarity!: ItemRarity;
+
+  @ApiProperty({
+    description: 'Equipment slot type for this item',
+    enum: EquipmentSlotType,
+    example: EquipmentSlotType.ARMOR,
+  })
+  @IsEnum(EquipmentSlotType)
+  slotType!: EquipmentSlotType;
 
   @ApiPropertyOptional({
     description: 'Durability in range 0..100',

@@ -59,9 +59,7 @@ export const envValidationSchema = z
   })
   .passthrough();
 
-export const validateEnvironment = (
-  config: Record<string, unknown>,
-): Record<string, unknown> => {
+export const validateEnvironment = (config: Record<string, unknown>): Record<string, unknown> => {
   const parsedConfig = envValidationSchema.safeParse(config);
 
   if (!parsedConfig.success) {

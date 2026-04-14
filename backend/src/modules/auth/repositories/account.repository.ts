@@ -69,10 +69,7 @@ export class AccountRepository {
     });
   }
 
-  async findByIdInTransaction(
-    id: string,
-    tx: Prisma.TransactionClient,
-  ): Promise<Account | null> {
+  async findByIdInTransaction(id: string, tx: Prisma.TransactionClient): Promise<Account | null> {
     return this.getClient(tx).account.findUnique({
       where: { id },
     });

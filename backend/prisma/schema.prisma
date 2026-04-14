@@ -6,6 +6,15 @@ datasource db {
   provider = "postgresql"
 }
 
+enum EquipmentSlotType {
+  HELMET
+  ARMOR
+  PANTS
+  BOOTS
+  LEFT_HAND
+  RIGHT_HAND
+}
+
 model Account {
   id               String    @id @default(uuid())
   username         String    @unique
@@ -19,6 +28,7 @@ model Account {
   createdAt        DateTime  @default(now())
   authCode         AuthCode?
   items            Item[]
+   equipment UserEquipmentSlot[]
 }
 
 model AuthCode {
@@ -60,8 +70,25 @@ model Item {
   price        Int
   rarity       ItemRarity
   durability   Int?
+
+  slotType  EquipmentSlotType
+  equippedSlot UserEquipmentSlot?
   createdAt    DateTime    @default(now()) @map("created_at")
 
   @@index([ownerUserId])
   @@map("items")
+}
+
+model UserEquipmentSlot {
+  id        String               @id @default(cuid())
+
+  userId    String
+  user      Account                 @relation(fields: [userId], references: [id])
+
+  slotType  EquipmentSlotType
+
+  itemId    String?              @unique
+  item      Item?                @relation(fields: [itemId], references: [id])
+
+  @@unique([userId, slotType])
 }

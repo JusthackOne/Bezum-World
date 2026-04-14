@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ItemRarity, type Item, type Prisma } from '@prisma/client';
+import { EquipmentSlotType, ItemRarity, type Item, type Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import type { ItemLocation } from '../types/item-location.type';
@@ -15,6 +15,7 @@ export interface CreateItemInput {
   intelligence: number | null;
   price: number;
   rarity: ItemRarity;
+  slotType: EquipmentSlotType;
   durability: number | null;
 }
 
@@ -35,6 +36,7 @@ export class ItemRepository {
         intelligence: input.intelligence,
         price: input.price,
         rarity: input.rarity,
+        slotType: input.slotType,
         durability: input.durability,
       },
     });

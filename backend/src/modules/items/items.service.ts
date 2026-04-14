@@ -35,6 +35,7 @@ export class ItemsService {
       intelligence: payload.intelligence ?? null,
       price: payload.price,
       rarity: payload.rarity,
+      slotType: payload.slotType,
       durability: payload.durability ?? null,
     });
 
@@ -115,6 +116,7 @@ export class ItemsService {
       intelligence: item.intelligence,
       price: item.price,
       rarity: item.rarity,
+      slotType: item.slotType,
       durability: item.durability,
       created_at: item.createdAt.toISOString(),
     };
