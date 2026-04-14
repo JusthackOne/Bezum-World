@@ -2,15 +2,10 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  BrainIcon,
-  CoinsIcon,
-  DumbbellIcon,
   SearchIcon,
-  ShieldIcon,
-  SparklesIcon,
   UploadIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { useClientTasksQuery, useSubmitClientTaskMutation } from "@/features/client-tasks/api";
@@ -30,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/ui/8bit/dialog";
-import { GameScoreIcon } from "@/shared/ui";
+import { RewardBadgesList, type RewardBadgeItem } from "@/shared/ui";
 import { Input } from "@/shared/ui/8bit/input";
 import {
   Toast,
@@ -47,13 +42,8 @@ interface ToastState {
   open: boolean;
   title: string;
   description: string;
+  rewards: RewardBadgeItem[];
   variant: ToastVariant;
-}
-
-interface RewardVisual {
-  key: string;
-  icon: ComponentType<{ className?: string }>;
-  value: number;
 }
 
 const taskTypeFilterOptions: Array<{ label: string; value: ClientTaskTypeFilter }> = [
@@ -66,63 +56,52 @@ const taskTypeFilterOptions: Array<{ label: string; value: ClientTaskTypeFilter 
 const fallbackTaskImage =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'%3E%3Crect width='1200' height='800' fill='%23181e2b'/%3E%3Cpath d='M0 540 L260 360 L500 520 L760 300 L1200 560 L1200 800 L0 800 Z' fill='%23273245'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23d8dee9' font-size='58' font-family='Segoe UI, Arial, sans-serif'%3ETask%3C/text%3E%3C/svg%3E";
 
-function getTaskRewardVisuals(task: ClientTask): RewardVisual[] {
-  const rewards: RewardVisual[] = [];
+function getTaskRewardVisuals(task: ClientTask): RewardBadgeItem[] {
+  const rewards: RewardBadgeItem[] = [];
 
   if ((task.rewardMoney ?? 0) > 0) {
     rewards.push({
-      key: "money",
-      icon: CoinsIcon,
+      kind: "balance",
       value: task.rewardMoney ?? 0,
     });
   }
 
   if ((task.rewardGameScore ?? 0) > 0) {
     rewards.push({
-      key: "gameScore",
-      icon: GameScoreIcon,
+      kind: "gameScore",
       value: task.rewardGameScore ?? 0,
     });
   }
 
   if ((task.rewardAttributes?.strength ?? 0) > 0) {
     rewards.push({
-      key: "strength",
-      icon: DumbbellIcon,
+      kind: "strength",
       value: task.rewardAttributes?.strength ?? 0,
     });
   }
 
   if ((task.rewardAttributes?.intelligence ?? 0) > 0) {
     rewards.push({
-      key: "intelligence",
-      icon: BrainIcon,
+      kind: "intelligence",
       value: task.rewardAttributes?.intelligence ?? 0,
     });
   }
 
   if ((task.rewardAttributes?.charisma ?? 0) > 0) {
     rewards.push({
-      key: "charisma",
-      icon: SparklesIcon,
+      kind: "charisma",
       value: task.rewardAttributes?.charisma ?? 0,
     });
   }
 
   if ((task.rewardAttributes?.endurance ?? 0) > 0) {
     rewards.push({
-      key: "endurance",
-      icon: ShieldIcon,
+      kind: "endurance",
       value: task.rewardAttributes?.endurance ?? 0,
     });
   }
 
   return rewards;
-}
-
-function buildCompletionMessage(task: ClientTask): string {
-  const fragments = getTaskRewardVisuals(task).map((reward) => `+${reward.value}`);
-  return fragments.length > 0 ? `Rewards: ${fragments.join(" ")}` : "Task completed successfully.";
 }
 
 export function TasksPage() {
@@ -142,6 +121,7 @@ export function TasksPage() {
     open: false,
     title: "",
     description: "",
+    rewards: [],
     variant: "default",
   });
 
@@ -168,12 +148,18 @@ export function TasksPage() {
     };
   }, [proofPreviewUrl]);
 
-  function showToast(title: string, description: string, variant: ToastVariant = "default") {
+  function showToast(
+    title: string,
+    description: string,
+    variant: ToastVariant = "default",
+    rewards: RewardBadgeItem[] = [],
+  ) {
     setToastState((previousState) => ({
       key: previousState.key + 1,
       open: true,
       title,
       description,
+      rewards,
       variant,
     }));
   }
@@ -217,7 +203,13 @@ export function TasksPage() {
         });
       }
 
-      showToast("Task completed", buildCompletionMessage(task));
+      const rewardVisuals = getTaskRewardVisuals(task);
+      showToast(
+        "Task completed",
+        rewardVisuals.length > 0 ? "Rewards received:" : "Task completed successfully.",
+        "default",
+        rewardVisuals,
+      );
     } catch (error: unknown) {
       showToast(
         "Task completion failed",
@@ -339,24 +331,7 @@ export function TasksPage() {
                   <div className="space-y-4 p-4">
                     <h2 className="line-clamp-2 text-base font-semibold">{task.title}</h2>
 
-                    <div className="flex flex-wrap gap-2">
-                      {rewardVisuals.length > 0 ? (
-                        rewardVisuals.map((reward) => {
-                          const Icon = reward.icon;
-                          return (
-                            <span
-                              key={reward.key}
-                              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-semibold"
-                            >
-                              <Icon className="size-4" />
-                              {reward.value}
-                            </span>
-                          );
-                        })
-                      ) : (
-                        <span className="text-muted-foreground text-sm">No rewards</span>
-                      )}
-                    </div>
+                    <RewardBadgesList rewards={rewardVisuals} emptyLabel="No rewards" />
 
                     <Button
                       type="button"
@@ -495,6 +470,11 @@ export function TasksPage() {
         <div className="grid gap-1">
           <ToastTitle>{toastState.title}</ToastTitle>
           <ToastDescription>{toastState.description}</ToastDescription>
+          {toastState.rewards.length > 0 ? (
+            <div className="mt-2">
+              <RewardBadgesList rewards={toastState.rewards} />
+            </div>
+          ) : null}
         </div>
       </Toast>
       <ToastViewport />
