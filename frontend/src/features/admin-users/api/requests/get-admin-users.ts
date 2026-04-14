@@ -4,18 +4,14 @@ import {
   getErrorMessage,
   isApiSuccessResponse,
 } from "@/shared/lib/api-response";
-import { httpClient } from "@/shared/lib/http-client";
+import { adminHttpClient } from "@/shared/lib/admin-http-client";
 import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
 
 import type { AdminUser } from "../model/admin-user.types";
 
-export async function getAdminUsers(accessToken: string): Promise<AdminUser[]> {
+export async function getAdminUsers(): Promise<AdminUser[]> {
   try {
-    const response = await httpClient.get<ApiSuccessResponse<AdminUser[]>>("/admin/users", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const response = await adminHttpClient.get<ApiSuccessResponse<AdminUser[]>>("/admin/users");
 
     if (!isApiSuccessResponse(response.data)) {
       throw new Error("Unexpected server response");

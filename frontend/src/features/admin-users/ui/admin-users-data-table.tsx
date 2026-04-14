@@ -70,10 +70,9 @@ export function AdminUsersDataTable() {
   const initializeSession = useAdminAuthStore((state) => state.initializeSession);
   const clearSession = useAdminAuthStore((state) => state.clearSession);
 
-  const accessToken = session?.accessToken ?? null;
-
-  const usersQuery = useAdminUsersQuery(accessToken, isInitialized);
-  const deleteUserMutation = useDeleteAdminUserMutation(accessToken);
+  const hasAdminSession = Boolean(session?.accessToken);
+  const usersQuery = useAdminUsersQuery(isInitialized, hasAdminSession);
+  const deleteUserMutation = useDeleteAdminUserMutation();
 
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -162,7 +161,7 @@ export function AdminUsersDataTable() {
   async function handleConfirmDelete() {
     const userIdsForDeletion = selectedExistingUserIds;
 
-    if (!accessToken || userIdsForDeletion.length === 0) {
+    if (!hasAdminSession || userIdsForDeletion.length === 0) {
       return;
     }
 
@@ -207,7 +206,7 @@ export function AdminUsersDataTable() {
   }
 
   const isDeleting = deleteUserMutation.isPending;
-  const isDeleteDisabled = selectedCount === 0 || isDeleting;
+  const isDeleteDisabled = selectedCount === 0 || isDeleting || !hasAdminSession;
 
   if (!isInitialized || !session) {
     return (

@@ -7,7 +7,6 @@ import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
 
 const ADMIN_AUTH_SESSION_STORAGE_KEY = "admin-auth-session";
 const ADMIN_REFRESH_ENDPOINT = "/auth/admin/refresh";
-const USER_REFRESH_ENDPOINT = "/auth/refresh";
 const ADMIN_LOGIN_ENDPOINT = "/auth/admin/login";
 const ADMIN_LOGIN_PAGE_PATH = "/admin/login";
 
@@ -143,7 +142,7 @@ async function refreshAdminAccessToken(): Promise<string> {
   }
 }
 
-export const httpClient = axios.create({
+export const adminHttpClient = axios.create({
   baseURL: env.NEXT_PUBLIC_API_BASE_URL,
   withCredentials: true,
   headers: {
@@ -151,10 +150,9 @@ export const httpClient = axios.create({
   },
 });
 
-httpClient.interceptors.request.use((config) => {
+adminHttpClient.interceptors.request.use((config) => {
   const requestUrl = config.url ?? "";
-  const isRefreshRequest =
-    requestUrl.includes(ADMIN_REFRESH_ENDPOINT) || requestUrl.includes(USER_REFRESH_ENDPOINT);
+  const isRefreshRequest = requestUrl.includes(ADMIN_REFRESH_ENDPOINT);
 
   if (isRefreshRequest) {
     return config;
@@ -170,7 +168,7 @@ httpClient.interceptors.request.use((config) => {
   return config;
 });
 
-httpClient.interceptors.response.use(
+adminHttpClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const statusCode = error.response?.status;
@@ -181,8 +179,7 @@ httpClient.interceptors.response.use(
     }
 
     const requestUrl = originalRequest.url ?? "";
-    const isRefreshRequest =
-      requestUrl.includes(ADMIN_REFRESH_ENDPOINT) || requestUrl.includes(USER_REFRESH_ENDPOINT);
+    const isRefreshRequest = requestUrl.includes(ADMIN_REFRESH_ENDPOINT);
     const isAdminLoginRequest = requestUrl.includes(ADMIN_LOGIN_ENDPOINT);
 
     if (isRefreshRequest) {
@@ -207,7 +204,7 @@ httpClient.interceptors.response.use(
       const refreshedAccessToken = await refreshAdminAccessToken();
       setAuthorizationHeader(originalRequest, refreshedAccessToken);
 
-      return httpClient(originalRequest);
+      return adminHttpClient(originalRequest);
     } catch (refreshError: unknown) {
       if (axios.isAxiosError(refreshError) && refreshError.response?.status === 401) {
         redirectToAdminLogin();

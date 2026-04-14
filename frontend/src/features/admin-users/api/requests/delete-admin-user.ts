@@ -4,23 +4,17 @@ import {
   getErrorMessage,
   isApiSuccessResponse,
 } from "@/shared/lib/api-response";
-import { httpClient } from "@/shared/lib/http-client";
+import { adminHttpClient } from "@/shared/lib/admin-http-client";
 import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
 
 import type { AdminDeleteUserResponse } from "../model/admin-user.types";
 
 export async function deleteAdminUser(
-  accessToken: string,
   userId: string,
 ): Promise<AdminDeleteUserResponse> {
   try {
-    const response = await httpClient.delete<ApiSuccessResponse<AdminDeleteUserResponse>>(
+    const response = await adminHttpClient.delete<ApiSuccessResponse<AdminDeleteUserResponse>>(
       `/admin/users/${userId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
     );
 
     if (!isApiSuccessResponse(response.data)) {

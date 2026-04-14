@@ -1,6 +1,6 @@
 import { isAxiosError } from "axios";
 
-import { httpClient } from "@/shared/lib/http-client";
+import { adminHttpClient } from "@/shared/lib/admin-http-client";
 import {
   getErrorMessage,
   isApiSuccessResponse,
@@ -11,7 +11,7 @@ import type { AdminAuthTokensResponse, AdminLoginPayload } from "../model/admin-
 
 export async function loginAdmin(payload: AdminLoginPayload): Promise<AdminAuthTokensResponse> {
   try {
-    const response = await httpClient.post<ApiSuccessResponse<AdminAuthTokensResponse>>(
+    const response = await adminHttpClient.post<ApiSuccessResponse<AdminAuthTokensResponse>>(
       "/auth/admin/login",
       payload,
     );
