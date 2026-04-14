@@ -7,6 +7,7 @@ export interface CreateTaskSubmissionInput {
   taskId: string;
   userId: string;
   proofImage: string | null;
+  grantedGameScore: number;
 }
 
 @Injectable()
@@ -19,6 +20,7 @@ export class TaskSubmissionRepository {
         taskId: input.taskId,
         userId: input.userId,
         proofImage: input.proofImage,
+        grantedGameScore: input.grantedGameScore,
       },
     });
   }

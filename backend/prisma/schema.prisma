@@ -126,6 +126,7 @@ model TaskSubmission {
   taskId     String   @map("task_id")
   userId     String   @map("user_id")
   proofImage String?  @map("proof_image")
+  grantedGameScore Int @default(0) @map("granted_game_score")
   createdAt  DateTime @default(now()) @map("created_at")
 
   task Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)

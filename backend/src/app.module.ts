@@ -11,6 +11,7 @@ import { QueueModule } from './infrastructure/queue/queue.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ItemsModule } from './modules/items/items.module';
+import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -29,6 +30,7 @@ import { UsersModule } from './modules/users/users.module';
     QueueModule,
     AuthModule,
     ItemsModule,
+    LeaderboardModule,
     TasksModule,
     UsersModule,
   ],

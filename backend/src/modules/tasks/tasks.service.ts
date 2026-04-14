@@ -235,6 +235,7 @@ export class TasksService {
           taskId: task.id,
           userId,
           proofImage,
+          grantedGameScore: task.rewardGameScore ?? 0,
         },
         tx,
       );
