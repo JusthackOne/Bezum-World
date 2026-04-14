@@ -1,4 +1,4 @@
-import { ItemRarity } from '@prisma/client';
+import { EquipmentSlotType, ItemRarity } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../../database/prisma/prisma.service';
@@ -6,6 +6,7 @@ import { PrismaService } from '../../../database/prisma/prisma.service';
 export interface UserOwnedItemRecord {
   id: string;
   name: string;
+  slotType: EquipmentSlotType;
   description: string | null;
   imageUrl: string | null;
   strength: number | null;
@@ -37,6 +38,7 @@ export class UserItemsRepository {
           select: {
             id: true,
             name: true,
+            slotType: true,
             description: true,
             imageUrl: true,
             strength: true,

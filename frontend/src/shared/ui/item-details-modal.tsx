@@ -55,6 +55,11 @@ export function ItemDetailsModal({ item, open, onOpenChange }: ItemDetailsModalP
             <DialogDescription>{item.description ?? "No description available."}</DialogDescription>
           </DialogHeader>
 
+          <div className="flex items-center justify-between rounded-md border bg-muted/10 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Rarity</span>
+            <span className="font-semibold capitalize">{item.rarity.replaceAll("_", " ")}</span>
+          </div>
+
           {itemAttributes.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
               {itemAttributes.map((attribute) => {

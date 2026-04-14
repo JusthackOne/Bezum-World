@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
 export interface PublicUserProfileRecord {
+  id: string;
   username: string;
   avatarUrl: string | null;
   lastTimeLoggedIn: Date | null;
@@ -21,6 +22,7 @@ export class UserProfileRepository {
     return this.prisma.account.findFirst({
       where: { username },
       select: {
+        id: true,
         username: true,
         avatarUrl: true,
         lastTimeLoggedIn: true,

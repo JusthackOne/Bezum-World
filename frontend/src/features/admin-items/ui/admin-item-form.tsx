@@ -3,10 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImageIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { env } from "@/shared/config/env";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -22,9 +21,9 @@ const optionalIntField = (min: number, max: number, label: string) =>
 const itemFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(128),
   description: z.string().trim().min(1, "Description is required").max(4096),
-  image_url: z.string().trim().max(2048).optional(),
   price: z.number().int().min(0).max(1000),
   rarity: z.enum(["unterlyanskiy", "basic_minimum", "sigma", "bezumnyy"]),
+  slotType: z.enum(["HELMET", "ARMOR", "PANTS", "BOOTS", "LEFT_HAND", "RIGHT_HAND"]),
   strength: optionalIntField(0, 100, "Strength"),
   charisma: optionalIntField(0, 100, "Charisma"),
   agility: optionalIntField(0, 100, "Agility"),
@@ -46,23 +45,15 @@ interface AdminItemFormProps {
 const defaultFormValues: AdminItemFormInputValues = {
   name: "",
   description: "",
-  image_url: "",
   price: 0,
   rarity: "basic_minimum",
+  slotType: "RIGHT_HAND",
   strength: "",
   charisma: "",
   agility: "",
   intelligence: "",
   durability: "",
 };
-
-function resolveImageUrl(imageUrl: string): string {
-  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("blob:")) {
-    return imageUrl;
-  }
-
-  return `${env.NEXT_PUBLIC_API_BASE_URL}${imageUrl}`;
-}
 
 export function AdminItemForm({
   submitLabel,
@@ -91,11 +82,7 @@ export function AdminItemForm({
     };
   }, [imagePreviewUrl]);
 
-  const imageUrlFromInput = useWatch({
-    control: form.control,
-    name: "image_url",
-  })?.trim() ?? "";
-  const displayImageUrl = imagePreviewUrl ?? (imageUrlFromInput ? resolveImageUrl(imageUrlFromInput) : null);
+  const displayImageUrl = imagePreviewUrl;
 
   const submitForm = form.handleSubmit(async (values) => {
     await onSubmit(values, imageFile);
@@ -173,16 +160,6 @@ export function AdminItemForm({
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="image_url" className="text-sm font-medium">
-          Image URL (optional)
-        </label>
-        <Input id="image_url" placeholder="https://example.com/item.png" {...form.register("image_url")} />
-        {form.formState.errors.image_url ? (
-          <p className="text-xs text-destructive">{form.formState.errors.image_url.message}</p>
-        ) : null}
-      </div>
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="price" className="text-sm font-medium">
@@ -207,6 +184,27 @@ export function AdminItemForm({
             <option value="bezumnyy">bezumnyy</option>
           </select>
           {form.formState.errors.rarity ? <p className="text-xs text-destructive">{form.formState.errors.rarity.message}</p> : null}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="slotType" className="text-sm font-medium">
+            Slot Type
+          </label>
+          <select
+            id="slotType"
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            {...form.register("slotType")}
+          >
+            <option value="HELMET">HELMET</option>
+            <option value="ARMOR">ARMOR</option>
+            <option value="PANTS">PANTS</option>
+            <option value="BOOTS">BOOTS</option>
+            <option value="LEFT_HAND">LEFT_HAND</option>
+            <option value="RIGHT_HAND">RIGHT_HAND</option>
+          </select>
+          {form.formState.errors.slotType ? (
+            <p className="text-xs text-destructive">{form.formState.errors.slotType.message}</p>
+          ) : null}
         </div>
 
         <div className="space-y-2">

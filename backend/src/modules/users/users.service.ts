@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, type Account } from '@prisma/client';
+import { EquipmentSlotType, Prisma, type Account } from '@prisma/client';
 
 import { AuthenticatedUserDto } from '../auth/dto';
 import { AccountRepository, type UpdateAccountInput } from '../auth/repositories';
@@ -13,8 +13,10 @@ import {
   AdminDeleteUserResponseDto,
   AdminUpdateUserDto,
   AdminUserWithCodeDto,
+  type UserEquipmentDto,
   EquipItemByUserResponse,
   PublicUserProfileDto,
+  UserOwnedItemDto,
   UserItemsResponseDto,
 } from './dto';
 import {
@@ -47,6 +49,7 @@ export class UsersService {
     }
 
     return {
+      id: account.id,
       username: account.username,
       lastLoginAt: account.lastTimeLoggedIn?.toISOString() ?? null,
       profilePhoto: account.avatarUrl,
@@ -70,24 +73,7 @@ export class UsersService {
 
     return {
       username: userItems.username,
-      items: userItems.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        image_url:
-          this.configService.get('APP_DOMAIN') +
-          ':' +
-          this.configService.get('PORT') +
-          item.imageUrl,
-        strength: item.strength,
-        charisma: item.charisma,
-        agility: item.agility,
-        intelligence: item.intelligence,
-        price: item.price,
-        rarity: item.rarity,
-        durability: item.durability,
-        created_at: item.createdAt.toISOString(),
-      })),
+      items: userItems.items.map((item) => this.toUserOwnedItem(item)),
     };
   }
 
@@ -175,6 +161,10 @@ export class UsersService {
         throw new ForbiddenException('Item does not belong to user');
       }
 
+      if (!this.isSupportedEquipmentSlot(item.slotType)) {
+        throw new BadRequestException('Item slot type is not supported for equipment');
+      }
+
       await this.userEquipmentRepository.setEquipmentByItemIdForUser(
         itemId,
         item.slotType,
@@ -182,43 +172,36 @@ export class UsersService {
         tx,
       );
 
-      const equipments = await this.userEquipmentRepository.getEquipmentByUserId(accountId, tx);
-
-      const equipmentBySlot = equipments.reduce<EquipItemByUserResponse['equipment']>(
-        (accumulator, equipment) => {
-          if (!equipment.item) {
-            return accumulator;
-          }
-
-          accumulator[equipment.slotType] = {
-            id: equipment.item.id,
-            name: equipment.item.name,
-            description: equipment.item.description,
-            image_url: equipment.item.imageUrl
-              ? this.configService.get('APP_DOMAIN') +
-                ':' +
-                this.configService.get('PORT') +
-                equipment.item.imageUrl
-              : null,
-            strength: equipment.item.strength,
-            charisma: equipment.item.charisma,
-            agility: equipment.item.agility,
-            intelligence: equipment.item.intelligence,
-            price: equipment.item.price,
-            rarity: equipment.item.rarity,
-            durability: equipment.item.durability,
-            created_at: equipment.item.createdAt.toISOString(),
-          };
-
-          return accumulator;
-        },
-        {},
-      );
-
       return {
-        equipment: equipmentBySlot,
+        equipped: await this.getUserEquipmentByUserId(accountId, tx),
       };
     });
+  }
+
+  async getUserEquipmentByUserId(
+    userId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<UserEquipmentDto> {
+    const account = tx
+      ? await this.accountRepository.findByIdInTransaction(userId, tx)
+      : await this.accountRepository.findById(userId);
+
+    if (!account) {
+      throw new NotFoundException('User is not found');
+    }
+
+    const equipments = await this.userEquipmentRepository.getEquipmentByUserId(userId, tx);
+
+    return equipments.reduce<UserEquipmentDto>((accumulator, equipment) => {
+      if (!equipment.item) {
+        return accumulator;
+      }
+
+      const equipmentSlot = this.toEquipmentResponseSlot(equipment.slotType);
+      accumulator[equipmentSlot] = this.toUserOwnedItem(equipment.item);
+
+      return accumulator;
+    }, {});
   }
 
   private toAuthenticatedUser(account: Account): AuthenticatedUserDto {
@@ -254,5 +237,96 @@ export class UsersService {
     }
 
     return typeof target === 'string' && target.toLowerCase().includes('username');
+  }
+
+  private toUserOwnedItem(item: {
+    id: string;
+    name: string;
+    slotType: EquipmentSlotType;
+    description: string | null;
+    imageUrl: string | null;
+    strength: number | null;
+    charisma: number | null;
+    agility: number | null;
+    intelligence: number | null;
+    price: number;
+    rarity: UserOwnedItemDto['rarity'];
+    durability: number | null;
+    createdAt: Date;
+  }): UserOwnedItemDto {
+    return {
+      id: item.id,
+      name: item.name,
+      type: this.toUserItemType(item.slotType),
+      slot_type: item.slotType,
+      description: item.description,
+      image_url: this.toPublicImageUrl(item.imageUrl),
+      strength: item.strength,
+      charisma: item.charisma,
+      agility: item.agility,
+      intelligence: item.intelligence,
+      price: item.price,
+      rarity: item.rarity,
+      durability: item.durability,
+      created_at: item.createdAt.toISOString(),
+    };
+  }
+
+  private toPublicImageUrl(imageUrl: string | null): string | null {
+    if (!imageUrl) {
+      return null;
+    }
+
+    return (
+      this.configService.get('APP_DOMAIN') + ':' + this.configService.get('PORT') + imageUrl
+    );
+  }
+
+  private toUserItemType(slotType: EquipmentSlotType): UserOwnedItemDto['type'] {
+    switch (slotType) {
+      case EquipmentSlotType.HELMET:
+        return 'helmet';
+      case EquipmentSlotType.ARMOR:
+        return 'chest';
+      case EquipmentSlotType.PANTS:
+        return 'pants';
+      case EquipmentSlotType.BOOTS:
+        return 'boots';
+      case EquipmentSlotType.LEFT_HAND:
+      case EquipmentSlotType.RIGHT_HAND:
+        return 'weapon';
+      default:
+        throw new BadRequestException(`Unsupported slot type: ${slotType}`);
+    }
+  }
+
+  private toEquipmentResponseSlot(slotType: EquipmentSlotType): keyof UserEquipmentDto {
+    switch (slotType) {
+      case EquipmentSlotType.HELMET:
+        return 'helmet';
+      case EquipmentSlotType.ARMOR:
+        return 'chest';
+      case EquipmentSlotType.PANTS:
+        return 'pants';
+      case EquipmentSlotType.BOOTS:
+        return 'boots';
+      case EquipmentSlotType.LEFT_HAND:
+        return 'leftWeapon';
+      case EquipmentSlotType.RIGHT_HAND:
+        return 'rightWeapon';
+      default:
+        throw new BadRequestException(`Unsupported slot type: ${slotType}`);
+    }
+  }
+
+  private isSupportedEquipmentSlot(slotType: EquipmentSlotType): boolean {
+    return (
+      slotType === EquipmentSlotType.HELMET ||
+      slotType === EquipmentSlotType.ARMOR ||
+      slotType === EquipmentSlotType.PANTS ||
+      slotType === EquipmentSlotType.BOOTS ||
+      slotType === EquipmentSlotType.LEFT_HAND ||
+      slotType === EquipmentSlotType.RIGHT_HAND
+    );
   }
 }

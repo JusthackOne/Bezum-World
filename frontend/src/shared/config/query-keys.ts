@@ -6,4 +6,5 @@ export const queryKeys = {
   userProfile: (username: string) => ["users", "profile", username] as const,
   publicUserProfile: (username: string) => ["users", "public-profile", username] as const,
   publicUserItems: (username: string) => ["users", "items", username] as const,
+  userEquipment: (userId: string) => ["users", "equipment", userId] as const,
 };

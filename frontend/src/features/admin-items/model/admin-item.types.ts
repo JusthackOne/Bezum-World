@@ -10,6 +10,7 @@ export interface AdminItem {
   intelligence: number | null;
   price: number;
   rarity: AdminItemRarity;
+  slotType: AdminItemSlotType;
   durability: number | null;
   created_at: string;
 }
@@ -17,6 +18,7 @@ export interface AdminItem {
 export type AdminItemLocationFilter = "shop" | "inventory" | "all";
 
 export type AdminItemRarity = "unterlyanskiy" | "basic_minimum" | "sigma" | "bezumnyy";
+export type AdminItemSlotType = "HELMET" | "ARMOR" | "PANTS" | "BOOTS" | "LEFT_HAND" | "RIGHT_HAND";
 
 export interface GetAdminItemsInput {
   location?: Exclude<AdminItemLocationFilter, "all">;
@@ -27,8 +29,8 @@ export interface AdminCreateItemInput {
   description: string;
   price: number;
   rarity: AdminItemRarity;
+  slotType: AdminItemSlotType;
   imageFile?: File | null;
-  image_url?: string;
   strength?: number;
   charisma?: number;
   agility?: number;

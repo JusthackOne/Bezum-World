@@ -8,4 +8,5 @@ export * from './public-user-profile.dto';
 export * from './user-items-response.dto';
 export * from './user-owned-item.dto';
 export * from './equip-item-params.dto';
-export * from './equip-item-response.dto';
+export * from './user-equipment.dto';
+export * from './get-user-equipment-params.dto';

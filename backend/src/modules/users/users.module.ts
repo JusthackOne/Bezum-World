@@ -9,12 +9,13 @@ import {
   UserItemsRepository,
   UserProfileRepository,
 } from './repositories';
+import { UserEquipmentController } from './user-equipment.controller';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, ItemsModule],
-  controllers: [UsersController, AdminUsersController],
+  controllers: [UsersController, UserEquipmentController, AdminUsersController],
   providers: [UsersService, UserProfileRepository, UserItemsRepository, UserEquipmentRepository],
 })
 export class UsersModule {}

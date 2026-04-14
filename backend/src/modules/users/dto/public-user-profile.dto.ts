@@ -4,6 +4,12 @@ import { PublicUserAttributesDto } from './public-user-attributes.dto';
 
 export class PublicUserProfileDto {
   @ApiProperty({
+    description: 'User identifier',
+    example: '2df8c39f-3255-4b40-9cb2-7f236c0b62e3',
+  })
+  id!: string;
+
+  @ApiProperty({
     description: 'Public username',
     example: 'mike123',
   })

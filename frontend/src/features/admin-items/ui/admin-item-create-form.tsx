@@ -57,9 +57,9 @@ export function AdminItemCreateForm() {
             const payload = {
               name: values.name.trim(),
               description: values.description.trim(),
-              image_url: values.image_url?.trim() ? values.image_url.trim() : undefined,
               price: values.price,
               rarity: values.rarity,
+              slotType: values.slotType,
               strength: values.strength,
               charisma: values.charisma,
               agility: values.agility,

@@ -11,10 +11,7 @@ export async function createAdminItem(payload: AdminCreateItemInput): Promise<Ad
   formData.append("description", payload.description);
   formData.append("price", String(payload.price));
   formData.append("rarity", payload.rarity);
-
-  if (payload.image_url) {
-    formData.append("image_url", payload.image_url);
-  }
+  formData.append("slotType", payload.slotType);
 
   if (payload.strength !== undefined) {
     formData.append("strength", String(payload.strength));
