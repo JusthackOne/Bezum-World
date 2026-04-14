@@ -1,22 +1,50 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CoinsIcon } from "lucide-react";
+import { SparklesIcon } from "lucide-react";
 
 import { usePurchaseShopItemMutation, useShopItemsQuery } from "@/features/shop/api";
 import type { ShopItem } from "@/features/shop/model/shop-item.types";
 import { queryKeys } from "@/shared/config/query-keys";
-import {
-  formatBalance,
-  getItemAttributeRows,
-  itemRarityStyles,
-  resolveAssetUrl,
-} from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { Checkbox } from "@/shared/ui/checkbox";
 import { ItemDetailsModal } from "@/shared/ui";
+import { ItemDisplayCard } from "@/shared/ui";
+
+type RarityFilterValue = "unterlyanskiy" | "basic_minimum" | "sigma" | "bezumnyy";
+type RarityFilterOptionValue = RarityFilterValue | "all";
+type SortOptionValue = "price_desc" | "price_asc" | "quality_desc" | "quality_asc";
+
+interface RarityFilterOption {
+  value: RarityFilterOptionValue;
+  label: string;
+  textClassName: string;
+}
+
+const rarityFilterOptions: ReadonlyArray<RarityFilterOption> = [
+  { value: "all", label: "All", textClassName: "text-foreground" },
+  { value: "unterlyanskiy", label: "Unterlyanskiy", textClassName: "text-amber-700 dark:text-amber-300" },
+  { value: "basic_minimum", label: "Basic minimum", textClassName: "text-emerald-600 dark:text-emerald-300" },
+  { value: "sigma", label: "Sigma", textClassName: "text-violet-600 dark:text-violet-300" },
+  { value: "bezumnyy", label: "Bezumnyy", textClassName: "text-amber-500 dark:text-amber-300" },
+];
+
+const sortOptions: ReadonlyArray<{ value: SortOptionValue; label: string }> = [
+  { value: "price_desc", label: "Price: High to Low" },
+  { value: "price_asc", label: "Price: Low to High" },
+  { value: "quality_desc", label: "Quality: Best to Worst" },
+  { value: "quality_asc", label: "Quality: Worst to Best" },
+];
+
+const rarityQualityRank: Record<RarityFilterValue, number> = {
+  bezumnyy: 4,
+  sigma: 3,
+  basic_minimum: 2,
+  unterlyanskiy: 1,
+};
 
 export function ShopPage() {
   const queryClient = useQueryClient();
@@ -26,8 +54,104 @@ export function ShopPage() {
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
   const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [selectedRarities, setSelectedRarities] = useState<RarityFilterOptionValue[]>(["all"]);
+  const [selectedSort, setSelectedSort] = useState<SortOptionValue>("quality_desc");
+  const [isRarityDropdownOpen, setIsRarityDropdownOpen] = useState(false);
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+
+  const rarityDropdownRef = useRef<HTMLDivElement | null>(null);
+  const sortDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
+
+  const selectedRarityValues = useMemo<RarityFilterValue[]>(() => {
+    if (selectedRarities.includes("all")) {
+      return [];
+    }
+
+    return selectedRarities.filter(
+      (value): value is RarityFilterValue => value !== "all",
+    );
+  }, [selectedRarities]);
+
+  const filteredAndSortedItems = useMemo(() => {
+    const filteredItems = selectedRarityValues.length > 0
+      ? items.filter((item) => selectedRarityValues.includes(item.rarity as RarityFilterValue))
+      : items;
+
+    const sortedItems = [...filteredItems];
+
+    switch (selectedSort) {
+      case "price_desc":
+        sortedItems.sort((left, right) => right.price - left.price);
+        break;
+      case "price_asc":
+        sortedItems.sort((left, right) => left.price - right.price);
+        break;
+      case "quality_desc":
+        sortedItems.sort((left, right) => {
+          const rightScore = rarityQualityRank[right.rarity as RarityFilterValue] ?? 0;
+          const leftScore = rarityQualityRank[left.rarity as RarityFilterValue] ?? 0;
+
+          if (rightScore !== leftScore) {
+            return rightScore - leftScore;
+          }
+
+          return right.price - left.price;
+        });
+        break;
+      case "quality_asc":
+        sortedItems.sort((left, right) => {
+          const rightScore = rarityQualityRank[right.rarity as RarityFilterValue] ?? 0;
+          const leftScore = rarityQualityRank[left.rarity as RarityFilterValue] ?? 0;
+
+          if (rightScore !== leftScore) {
+            return leftScore - rightScore;
+          }
+
+          return left.price - right.price;
+        });
+        break;
+      default:
+        break;
+    }
+
+    return sortedItems;
+  }, [items, selectedRarityValues, selectedSort]);
+
+  const raritySummary = useMemo(() => {
+    if (selectedRarityValues.length === 0) {
+      return "All";
+    }
+
+    return rarityFilterOptions
+      .filter((option) => option.value !== "all" && selectedRarityValues.includes(option.value))
+      .map((option) => option.label)
+      .join(", ");
+  }, [selectedRarityValues]);
+
+  const selectedSortOption = useMemo(
+    () => sortOptions.find((option) => option.value === selectedSort) ?? sortOptions[0],
+    [selectedSort],
+  );
+
+  const handleRarityToggle = (value: RarityFilterOptionValue) => {
+    if (value === "all") {
+      setSelectedRarities(["all"]);
+      return;
+    }
+
+    setSelectedRarities((previousValues) => {
+      const nextValues = previousValues.filter((previousValue) => previousValue !== "all");
+
+      if (nextValues.includes(value)) {
+        const updatedValues = nextValues.filter((previousValue) => previousValue !== value);
+        return updatedValues.length > 0 ? updatedValues : ["all"];
+      }
+
+      return [...nextValues, value];
+    });
+  };
 
   const handleBuy = async (itemId: string) => {
     setPurchaseError(null);
@@ -46,6 +170,27 @@ export function ShopPage() {
       setBuyingItemId(null);
     }
   };
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      const targetNode = event.target as Node | null;
+
+      if (
+        targetNode &&
+        !rarityDropdownRef.current?.contains(targetNode) &&
+        !sortDropdownRef.current?.contains(targetNode)
+      ) {
+        setIsRarityDropdownOpen(false);
+        setIsSortDropdownOpen(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, []);
 
   if (itemsQuery.isError) {
     return (
@@ -73,105 +218,131 @@ export function ShopPage() {
           <CardDescription>
             {itemsQuery.isPending
               ? "Loading items..."
-              : `${items.length} item${items.length === 1 ? "" : "s"} in shop`}
+              : `${filteredAndSortedItems.length} item${filteredAndSortedItems.length === 1 ? "" : "s"} shown`}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {purchaseError ? <p className="text-sm text-destructive">{purchaseError}</p> : null}
 
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div ref={rarityDropdownRef} className="relative w-full sm:w-[230px]">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 w-full justify-between px-2 text-xs"
+                onClick={() => {
+                  setIsRarityDropdownOpen((previous) => !previous);
+                  setIsSortDropdownOpen(false);
+                }}
+              >
+                <span>Rarity</span>
+                <span className="max-w-[130px] truncate text-[10px] text-muted-foreground">
+                  {raritySummary}
+                </span>
+              </Button>
+
+              {isRarityDropdownOpen ? (
+                <div className="bg-card absolute z-30 mt-1.5 w-full rounded-md border p-2 shadow-lg">
+                  <div className="space-y-1">
+                    {rarityFilterOptions.map((option) => {
+                      const isChecked = option.value === "all"
+                        ? selectedRarityValues.length === 0
+                        : selectedRarityValues.includes(option.value);
+
+                      return (
+                        <label
+                          key={option.value}
+                          className={cn(
+                            "flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 transition-colors",
+                            isChecked ? "bg-muted/40" : "hover:bg-muted/30",
+                          )}
+                        >
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={() => handleRarityToggle(option.value)}
+                            aria-label={option.label}
+                            className="size-3.5 rounded-[3px] [&_svg]:size-2.5"
+                          />
+                          <span className={cn("text-xs font-medium", option.textClassName)}>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div ref={sortDropdownRef} className="relative w-full sm:w-[230px]">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 w-full justify-between px-2 text-xs"
+                onClick={() => {
+                  setIsSortDropdownOpen((previous) => !previous);
+                  setIsRarityDropdownOpen(false);
+                }}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <SparklesIcon className="size-4" />
+                  Sort
+                </span>
+                <span className="max-w-[130px] truncate text-[10px] text-muted-foreground">
+                  {selectedSortOption.label}
+                </span>
+              </Button>
+
+              {isSortDropdownOpen ? (
+                <div className="bg-card absolute z-30 mt-1.5 w-full rounded-md border p-2 shadow-lg">
+                  <div className="space-y-1">
+                    {sortOptions.map((option) => {
+                      const isSelected = selectedSort === option.value;
+
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={cn(
+                            "flex w-full items-center rounded-md border px-2 py-1 text-left text-xs transition-colors",
+                            isSelected ? "bg-muted/45" : "hover:bg-muted/30",
+                          )}
+                          onClick={() => {
+                            setSelectedSort(option.value);
+                            setIsSortDropdownOpen(false);
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
           {itemsQuery.isPending ? (
             <p className="text-muted-foreground text-sm">Loading items...</p>
-          ) : items.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No items available in shop.</p>
+          ) : filteredAndSortedItems.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No items match the selected filters.</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {items.map((item) => {
-                const rarityStyle = itemRarityStyles[item.rarity] ?? {
-                  borderClassName: "border-border",
-                  glowClassName: "shadow-sm",
-                };
-                const itemAttributes = getItemAttributeRows(item);
-                const imageUrl = item.image_url ? resolveAssetUrl(item.image_url) : null;
+            <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
+              {filteredAndSortedItems.map((item) => {
                 const isBuying = buyingItemId === item.id;
 
                 return (
-                  <article
+                  <ItemDisplayCard
                     key={item.id}
-                    className={cn(
-                      "flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border bg-card transition-shadow",
-                      rarityStyle.borderClassName,
-                      rarityStyle.glowClassName,
-                    )}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setSelectedItem(item)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        setSelectedItem(item);
-                      }
+                    item={item}
+                    onOpenDetails={setSelectedItem}
+                    actionLabel="Buy"
+                    actionLoadingLabel="Buying..."
+                    isActionLoading={isBuying}
+                    actionDisabled={isBuying}
+                    onAction={(clickedItem) => {
+                      void handleBuy(clickedItem.id);
                     }}
-                  >
-                    <div className="aspect-[4/3] w-full overflow-hidden bg-muted/35">
-                      {imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={imageUrl}
-                          alt={item.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                          No image
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex h-full flex-col gap-3 p-4">
-                      <h2 className="text-base leading-tight font-semibold">{item.name}</h2>
-
-                      {itemAttributes.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          {itemAttributes.map((attribute) => {
-                            const Icon = attribute.icon;
-
-                            return (
-                              <div
-                                key={attribute.key}
-                                className="flex items-center justify-between rounded-md border bg-muted/15 px-2 py-1.5"
-                              >
-                                <Icon className="size-3.5 text-muted-foreground" />
-                                <span className="text-xs font-medium tabular-nums">
-                                  {attribute.value}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-muted-foreground text-xs">No attributes</p>
-                      )}
-
-                      <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={isBuying}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleBuy(item.id);
-                          }}
-                        >
-                          {isBuying ? "Buying..." : "Buy"}
-                        </Button>
-
-                        <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold">
-                          <CoinsIcon className="size-4" />
-                          {formatBalance(item.price)}
-                        </span>
-                      </div>
-                    </div>
-                  </article>
+                    actionAriaLabel={`Buy ${item.name}`}
+                  />
                 );
               })}
             </div>
