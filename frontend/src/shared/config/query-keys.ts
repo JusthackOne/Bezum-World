@@ -24,6 +24,7 @@ export const queryKeys = {
     type: "all" | "daily" | "weekly" | "event";
   }) => ["client", "tasks", filters.search, filters.type] as const,
   leaderboard: (period: "all" | "weekly" | "daily") => ["leaderboard", period] as const,
+  battlesPlayers: ["battles", "players"] as const,
   userProfile: (username: string) => ["users", "profile", username] as const,
   publicUserProfile: (username: string) => ["users", "public-profile", username] as const,
   publicUserItems: (username: string) => ["users", "items", username] as const,

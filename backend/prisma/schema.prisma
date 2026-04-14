@@ -31,6 +31,10 @@ model Account {
   items            Item[]
   equipment        UserEquipmentSlot[]
   taskSubmissions  TaskSubmission[]
+  attackedBattles  BattleLog[] @relation("BattleAttacker")
+  defendedBattles  BattleLog[] @relation("BattleDefender")
+  wonBattles       BattleLog[] @relation("BattleWinner")
+  lostBattles      BattleLog[] @relation("BattleLoser")
 }
 
 model AuthCode {
@@ -136,4 +140,28 @@ model TaskSubmission {
   @@index([userId])
   @@index([taskId, userId, createdAt])
   @@map("task_submissions")
+}
+
+model BattleLog {
+  id                    String   @id @default(uuid())
+  attackerUserId        String   @map("attacker_user_id")
+  defenderUserId        String   @map("defender_user_id")
+  attackerPower         Float    @map("attacker_power")
+  defenderPower         Float    @map("defender_power")
+  attackerWinProbability Float   @map("attacker_win_probability")
+  winnerUserId          String   @map("winner_user_id")
+  loserUserId           String   @map("loser_user_id")
+  transferredCoins      Int      @map("transferred_coins")
+  gameScoreReward       Int      @map("game_score_reward")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  attacker Account @relation("BattleAttacker", fields: [attackerUserId], references: [id], onDelete: Cascade)
+  defender Account @relation("BattleDefender", fields: [defenderUserId], references: [id], onDelete: Cascade)
+  winner   Account @relation("BattleWinner", fields: [winnerUserId], references: [id], onDelete: Cascade)
+  loser    Account @relation("BattleLoser", fields: [loserUserId], references: [id], onDelete: Cascade)
+
+  @@index([attackerUserId, defenderUserId, createdAt])
+  @@index([winnerUserId])
+  @@index([loserUserId])
+  @@map("battle_logs")
 }

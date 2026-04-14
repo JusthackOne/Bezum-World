@@ -1,5 +1,4 @@
--- Keep this migration replay-safe for the shadow database.
--- At this point in history, "game_score" and "tasks.updated_at" may not exist yet.
+-- Ensure Account game score column naming is normalized after tasks migration.
 DO $$
 BEGIN
   IF EXISTS (
@@ -19,6 +18,7 @@ BEGIN
   END IF;
 END $$;
 
+-- Task.updatedAt is managed by Prisma (@updatedAt), keep DB column without a default.
 DO $$
 BEGIN
   IF EXISTS (

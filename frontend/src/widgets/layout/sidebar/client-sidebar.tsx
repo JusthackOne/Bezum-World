@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListTodoIcon, ShoppingBagIcon, TrophyIcon } from "lucide-react";
+import { ListTodoIcon, ShoppingBagIcon, SwordsIcon, TrophyIcon } from "lucide-react";
 
 import {
   Sidebar,
@@ -18,6 +18,7 @@ import {
 export function ClientSidebar() {
   const pathname = usePathname();
   const isShopActive = pathname.startsWith("/shop");
+  const isBattlesActive = pathname.startsWith("/battles");
   const isTasksActive = pathname.startsWith("/tasks");
   const isLeaderboardActive = pathname.startsWith("/leaderboard");
 
@@ -32,6 +33,14 @@ export function ClientSidebar() {
                 <Link href="/shop">
                   <ShoppingBagIcon />
                   <span>Shop</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isBattlesActive}>
+                <Link href="/battles">
+                  <SwordsIcon />
+                  <span>Battles</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
