@@ -1,10 +1,5 @@
-import { AdminDashboardStub } from "@/features/auth/ui";
-import { AppShell } from "@/widgets/layout/app-shell";
+import { redirect } from "next/navigation";
 
 export default function AdminPage() {
-  return (
-    <AppShell>
-      <AdminDashboardStub />
-    </AppShell>
-  );
+  redirect("/admin/users");
 }

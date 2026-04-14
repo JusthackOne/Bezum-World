@@ -44,13 +44,13 @@ export function AdminLoginForm() {
       return;
     }
 
-    router.replace("/admin");
+    router.replace("/admin/users");
   }, [isInitialized, router, session?.accessToken]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     const result = await loginMutation.mutateAsync(values);
     setSession(result);
-    router.replace("/admin");
+    router.replace("/admin/users");
   });
 
   const mutationError =
