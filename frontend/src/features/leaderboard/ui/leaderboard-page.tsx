@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CrownIcon, MedalIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { useLeaderboardQuery } from "@/features/leaderboard/api";
 import type {
@@ -16,12 +16,6 @@ import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { GameScoreIcon } from "@/shared/ui";
 import { AvatarImage } from "@/shared/ui/avatar-image";
-
-const periodFilters: Array<{ label: string; value: LeaderboardPeriod }> = [
-  { label: "All Time", value: "all" },
-  { label: "Weekly", value: "weekly" },
-  { label: "Daily", value: "daily" },
-];
 
 const podiumVisuals: Record<number, { cardClassName: string; badgeClassName: string }> = {
   1: {
@@ -138,8 +132,7 @@ function LeaderListRow({
 }
 
 export function LeaderBoardPage() {
-  const [period, setPeriod] = useState<LeaderboardPeriod>("all");
-  const leaderboardQuery = useLeaderboardQuery(period);
+  const leaderboardQuery = useLeaderboardQuery("all");
 
   const leaders = useMemo(
     () => leaderboardQuery.data?.leaders ?? [],
@@ -178,22 +171,8 @@ export function LeaderBoardPage() {
           <h1 className="text-2xl font-semibold">LeaderBoard</h1>
         </div>
         <p className="text-muted-foreground text-sm">
-          Track top players by total score or recent score growth.
+          Track top players by total score.
         </p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {periodFilters.map((option) => (
-          <Button
-            key={option.value}
-            type="button"
-            size="sm"
-            variant={period === option.value ? "default" : "outline"}
-            onClick={() => setPeriod(option.value)}
-          >
-            {option.label}
-          </Button>
-        ))}
       </div>
 
       {leaderboardQuery.isPending ? (
@@ -213,22 +192,22 @@ export function LeaderBoardPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle>Top 3 Players</CardTitle>
-              <CardDescription>Best players for selected period.</CardDescription>
+              <CardDescription>Best players by total game score.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid items-end gap-3 md:grid-cols-3">
                 {second ? (
-                  <TopLeaderCard leader={second} place={2} period={period} emphasized={false} />
+                  <TopLeaderCard leader={second} place={2} period="all" emphasized={false} />
                 ) : (
                   <div />
                 )}
                 {first ? (
-                  <TopLeaderCard leader={first} place={1} period={period} emphasized={true} />
+                  <TopLeaderCard leader={first} place={1} period="all" emphasized={true} />
                 ) : (
                   <div />
                 )}
                 {third ? (
-                  <TopLeaderCard leader={third} place={3} period={period} emphasized={false} />
+                  <TopLeaderCard leader={third} place={3} period="all" emphasized={false} />
                 ) : (
                   <div />
                 )}
@@ -250,7 +229,7 @@ export function LeaderBoardPage() {
               ) : (
                 <div className="space-y-2">
                   {remaining.map((leader) => (
-                    <LeaderListRow key={leader.userId} leader={leader} period={period} />
+                    <LeaderListRow key={leader.userId} leader={leader} period="all" />
                   ))}
                 </div>
               )}

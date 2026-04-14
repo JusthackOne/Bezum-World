@@ -1,0 +1,90 @@
+[
+  {
+    "id": "33333333-3333-4333-8333-111111111111",
+    "type": "daily",
+    "title": "Morning Mobility Circuit",
+    "description": "Complete a 20-minute stretching and core mobility routine before 10:00.",
+    "image": "tasks/morning-mobility.jpg",
+    "rewardMoney": 120,
+    "rewardGameScore": 18,
+    "rewardAttributes": {
+      "endurance": 2,
+      "strength": 1
+    },
+    "requiresProofImage": true,
+    "submissionLimit": 1
+  },
+  {
+    "id": "33333333-3333-4333-8333-222222222222",
+    "type": "daily",
+    "title": "Read 25 Pages",
+    "description": "Read at least 25 pages from a book and submit a photo of notes.",
+    "image": "tasks/read-25-pages.jpg",
+    "rewardMoney": 80,
+    "rewardGameScore": 12,
+    "rewardAttributes": {
+      "intelligence": 2
+    },
+    "requiresProofImage": true,
+    "submissionLimit": 2
+  },
+  {
+    "id": "33333333-3333-4333-8333-333333333333",
+    "type": "weekly",
+    "title": "Five Focus Sessions",
+    "description": "Finish five separate 45-minute deep-work sessions during the week.",
+    "image": "tasks/five-focus-sessions.jpg",
+    "rewardMoney": 450,
+    "rewardGameScore": 75,
+    "rewardAttributes": {
+      "intelligence": 4,
+      "endurance": 2
+    },
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "33333333-3333-4333-8333-444444444444",
+    "type": "weekly",
+    "title": "Social Momentum",
+    "description": "Attend two social meetups and publish one short recap post.",
+    "image": "tasks/social-momentum.jpg",
+    "rewardMoney": 380,
+    "rewardGameScore": 62,
+    "rewardAttributes": {
+      "charisma": 5
+    },
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "33333333-3333-4333-8333-555555555555",
+    "type": "event",
+    "title": "City Steps Sprint",
+    "description": "Hit 18,000 steps in one day during event window and upload tracker screenshot.",
+    "image": "tasks/city-steps-sprint.jpg",
+    "rewardMoney": 600,
+    "rewardGameScore": 110,
+    "rewardAttributes": {
+      "endurance": 6,
+      "strength": 2
+    },
+    "requiresProofImage": true,
+    "submissionLimit": 1
+  },
+  {
+    "id": "33333333-3333-4333-8333-666666666666",
+    "type": "event",
+    "title": "Mentor Session",
+    "description": "Run a 30-minute help session for another player and submit a confirmation image.",
+    "image": "tasks/voidmail-cuirass.jpg",
+    "rewardMoney": 520,
+    "rewardGameScore": 95,
+    "rewardAttributes": {
+      "charisma": 4,
+      "intelligence": 3
+    },
+    "requiresProofImage": true,
+    "submissionLimit": 3
+  }
+]
