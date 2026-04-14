@@ -42,6 +42,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { GameScoreIcon } from "@/shared/ui";
 import { ItemDetailsModal } from "@/shared/ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
+import { Separator } from "@/shared/ui/8bit";
 
 interface PublicUserPageProps {
   username: string;
@@ -50,19 +51,53 @@ interface PublicUserPageProps {
 interface AttributeVisualConfig {
   key: "strength" | "charisma" | "endurance" | "intelligence";
   icon: ComponentType<{ className?: string }>;
+  label: string;
+  accentClassName: string;
+  iconClassName: string;
 }
 
 const attributeVisuals: AttributeVisualConfig[] = [
-  { key: "strength", icon: DumbbellIcon },
-  { key: "charisma", icon: SparklesIcon },
-  { key: "endurance", icon: ShieldIcon },
-  { key: "intelligence", icon: BrainIcon },
+  {
+    key: "strength",
+    label: "Strength",
+    icon: DumbbellIcon,
+    accentClassName:
+      "border-red-400/65 bg-red-500/8 shadow-[0_0_0_1px_rgba(248,113,113,0.28),0_0_18px_rgba(239,68,68,0.16)]",
+    iconClassName: "text-red-400",
+  },
+  {
+    key: "intelligence",
+    label: "Intelligence",
+    icon: BrainIcon,
+    accentClassName:
+      "border-blue-400/65 bg-blue-500/8 shadow-[0_0_0_1px_rgba(96,165,250,0.28),0_0_18px_rgba(59,130,246,0.16)]",
+    iconClassName: "text-blue-400",
+  },
+  {
+    key: "charisma",
+    label: "Charisma",
+    icon: SparklesIcon,
+    accentClassName:
+      "border-emerald-400/65 bg-emerald-500/8 shadow-[0_0_0_1px_rgba(52,211,153,0.26),0_0_18px_rgba(16,185,129,0.15)]",
+    iconClassName: "text-emerald-400",
+  },
+  {
+    key: "endurance",
+    label: "Endurance",
+    icon: ShieldIcon,
+    accentClassName:
+      "border-violet-400/65 bg-violet-500/8 shadow-[0_0_0_1px_rgba(196,181,253,0.28),0_0_18px_rgba(139,92,246,0.16)]",
+    iconClassName: "text-violet-400",
+  },
 ];
 
 function getUserAttributeRows(profile: PublicUserProfile) {
-  return attributeVisuals.map(({ key, icon: Icon }) => ({
+  return attributeVisuals.map(({ key, icon: Icon, label, accentClassName, iconClassName }) => ({
     key,
+    label,
     icon: Icon,
+    accentClassName,
+    iconClassName,
     value: profile.attributes[key],
   }));
 }
@@ -178,34 +213,25 @@ function UserEquipmentSection({
 
   return (
     <TooltipProvider>
-      <div className="mx-auto grid max-w-[290px] grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2">
-        <div className="flex items-center justify-center">
-          <EquipmentSlot label="Left" icon={ShieldIcon} item={equipment.leftWeapon} />
-        </div>
-        <div className="flex justify-center">
+      <div className="mx-auto grid max-w-72.5 grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-2.5">
+        <div className="col-start-2 row-start-1 flex justify-center">
           <EquipmentSlot label="Helmet" icon={HardHatIcon} item={equipment.helmet} />
         </div>
-        <div className="flex items-center justify-center">
-          <EquipmentSlot label="Right" icon={SwordIcon} item={equipment.rightWeapon} />
+        <div className="col-start-1 row-start-2 flex items-center justify-center">
+          <EquipmentSlot label="Left" icon={ShieldIcon} item={equipment.leftWeapon} />
         </div>
-
-        <div />
-        <div className="flex justify-center">
+        <div className="col-start-2 row-start-2 flex justify-center">
           <EquipmentSlot label="Chest" icon={ShirtIcon} item={equipment.chest} />
         </div>
-        <div />
-
-        <div />
-        <div className="flex justify-center">
+        <div className="col-start-3 row-start-2 flex items-center justify-center">
+          <EquipmentSlot label="Right" icon={SwordIcon} item={equipment.rightWeapon} />
+        </div>
+        <div className="col-start-2 row-start-3 flex justify-center">
           <EquipmentSlot label="Pants" icon={PersonStandingIcon} item={equipment.pants} />
         </div>
-        <div />
-
-        <div />
-        <div className="flex justify-center">
+        <div className="col-start-2 row-start-4 flex justify-center">
           <EquipmentSlot label="Boots" icon={FootprintsIcon} item={equipment.boots} />
         </div>
-        <div />
       </div>
     </TooltipProvider>
   );
@@ -218,8 +244,6 @@ function UserInfoCard({
   isEquipmentError,
   onRetryEquipment,
   isEquipmentRefetching,
-  onRetry,
-  isRetrying,
 }: {
   profile: PublicUserProfile;
   equipment: PublicUserEquipment;
@@ -240,7 +264,7 @@ function UserInfoCard({
         <CardDescription>Public information and base attributes.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="flex justify-start">
+        <div className="flex justify-center">
           <div className="flex h-52 w-52 items-center justify-center overflow-hidden rounded-2xl border bg-muted/30">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -254,16 +278,9 @@ function UserInfoCard({
             )}
           </div>
         </div>
-
         <h1 className="text-2xl font-semibold break-all">{profile.username}</h1>
-
+        <Separator />
         <div className="space-y-2">
-          <div>
-            <h2 className="text-sm font-semibold">User Equipment</h2>
-            <p className="text-muted-foreground text-xs">
-              6 slots: armor center and weapons on sides.
-            </p>
-          </div>
           <UserEquipmentSection
             equipment={equipment}
             isPending={isEquipmentPending}
@@ -272,50 +289,74 @@ function UserInfoCard({
             isRetrying={isEquipmentRefetching}
           />
         </div>
+        <div className="flex flex-col">
+          <TooltipProvider>
+            <div className="flex gap-1 flex-col">
+              {userAttributeRows.map((attribute) => {
+                const Icon = attribute.icon;
 
-        <div className="space-y-2">
-          {userAttributeRows.map((attribute) => {
-            const Icon = attribute.icon;
+                return (
+                  <Tooltip key={attribute.key}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          "flex items-center justify-between rounded-lg border px-3 py-2",
+                          attribute.accentClassName,
+                        )}
+                      >
+                        <Icon className={cn("size-4", attribute.iconClassName)} />
+                        <span className="text-sm font-semibold tabular-nums">
+                          {attribute.value}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={6}>
+                      {attribute.label}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+            <Separator className="mt-4" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="rounded-lg border mt-4 border-fuchsia-400/60 bg-[linear-gradient(120deg,rgba(244,114,182,0.12),rgba(96,165,250,0.12),rgba(52,211,153,0.12),rgba(250,204,21,0.12))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(217,70,239,0.25),0_0_20px_rgba(59,130,246,0.18)]">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-2">
+                      <GameScoreIcon className="size-4 text-fuchsia-300" />
+                      <span className="sr-only">GameScore</span>
+                    </span>
+                    <span className="bg-gradient-to-r from-fuchsia-300 via-sky-300 to-emerald-300 bg-clip-text text-base font-semibold tabular-nums text-transparent">
+                      {formatBalance(profile.gameScore)}
+                    </span>
+                  </div>
+                </div>
+              </TooltipTrigger>
 
-            return (
-              <div
-                key={attribute.key}
-                className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2"
-              >
-                <Icon className="size-4 text-muted-foreground" />
-                <span className="text-sm font-semibold tabular-nums">{attribute.value}</span>
-              </div>
-            );
-          })}
+              <TooltipContent side="top" sideOffset={6}>
+                GameScore
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="rounded-lg border mt-2.5 border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.13),rgba(251,191,36,0.08))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(245,158,11,0.26),0_0_18px_rgba(245,158,11,0.18)]">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-2">
+                      <CoinsIcon className="size-4 text-amber-300" />
+                      <span className="sr-only">Balance</span>
+                    </span>
+                    <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-base font-semibold tabular-nums text-transparent">
+                      {formatBalance(profile.balance)}
+                    </span>
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>
+                Balance
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
-
-        <div className="rounded-lg border bg-muted/15 px-3 py-3">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm text-muted-foreground">
-              <GameScoreIcon className="size-4" />
-              GameScore
-            </span>
-            <span className="text-base font-semibold tabular-nums">
-              {formatBalance(profile.gameScore)}
-            </span>
-          </div>
-        </div>
-
-        <div className="rounded-lg border bg-muted/15 px-3 py-3">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CoinsIcon className="size-4" />
-              Balance
-            </span>
-            <span className="text-base font-semibold tabular-nums">
-              {formatBalance(profile.balance)}
-            </span>
-          </div>
-        </div>
-
-        <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={isRetrying}>
-          Refresh profile
-        </Button>
       </CardContent>
     </Card>
   );
@@ -382,7 +423,7 @@ function UserItemsCard({
                       }
                     }}
                   >
-                    <div className="aspect-[4/3] w-full overflow-hidden bg-muted/35">
+                    <div className="aspect-4/3 w-full overflow-hidden bg-muted/35">
                       {imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
