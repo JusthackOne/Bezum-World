@@ -18,6 +18,11 @@ export const queryKeys = {
     ] as const,
   adminTaskById: (taskId: string) => ["admin", "tasks", "by-id", taskId] as const,
   shopItems: ["shop", "items"] as const,
+  clientTasksPrefix: ["client", "tasks"] as const,
+  clientTasks: (filters: {
+    search: string;
+    type: "all" | "daily" | "weekly" | "event";
+  }) => ["client", "tasks", filters.search, filters.type] as const,
   userProfile: (username: string) => ["users", "profile", username] as const,
   publicUserProfile: (username: string) => ["users", "public-profile", username] as const,
   publicUserItems: (username: string) => ["users", "items", username] as const,

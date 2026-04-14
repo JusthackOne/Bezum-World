@@ -39,6 +39,11 @@ export interface FindAdminTasksResult {
   total: number;
 }
 
+export interface FindClientTasksInput {
+  search?: string;
+  type?: TaskType;
+}
+
 @Injectable()
 export class TaskRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -126,6 +131,15 @@ export class TaskRepository {
       total,
       items,
     };
+  }
+
+  async findManyForClient(input: FindClientTasksInput): Promise<Task[]> {
+    return this.prisma.task.findMany({
+      where: this.buildWhere(input.search, input.type),
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
   }
 
   private buildWhere(search?: string, type?: TaskType): Prisma.TaskWhereInput {

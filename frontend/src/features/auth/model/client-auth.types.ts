@@ -7,6 +7,7 @@ export interface AuthenticatedClientUser {
   username: string;
   avatarUrl: string | null;
   balance: number;
+  gameScore: number;
   strength: number;
   charisma: number;
   endurance: number;

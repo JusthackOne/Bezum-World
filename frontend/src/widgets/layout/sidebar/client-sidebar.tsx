@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBagIcon } from "lucide-react";
+import { ListTodoIcon, ShoppingBagIcon } from "lucide-react";
 
 import {
   Sidebar,
@@ -18,6 +18,7 @@ import {
 export function ClientSidebar() {
   const pathname = usePathname();
   const isShopActive = pathname.startsWith("/shop");
+  const isTasksActive = pathname.startsWith("/tasks");
 
   return (
     <Sidebar>
@@ -30,6 +31,14 @@ export function ClientSidebar() {
                 <Link href="/shop">
                   <ShoppingBagIcon />
                   <span>Shop</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isTasksActive}>
+                <Link href="/tasks">
+                  <ListTodoIcon />
+                  <span>Tasks</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

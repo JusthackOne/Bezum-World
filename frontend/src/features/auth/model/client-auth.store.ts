@@ -14,6 +14,7 @@ const clientSessionSchema = z.object({
     username: z.string().min(1),
     avatarUrl: z.string().nullable(),
     balance: z.number(),
+    gameScore: z.number(),
     strength: z.number(),
     charisma: z.number(),
     endurance: z.number(),

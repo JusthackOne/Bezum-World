@@ -39,6 +39,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { GameScoreIcon } from "@/shared/ui/game-score-icon";
 import { ItemDetailsModal } from "@/shared/ui/item-details-modal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
 
@@ -282,6 +283,18 @@ function UserInfoCard({
               </div>
             );
           })}
+        </div>
+
+        <div className="rounded-lg border bg-muted/15 px-3 py-3">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-sm text-muted-foreground">
+              <GameScoreIcon className="size-4" />
+              GameScore
+            </span>
+            <span className="text-base font-semibold tabular-nums">
+              {formatBalance(profile.gameScore)}
+            </span>
+          </div>
         </div>
 
         <div className="rounded-lg border bg-muted/15 px-3 py-3">

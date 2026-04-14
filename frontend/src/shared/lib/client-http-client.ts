@@ -17,6 +17,7 @@ interface StoredClientSession {
     username: string;
     avatarUrl: string | null;
     balance: number;
+    gameScore: number;
     strength: number;
     charisma: number;
     endurance: number;
@@ -54,6 +55,7 @@ function isValidStoredUser(user: unknown): user is StoredClientSession["user"] {
     typeof user.username === "string" &&
     (user.avatarUrl === null || typeof user.avatarUrl === "string") &&
     typeof user.balance === "number" &&
+    typeof user.gameScore === "number" &&
     typeof user.strength === "number" &&
     typeof user.charisma === "number" &&
     typeof user.endurance === "number" &&

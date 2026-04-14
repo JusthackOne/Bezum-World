@@ -43,7 +43,9 @@ import {
   AdminTasksListResponseDto,
   AdminDeleteTaskResponseDto,
   CreateTaskDto,
+  ClientTasksListResponseDto,
   GetAdminTasksQueryDto,
+  GetClientTasksQueryDto,
   SubmitTaskDto,
   SubmitTaskResponseDto,
   TaskIdParamsDto,
@@ -215,6 +217,28 @@ export class TasksController {
   @ApiNotFoundResponse({ description: 'Task is not found' })
   async getAdminTaskById(@Param() params: TaskIdParamsDto): Promise<TaskResponseDto> {
     return this.tasksService.getTaskByIdByAdmin(params.taskId);
+  }
+
+  @Get('tasks')
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({
+    summary: 'Get tasks for current user',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'type', required: false, enum: TaskType })
+  @ApiOkResponse({ type: ClientTasksListResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Only user accounts can view tasks' })
+  async getClientTasks(
+    @Query() query: GetClientTasksQueryDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<ClientTasksListResponseDto> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can view tasks');
+    }
+
+    return this.tasksService.getClientTasksByUser(request.user.sub, query);
   }
 
   @Post('tasks/:taskId/submit')

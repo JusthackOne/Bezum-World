@@ -12,8 +12,11 @@ import { AccountRepository } from '../auth/repositories';
 import type {
   AdminDeleteTaskResponseDto,
   AdminTasksListResponseDto,
+  ClientTaskResponseDto,
+  ClientTasksListResponseDto,
   CreateTaskDto,
   GetAdminTasksQueryDto,
+  GetClientTasksQueryDto,
   SubmitTaskDto,
   SubmitTaskResponseDto,
   TaskResponseDto,
@@ -157,6 +160,51 @@ export class TasksService {
     }
 
     return this.toTaskResponse(task);
+  }
+
+  async getClientTasksByUser(
+    userId: string,
+    query: GetClientTasksQueryDto,
+  ): Promise<ClientTasksListResponseDto> {
+    const account = await this.accountRepository.findById(userId);
+
+    if (!account) {
+      throw new NotFoundException('User is not found');
+    }
+
+    const now = new Date();
+    const dailyRange = this.getUtcDayRange(now);
+    const weeklyRange = this.getUtcIsoWeekRange(now);
+
+    const [tasks, completedEventTaskIds, dailySubmissionCounts, weeklySubmissionCounts] =
+      await Promise.all([
+        this.taskRepository.findManyForClient({
+          ...(query.search !== undefined ? { search: query.search } : {}),
+          ...(query.type !== undefined ? { type: query.type } : {}),
+        }),
+        this.taskSubmissionRepository.findCompletedEventTaskIds(),
+        this.taskSubmissionRepository.countByTaskGroupedForUserInRange(
+          userId,
+          dailyRange.start,
+          dailyRange.end,
+        ),
+        this.taskSubmissionRepository.countByTaskGroupedForUserInRange(
+          userId,
+          weeklyRange.start,
+          weeklyRange.end,
+        ),
+      ]);
+
+    return {
+      items: tasks.map((task) =>
+        this.toClientTaskResponse(
+          task,
+          completedEventTaskIds,
+          dailySubmissionCounts,
+          weeklySubmissionCounts,
+        ),
+      ),
+    };
   }
 
   async submitTask(taskId: string, userId: string, payload: SubmitTaskDto): Promise<SubmitTaskResponseDto> {
@@ -453,5 +501,47 @@ export class TasksService {
       proofImage: submission.proofImage,
       createdAt: submission.createdAt.toISOString(),
     };
+  }
+
+  private toClientTaskResponse(
+    task: Task,
+    completedEventTaskIds: Set<string>,
+    dailySubmissionCounts: Map<string, number>,
+    weeklySubmissionCounts: Map<string, number>,
+  ): ClientTaskResponseDto {
+    return {
+      id: task.id,
+      type: task.type,
+      title: task.title,
+      image: task.image,
+      rewardMoney: task.rewardMoney,
+      rewardGameScore: task.rewardGameScore,
+      rewardAttributes: this.toRewardAttributesDto(task.rewardAttributes),
+      requiresProofImage: task.requiresProofImage,
+      isAvailable: this.getClientTaskAvailability(
+        task,
+        completedEventTaskIds,
+        dailySubmissionCounts,
+        weeklySubmissionCounts,
+      ),
+    };
+  }
+
+  private getClientTaskAvailability(
+    task: Task,
+    completedEventTaskIds: Set<string>,
+    dailySubmissionCounts: Map<string, number>,
+    weeklySubmissionCounts: Map<string, number>,
+  ): boolean {
+    if (task.type === TaskType.event) {
+      return !completedEventTaskIds.has(task.id);
+    }
+
+    if (task.type === TaskType.weekly) {
+      return (weeklySubmissionCounts.get(task.id) ?? 0) < 1;
+    }
+
+    const dailyLimit = task.submissionLimit ?? DEFAULT_DAILY_SUBMISSION_LIMIT;
+    return (dailySubmissionCounts.get(task.id) ?? 0) < dailyLimit;
   }
 }
