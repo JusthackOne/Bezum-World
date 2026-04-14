@@ -6,9 +6,9 @@ import { z } from "zod";
 
 import { useAuthStatusQuery } from "@/features/auth/api";
 import { useAuthUiStore } from "@/features/auth/model";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { Input } from "@/shared/ui/8bit/input";
 
 const authStubSchema = z.object({
   email: z.string().email("Enter a valid email"),

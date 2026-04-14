@@ -8,9 +8,9 @@ import { z } from "zod";
 
 import { useAdminLoginMutation } from "@/features/auth/api";
 import { useAdminAuthStore } from "@/features/auth/model";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { Input } from "@/shared/ui/8bit/input";
 
 const adminLoginSchema = z.object({
   username: z.string().min(3, "Username must contain at least 3 characters").max(64),

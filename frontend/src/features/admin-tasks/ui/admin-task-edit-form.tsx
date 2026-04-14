@@ -16,8 +16,8 @@ import type {
   UpdateAdminTaskInput,
 } from "@/features/admin-tasks/model/admin-task.types";
 import { queryKeys } from "@/shared/config/query-keys";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { AdminTaskForm, type AdminTaskFormValues } from "./admin-task-form";
 
 interface AdminTaskEditFormProps {

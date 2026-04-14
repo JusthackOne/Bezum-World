@@ -1,5 +1,5 @@
 import { env } from "@/shared/config/env";
-import { SidebarTrigger } from "@/shared/ui/sidebar";
+import { SidebarTrigger } from "@/shared/ui";
 
 export function Header() {
   return (

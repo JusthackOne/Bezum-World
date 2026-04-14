@@ -14,9 +14,9 @@ import {
   resolveAssetUrl,
 } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { ItemDetailsModal } from "@/shared/ui/item-details-modal";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { ItemDetailsModal } from "@/shared/ui";
 
 export function ShopPage() {
   const queryClient = useQueryClient();

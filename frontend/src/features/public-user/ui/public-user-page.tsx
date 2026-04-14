@@ -37,11 +37,11 @@ import {
   resolveAssetUrl,
 } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { GameScoreIcon } from "@/shared/ui/game-score-icon";
-import { ItemDetailsModal } from "@/shared/ui/item-details-modal";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { GameScoreIcon } from "@/shared/ui";
+import { ItemDetailsModal } from "@/shared/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
 
 interface PublicUserPageProps {
   username: string;
@@ -74,7 +74,9 @@ function ItemQuickTooltip({ item }: { item: PublicUserItem }) {
     <div className="space-y-2">
       <div className="space-y-1">
         <p className="text-sm font-semibold">{item.name}</p>
-        <p className="text-muted-foreground text-xs">{item.description ?? "No description available."}</p>
+        <p className="text-muted-foreground text-xs">
+          {item.description ?? "No description available."}
+        </p>
       </div>
 
       <div className="flex items-center justify-between text-xs">
@@ -258,7 +260,9 @@ function UserInfoCard({
         <div className="space-y-2">
           <div>
             <h2 className="text-sm font-semibold">User Equipment</h2>
-            <p className="text-muted-foreground text-xs">6 slots: armor center and weapons on sides.</p>
+            <p className="text-muted-foreground text-xs">
+              6 slots: armor center and weapons on sides.
+            </p>
           </div>
           <UserEquipmentSection
             equipment={equipment}
@@ -471,7 +475,10 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
 
   const profileQuery = usePublicUserProfileQuery(username);
   const itemsQuery = usePublicUserItemsQuery(username);
-  const equipmentQuery = useUserEquipmentQuery(profileQuery.data?.id ?? "", Boolean(profileQuery.data?.id));
+  const equipmentQuery = useUserEquipmentQuery(
+    profileQuery.data?.id ?? "",
+    Boolean(profileQuery.data?.id),
+  );
   const equipMutation = useEquipUserItemMutation();
 
   const isOwnProfile =

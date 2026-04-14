@@ -7,9 +7,9 @@ import { useMemo, useState } from "react";
 import { useAdminItemsQuery } from "@/features/admin-items/api";
 import type { AdminItemLocationFilter } from "@/features/admin-items/model/admin-item.types";
 import { env } from "@/shared/config/env";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/8bit/table";
 
 function formatDate(value: string): string {
   const parsedDate = new Date(value);

@@ -14,11 +14,14 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { useClientTasksQuery, useSubmitClientTaskMutation } from "@/features/client-tasks/api";
-import type { ClientTask, ClientTaskTypeFilter } from "@/features/client-tasks/model/client-task.types";
+import type {
+  ClientTask,
+  ClientTaskTypeFilter,
+} from "@/features/client-tasks/model/client-task.types";
 import { queryKeys } from "@/shared/config/query-keys";
 import { resolveAssetUrl } from "@/shared/lib/item-display";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import {
   Dialog,
   DialogContent,
@@ -26,16 +29,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/shared/ui/dialog";
-import { GameScoreIcon } from "@/shared/ui/game-score-icon";
-import { Input } from "@/shared/ui/input";
+} from "@/shared/ui/8bit/dialog";
+import { GameScoreIcon } from "@/shared/ui";
+import { Input } from "@/shared/ui/8bit/input";
 import {
   Toast,
   ToastDescription,
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from "@/shared/ui/toast";
+} from "@/shared/ui/8bit/toast";
 
 type ToastVariant = "default" | "destructive";
 
@@ -324,7 +327,10 @@ export function TasksPage() {
               const actionDisabled = !task.isAvailable || isSubmitting;
 
               return (
-                <article key={task.id} className="overflow-hidden rounded-xl border bg-card shadow-sm">
+                <article
+                  key={task.id}
+                  className="overflow-hidden rounded-xl border bg-card shadow-sm"
+                >
                   <div className="h-56 w-full overflow-hidden bg-muted/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imageUrl} alt={task.title} className="h-full w-full object-cover" />
@@ -396,9 +402,7 @@ export function TasksPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Attach image</DialogTitle>
-            <DialogDescription>
-              Upload proof image to complete this task.
-            </DialogDescription>
+            <DialogDescription>Upload proof image to complete this task.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
@@ -424,7 +428,11 @@ export function TasksPage() {
             <div className="h-48 overflow-hidden rounded-lg border bg-muted/20">
               {proofPreviewUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={proofPreviewUrl} alt="Proof preview" className="h-full w-full object-cover" />
+                <img
+                  src={proofPreviewUrl}
+                  alt="Proof preview"
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   Preview will appear here

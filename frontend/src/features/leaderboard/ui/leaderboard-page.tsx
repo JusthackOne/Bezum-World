@@ -12,9 +12,9 @@ import type {
 import { publicUserRoutes } from "@/features/public-user/routes";
 import { formatBalance, resolveAssetUrl } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { GameScoreIcon } from "@/shared/ui/game-score-icon";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { GameScoreIcon } from "@/shared/ui";
 
 const periodFilters: Array<{ label: string; value: LeaderboardPeriod }> = [
   { label: "All Time", value: "all" },
@@ -41,10 +41,23 @@ function getScoreLabel(period: LeaderboardPeriod): string {
   return period === "all" ? "Total GameScore" : "Gained GameScore";
 }
 
-function LeaderAvatar({ avatar, username, sizeClassName }: { avatar: string | null; username: string; sizeClassName: string }) {
+function LeaderAvatar({
+  avatar,
+  username,
+  sizeClassName,
+}: {
+  avatar: string | null;
+  username: string;
+  sizeClassName: string;
+}) {
   if (!avatar) {
     return (
-      <div className={cn("flex items-center justify-center rounded-full border bg-muted/30", sizeClassName)}>
+      <div
+        className={cn(
+          "flex items-center justify-center rounded-full border bg-muted/30",
+          sizeClassName,
+        )}
+      >
         <UserCircle2Icon className="size-2/3 text-muted-foreground/75" />
       </div>
     );
@@ -143,7 +156,10 @@ export function LeaderBoardPage() {
   const [period, setPeriod] = useState<LeaderboardPeriod>("all");
   const leaderboardQuery = useLeaderboardQuery(period);
 
-  const leaders = useMemo(() => leaderboardQuery.data?.leaders ?? [], [leaderboardQuery.data?.leaders]);
+  const leaders = useMemo(
+    () => leaderboardQuery.data?.leaders ?? [],
+    [leaderboardQuery.data?.leaders],
+  );
   const first = leaders.find((leader) => leader.rank === 1);
   const second = leaders.find((leader) => leader.rank === 2);
   const third = leaders.find((leader) => leader.rank === 3);
@@ -155,7 +171,9 @@ export function LeaderBoardPage() {
         <CardHeader>
           <CardTitle>Failed to Load LeaderBoard</CardTitle>
           <CardDescription>
-            {leaderboardQuery.error instanceof Error ? leaderboardQuery.error.message : "Unexpected error"}
+            {leaderboardQuery.error instanceof Error
+              ? leaderboardQuery.error.message
+              : "Unexpected error"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -214,9 +232,21 @@ export function LeaderBoardPage() {
             </CardHeader>
             <CardContent>
               <div className="grid items-end gap-3 md:grid-cols-3">
-                {second ? <TopLeaderCard leader={second} place={2} period={period} emphasized={false} /> : <div />}
-                {first ? <TopLeaderCard leader={first} place={1} period={period} emphasized={true} /> : <div />}
-                {third ? <TopLeaderCard leader={third} place={3} period={period} emphasized={false} /> : <div />}
+                {second ? (
+                  <TopLeaderCard leader={second} place={2} period={period} emphasized={false} />
+                ) : (
+                  <div />
+                )}
+                {first ? (
+                  <TopLeaderCard leader={first} place={1} period={period} emphasized={true} />
+                ) : (
+                  <div />
+                )}
+                {third ? (
+                  <TopLeaderCard leader={third} place={3} period={period} emphasized={false} />
+                ) : (
+                  <div />
+                )}
               </div>
             </CardContent>
           </Card>
@@ -231,9 +261,7 @@ export function LeaderBoardPage() {
             </CardHeader>
             <CardContent>
               {remaining.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  No additional players yet.
-                </p>
+                <p className="text-muted-foreground text-sm">No additional players yet.</p>
               ) : (
                 <div className="space-y-2">
                   {remaining.map((leader) => (
@@ -248,4 +276,3 @@ export function LeaderBoardPage() {
     </section>
   );
 }
-

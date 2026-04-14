@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 
 import { ClientPanelGuard } from "@/features/auth/ui";
-import { SidebarProvider } from "@/shared/ui/sidebar";
+import { SidebarProvider } from "@/shared/ui";
 import { ClientAppShell } from "@/widgets/layout/client-app-shell";
 
 export default function ClientLayout({
@@ -16,7 +16,9 @@ export default function ClientLayout({
 
   return (
     <SidebarProvider>
-      <ClientPanelGuard>{isLoginPage ? children : <ClientAppShell>{children}</ClientAppShell>}</ClientPanelGuard>
+      <ClientPanelGuard>
+        {isLoginPage ? children : <ClientAppShell>{children}</ClientAppShell>}
+      </ClientPanelGuard>
     </SidebarProvider>
   );
 }

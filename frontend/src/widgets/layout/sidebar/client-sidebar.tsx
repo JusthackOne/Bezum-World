@@ -13,7 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/shared/ui/sidebar";
+} from "@/shared/ui";
 
 export function ClientSidebar() {
   const pathname = usePathname();

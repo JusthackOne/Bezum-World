@@ -7,8 +7,8 @@ import { useState } from "react";
 
 import { useCreateAdminItemMutation } from "@/features/admin-items/api";
 import { queryKeys } from "@/shared/config/query-keys";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { AdminItemForm, type AdminItemFormValues } from "./admin-item-form";
 
 export function AdminItemCreateForm() {

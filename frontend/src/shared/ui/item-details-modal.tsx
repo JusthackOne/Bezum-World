@@ -3,7 +3,12 @@
 import { CoinsIcon, ShieldIcon } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
-import { formatBalance, getItemAttributeRows, itemRarityStyles, resolveAssetUrl } from "@/shared/lib/item-display";
+import {
+  formatBalance,
+  getItemAttributeRows,
+  itemRarityStyles,
+  resolveAssetUrl,
+} from "@/shared/lib/item-display";
 import type { ItemDisplay } from "@/shared/model/item-display.types";
 import {
   Dialog,
@@ -11,7 +16,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/shared/ui/dialog";
+} from "@/shared/ui/8bit/dialog";
 
 interface ItemDetailsModalProps {
   item: ItemDisplay | null;
@@ -45,7 +50,9 @@ export function ItemDetailsModal({ item, open, onOpenChange }: ItemDetailsModalP
             // eslint-disable-next-line @next/next/no-img-element
             <img src={imageUrl} alt={item.name} className="h-full w-full object-cover" />
           ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center text-sm">No image</div>
+            <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+              No image
+            </div>
           )}
         </div>
 

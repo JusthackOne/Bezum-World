@@ -16,10 +16,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/shared/ui/alert-dialog";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Checkbox } from "@/shared/ui/checkbox";
+} from "@/shared/ui/8bit/alert-dialog";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { Checkbox } from "@/shared/ui/8bit/checkbox";
 import {
   Table,
   TableBody,
@@ -27,14 +27,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/shared/ui/table";
+} from "@/shared/ui/8bit/table";
 import {
   Toast,
   ToastDescription,
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from "@/shared/ui/toast";
+} from "@/shared/ui/8bit/toast";
 
 type CheckboxState = boolean | "indeterminate";
 type ToastVariant = "default" | "destructive";

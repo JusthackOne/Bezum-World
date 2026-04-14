@@ -1,4 +1,4 @@
-import { SidebarInset } from "@/shared/ui/sidebar";
+import { SidebarInset } from "@/shared/ui";
 import { Header } from "@/widgets/layout/header/header";
 import { ClientSidebar } from "@/widgets/layout/sidebar/client-sidebar";
 

@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 
 import { useAdminTasksQuery } from "@/features/admin-tasks/api";
 import type { AdminTaskTypeFilter } from "@/features/admin-tasks/model/admin-task.types";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { Input } from "@/shared/ui/8bit/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/8bit/table";
 
 const taskTypeFilterOptions: Array<{ label: string; value: AdminTaskTypeFilter }> = [
   { label: "All", value: "all" },

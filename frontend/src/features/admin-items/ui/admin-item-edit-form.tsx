@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
 import { useAdminItemsQuery, useDeleteAdminItemMutation } from "@/features/admin-items/api";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 
 interface AdminItemEditFormProps {
   itemId: string;

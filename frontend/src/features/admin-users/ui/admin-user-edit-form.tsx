@@ -16,8 +16,8 @@ import type {
   UserProfileByUsername,
 } from "@/features/admin-users/model/admin-user.types";
 import { queryKeys } from "@/shared/config/query-keys";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { AdminUserForm, type AdminUserFormValues } from "./admin-user-form";
 
 interface AdminUserEditFormProps {

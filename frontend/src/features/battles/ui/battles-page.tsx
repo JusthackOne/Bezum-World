@@ -19,16 +19,16 @@ import { useBattlePlayersQuery, useStartBattleMutation } from "@/features/battle
 import type { BattleEquipmentItem, BattlePlayer, BattlePlayerEquipment } from "@/features/battles/model/battles.types";
 import { queryKeys } from "@/shared/config/query-keys";
 import { getItemAttributeRows, resolveAssetUrl } from "@/shared/lib/item-display";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import {
   Toast,
   ToastDescription,
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from "@/shared/ui/toast";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
+} from "@/shared/ui/8bit/toast";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
 
 type ToastVariant = "default" | "destructive";
 

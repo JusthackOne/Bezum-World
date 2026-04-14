@@ -7,9 +7,9 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { env } from "@/shared/config/env";
-import { Button } from "@/shared/ui/button";
-import { Checkbox } from "@/shared/ui/checkbox";
-import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/8bit/button";
+import { Checkbox } from "@/shared/ui/8bit/checkbox";
+import { Input } from "@/shared/ui/8bit/input";
 
 const optionalIntField = (min: number, max: number, label: string) =>
   z

@@ -7,8 +7,8 @@ import { useState } from "react";
 
 import { useCreateAdminUserMutation } from "@/features/admin-users/api";
 import { queryKeys } from "@/shared/config/query-keys";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { AdminUserForm, type AdminUserFormValues } from "./admin-user-form";
 
 export function AdminUserCreateForm() {

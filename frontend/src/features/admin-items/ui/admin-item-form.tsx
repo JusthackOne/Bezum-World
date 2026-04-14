@@ -7,8 +7,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/8bit/button";
+import { Input } from "@/shared/ui/8bit/input";
 
 const optionalIntField = (min: number, max: number, label: string) =>
   z

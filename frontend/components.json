@@ -11,6 +11,9 @@
     "prefix": ""
   },
   "iconLibrary": "lucide",
+  "registries": {
+    "@8bitcn": "https://8bitcn.com/r/{name}.json"
+  },
   "aliases": {
     "components": "@/shared/ui",
     "utils": "@/shared/lib/utils",

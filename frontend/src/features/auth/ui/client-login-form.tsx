@@ -9,9 +9,9 @@ import { z } from "zod";
 import { useClientLoginMutation } from "@/features/auth/api/use-client-login-mutation";
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { publicUserRoutes } from "@/features/public-user/routes";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/8bit/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
+import { Input } from "@/shared/ui/8bit/input";
 
 const clientLoginSchema = z.object({
   code: z

@@ -7,8 +7,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { env } from "@/shared/config/env";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/8bit/button";
+import { Input } from "@/shared/ui/8bit/input";
 
 const userFormSchema = z.object({
   username: z.string().trim().min(1, "Username is required").max(64),
