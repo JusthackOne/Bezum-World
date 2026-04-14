@@ -17,7 +17,7 @@ const optionalIntField = (min: number, max: number, label: string) =>
       z.literal(""),
       z.coerce.number().int().min(min, `${label} must be at least ${min}`).max(max, `${label} must be at most ${max}`),
     ])
-    .transform((value) => (value === "" ? undefined : value));
+    .transform<number | undefined>((value) => (value === "" ? undefined : value));
 
 const itemFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(128),
@@ -32,7 +32,8 @@ const itemFormSchema = z.object({
   durability: optionalIntField(0, 100, "Durability"),
 });
 
-export type AdminItemFormValues = z.infer<typeof itemFormSchema>;
+type AdminItemFormInputValues = z.input<typeof itemFormSchema>;
+export type AdminItemFormValues = z.output<typeof itemFormSchema>;
 
 interface AdminItemFormProps {
   submitLabel: string;
@@ -42,17 +43,17 @@ interface AdminItemFormProps {
   onSubmit: (values: AdminItemFormValues, imageFile: File | null) => Promise<void>;
 }
 
-const defaultFormValues: AdminItemFormValues = {
+const defaultFormValues: AdminItemFormInputValues = {
   name: "",
   description: "",
   image_url: "",
   price: 0,
   rarity: "basic_minimum",
-  strength: undefined,
-  charisma: undefined,
-  agility: undefined,
-  intelligence: undefined,
-  durability: undefined,
+  strength: "",
+  charisma: "",
+  agility: "",
+  intelligence: "",
+  durability: "",
 };
 
 function resolveImageUrl(imageUrl: string): string {
@@ -73,7 +74,7 @@ export function AdminItemForm({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const form = useForm<AdminItemFormValues>({
+  const form = useForm<AdminItemFormInputValues, unknown, AdminItemFormValues>({
     resolver: zodResolver(itemFormSchema),
     defaultValues: defaultFormValues,
   });
@@ -105,21 +106,31 @@ export function AdminItemForm({
       <div className="space-y-2">
         <label className="text-sm font-medium">Item Image (optional)</label>
 
-        <div className="group relative h-36 w-36 overflow-hidden rounded-md border border-dashed border-muted-foreground/40 bg-muted/20">
+        <div
+          className="group relative h-36 w-36 cursor-pointer overflow-hidden rounded-md border border-dashed border-muted-foreground/40 bg-muted/20"
+          role="button"
+          tabIndex={0}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+        >
           {displayImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={displayImageUrl} alt="Item image preview" className="h-full w-full object-cover" />
           ) : null}
 
-          <div className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 transition-opacity group-hover:opacity-100">
-            <Button type="button" size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-              <ImageIcon className="size-4" />
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
               {displayImageUrl ? "Change" : "Select"}
-            </Button>
+            </span>
           </div>
 
           {!displayImageUrl ? (
-            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
               <ImageIcon className="size-8" />
             </div>
           ) : null}

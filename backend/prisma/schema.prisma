@@ -8,7 +8,7 @@ datasource db {
 
 model Account {
   id               String    @id @default(uuid())
-  username         String
+  username         String    @unique
   avatarUrl        String?
   balance          Int       @default(0)
   strength         Int       @default(0)

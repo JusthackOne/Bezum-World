@@ -1,4 +1,10 @@
-import { Injectable, InternalServerErrorException, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  OnModuleInit,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, type Account, type Admin } from '@prisma/client';
@@ -191,6 +197,10 @@ export class AuthService implements OnModuleInit {
       } catch (error) {
         if (this.isAuthCodeCollision(error)) {
           continue;
+        }
+
+        if (this.isUsernameCollision(error)) {
+          throw new BadRequestException('Username is already in use');
         }
 
         throw new InternalServerErrorException('Failed to create account');
@@ -399,5 +409,25 @@ export class AuthService implements OnModuleInit {
 
   private isUniqueConstraintError(error: unknown): boolean {
     return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+  }
+
+  private isUsernameCollision(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    if (error.code !== 'P2002') {
+      return false;
+    }
+
+    const target = error.meta?.target;
+
+    if (Array.isArray(target)) {
+      return target.some(
+        (field) => typeof field === 'string' && field.toLowerCase().includes('username'),
+      );
+    }
+
+    return typeof target === 'string' && target.toLowerCase().includes('username');
   }
 }

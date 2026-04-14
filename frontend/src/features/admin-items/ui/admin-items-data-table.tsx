@@ -2,11 +2,10 @@
 
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useAdminItemsQuery } from "@/features/admin-items/api";
 import type { AdminItemLocationFilter } from "@/features/admin-items/model/admin-item.types";
-import { useAdminAuthStore } from "@/features/auth/model";
 import { env } from "@/shared/config/env";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -38,41 +37,8 @@ const itemFilterOptions: Array<{ label: string; value: AdminItemLocationFilter }
 export function AdminItemsDataTable() {
   const router = useRouter();
   const [locationFilter, setLocationFilter] = useState<AdminItemLocationFilter>("all");
-
-  const session = useAdminAuthStore((state) => state.session);
-  const isInitialized = useAdminAuthStore((state) => state.isInitialized);
-  const initializeSession = useAdminAuthStore((state) => state.initializeSession);
-  const clearSession = useAdminAuthStore((state) => state.clearSession);
-
-  useEffect(() => {
-    initializeSession();
-  }, [initializeSession]);
-
-  useEffect(() => {
-    if (!isInitialized) {
-      return;
-    }
-
-    if (!session?.accessToken) {
-      clearSession();
-      router.replace("/admin/login");
-    }
-  }, [clearSession, isInitialized, router, session?.accessToken]);
-
-  const hasAdminSession = Boolean(session?.accessToken);
-  const itemsQuery = useAdminItemsQuery(isInitialized, hasAdminSession, locationFilter);
+  const itemsQuery = useAdminItemsQuery(true, true, locationFilter);
   const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
-
-  if (!isInitialized || !session) {
-    return (
-      <Card className="max-w-6xl">
-        <CardHeader>
-          <CardTitle>Items</CardTitle>
-          <CardDescription>Loading admin session...</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
 
   if (itemsQuery.isError) {
     return (

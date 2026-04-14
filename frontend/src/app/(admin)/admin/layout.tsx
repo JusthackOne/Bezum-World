@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/providers/query-provider";
 import "@/styles/globals.css";
+import { AdminPanelGuard } from "@/features/auth/ui";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { SidebarProvider } from "@/shared/ui/sidebar";
 
@@ -30,7 +31,9 @@ export default function RootLayout({
       <body className="min-h-full bg-background text-foreground">
         <TooltipProvider>
           <QueryProvider>
-            <SidebarProvider>{children}</SidebarProvider>
+            <SidebarProvider>
+              <AdminPanelGuard>{children}</AdminPanelGuard>
+            </SidebarProvider>
           </QueryProvider>
         </TooltipProvider>
       </body>

@@ -3,10 +3,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftIcon, CheckCircle2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useCreateAdminItemMutation } from "@/features/admin-items/api";
-import { useAdminAuthStore } from "@/features/auth/model";
 import { queryKeys } from "@/shared/config/query-keys";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -18,39 +17,10 @@ export function AdminItemCreateForm() {
   const createItemMutation = useCreateAdminItemMutation();
   const [createdItemId, setCreatedItemId] = useState<string | null>(null);
 
-  const session = useAdminAuthStore((state) => state.session);
-  const isInitialized = useAdminAuthStore((state) => state.isInitialized);
-  const initializeSession = useAdminAuthStore((state) => state.initializeSession);
-
-  useEffect(() => {
-    initializeSession();
-  }, [initializeSession]);
-
-  useEffect(() => {
-    if (!isInitialized) {
-      return;
-    }
-
-    if (!session?.accessToken) {
-      router.replace("/admin/login");
-    }
-  }, [isInitialized, router, session?.accessToken]);
-
   const mutationError =
     createItemMutation.error instanceof Error
       ? createItemMutation.error.message
       : "Unable to create item";
-
-  if (!isInitialized || !session) {
-    return (
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle>Create Item</CardTitle>
-          <CardDescription>Loading admin session...</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
 
   return (
     <Card className="max-w-3xl">

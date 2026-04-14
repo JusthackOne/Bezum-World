@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
@@ -38,6 +39,7 @@ export class AdminUpdateUserDto {
     minimum: 0,
   })
   @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   balance?: number;
@@ -49,6 +51,7 @@ export class AdminUpdateUserDto {
     maximum: 100,
   })
   @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -61,6 +64,7 @@ export class AdminUpdateUserDto {
     maximum: 100,
   })
   @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -73,6 +77,7 @@ export class AdminUpdateUserDto {
     maximum: 100,
   })
   @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -85,6 +90,7 @@ export class AdminUpdateUserDto {
     maximum: 100,
   })
   @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)

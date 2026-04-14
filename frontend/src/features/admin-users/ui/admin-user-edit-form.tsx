@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftIcon, CheckCircle2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   useAdminUsersQuery,
@@ -15,7 +15,6 @@ import type {
   AdminUser,
   UserProfileByUsername,
 } from "@/features/admin-users/model/admin-user.types";
-import { useAdminAuthStore } from "@/features/auth/model";
 import { queryKeys } from "@/shared/config/query-keys";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -52,25 +51,14 @@ export function AdminUserEditForm({ userId }: AdminUserEditFormProps) {
   const queryClient = useQueryClient();
   const updateUserMutation = useUpdateAdminUserMutation();
   const [showSuccess, setShowSuccess] = useState(false);
-
-  const session = useAdminAuthStore((state) => state.session);
-  const isInitialized = useAdminAuthStore((state) => state.isInitialized);
-  const initializeSession = useAdminAuthStore((state) => state.initializeSession);
-  const clearSession = useAdminAuthStore((state) => state.clearSession);
-
-  useEffect(() => {
-    initializeSession();
-  }, [initializeSession]);
-
-  const hasAdminSession = Boolean(session?.accessToken);
-  const usersQuery = useAdminUsersQuery(isInitialized, hasAdminSession);
+  const usersQuery = useAdminUsersQuery(true, true);
   const user = useMemo(
     () => (usersQuery.data ?? []).find((nextUser) => nextUser.id === userId) ?? null,
     [userId, usersQuery.data],
   );
   const userProfileQuery = useUserProfileByUsernameQuery(
     user?.username ?? null,
-    isInitialized && hasAdminSession && Boolean(user),
+    Boolean(user),
   );
   const initialFormValues = useMemo(
     () =>
@@ -83,32 +71,10 @@ export function AdminUserEditForm({ userId }: AdminUserEditFormProps) {
   );
   const avatarUrl = userProfileQuery.data?.profilePhoto ?? user?.avatarUrl ?? null;
 
-  useEffect(() => {
-    if (!isInitialized) {
-      return;
-    }
-
-    if (!session?.accessToken) {
-      clearSession();
-      router.replace("/admin/login");
-    }
-  }, [clearSession, isInitialized, router, session?.accessToken]);
-
   const mutationError =
     updateUserMutation.error instanceof Error
       ? updateUserMutation.error.message
       : "Unable to update user";
-
-  if (!isInitialized || !session) {
-    return (
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle>Edit User</CardTitle>
-          <CardDescription>Loading admin session...</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
 
   if (usersQuery.isPending) {
     return (

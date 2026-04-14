@@ -3,10 +3,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useDeleteAdminUserMutation, useAdminUsersQuery } from "@/features/admin-users/api";
-import { useAdminAuthStore } from "@/features/auth/model";
 import { queryKeys } from "@/shared/config/query-keys";
 import {
   AlertDialog,
@@ -64,14 +63,7 @@ function formatDate(value: string | null): string {
 export function AdminUsersDataTable() {
   const router = useRouter();
   const queryClient = useQueryClient();
-
-  const session = useAdminAuthStore((state) => state.session);
-  const isInitialized = useAdminAuthStore((state) => state.isInitialized);
-  const initializeSession = useAdminAuthStore((state) => state.initializeSession);
-  const clearSession = useAdminAuthStore((state) => state.clearSession);
-
-  const hasAdminSession = Boolean(session?.accessToken);
-  const usersQuery = useAdminUsersQuery(isInitialized, hasAdminSession);
+  const usersQuery = useAdminUsersQuery(true, true);
   const deleteUserMutation = useDeleteAdminUserMutation();
 
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
@@ -83,21 +75,6 @@ export function AdminUsersDataTable() {
     description: "",
     variant: "default",
   });
-
-  useEffect(() => {
-    initializeSession();
-  }, [initializeSession]);
-
-  useEffect(() => {
-    if (!isInitialized) {
-      return;
-    }
-
-    if (!session?.accessToken) {
-      clearSession();
-      router.replace("/admin/login");
-    }
-  }, [clearSession, isInitialized, router, session?.accessToken]);
 
   const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
   const availableUserIds = useMemo(() => new Set(users.map((user) => user.id)), [users]);
@@ -161,7 +138,7 @@ export function AdminUsersDataTable() {
   async function handleConfirmDelete() {
     const userIdsForDeletion = selectedExistingUserIds;
 
-    if (!hasAdminSession || userIdsForDeletion.length === 0) {
+    if (userIdsForDeletion.length === 0) {
       return;
     }
 
@@ -206,18 +183,7 @@ export function AdminUsersDataTable() {
   }
 
   const isDeleting = deleteUserMutation.isPending;
-  const isDeleteDisabled = selectedCount === 0 || isDeleting || !hasAdminSession;
-
-  if (!isInitialized || !session) {
-    return (
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle>Admin Users</CardTitle>
-          <CardDescription>Loading admin session...</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
+  const isDeleteDisabled = selectedCount === 0 || isDeleting;
 
   if (usersQuery.isError) {
     return (

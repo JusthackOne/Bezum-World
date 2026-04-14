@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Account } from '@prisma/client';
+import { Prisma, type Account } from '@prisma/client';
 
 import { AuthenticatedUserDto } from '../auth/dto';
 import { AccountRepository, type UpdateAccountInput } from '../auth/repositories';
@@ -78,7 +78,11 @@ export class UsersService {
     }));
   }
 
-  async updateUserByAdmin(userId: string, payload: AdminUpdateUserDto): Promise<AuthenticatedUserDto> {
+  async updateUserByAdmin(
+    userId: string,
+    payload: AdminUpdateUserDto,
+    uploadedAvatarUrl?: string,
+  ): Promise<AuthenticatedUserDto> {
     const existingAccount = await this.accountRepository.findById(userId);
 
     if (!existingAccount) {
@@ -87,7 +91,11 @@ export class UsersService {
 
     const updateInput: UpdateAccountInput = {
       ...(payload.username !== undefined ? { username: payload.username } : {}),
-      ...(payload.avatarUrl !== undefined ? { avatarUrl: payload.avatarUrl } : {}),
+      ...(uploadedAvatarUrl !== undefined
+        ? { avatarUrl: uploadedAvatarUrl }
+        : payload.avatarUrl !== undefined
+          ? { avatarUrl: payload.avatarUrl }
+          : {}),
       ...(payload.balance !== undefined ? { balance: payload.balance } : {}),
       ...(payload.strength !== undefined ? { strength: payload.strength } : {}),
       ...(payload.charisma !== undefined ? { charisma: payload.charisma } : {}),
@@ -99,7 +107,17 @@ export class UsersService {
       throw new BadRequestException('At least one field must be provided');
     }
 
-    const updatedAccount = await this.accountRepository.updateById(userId, updateInput);
+    let updatedAccount: Account;
+
+    try {
+      updatedAccount = await this.accountRepository.updateById(userId, updateInput);
+    } catch (error: unknown) {
+      if (this.isUsernameUniqueConstraintError(error)) {
+        throw new BadRequestException('Username is already in use');
+      }
+
+      throw error;
+    }
 
     return this.toAuthenticatedUser(updatedAccount);
   }
@@ -130,5 +148,25 @@ export class UsersService {
       lastTimeLoggedIn: account.lastTimeLoggedIn?.toISOString() ?? null,
       createdAt: account.createdAt.toISOString(),
     };
+  }
+
+  private isUsernameUniqueConstraintError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    if (error.code !== 'P2002') {
+      return false;
+    }
+
+    const target = error.meta?.target;
+
+    if (Array.isArray(target)) {
+      return target.some(
+        (field) => typeof field === 'string' && field.toLowerCase().includes('username'),
+      );
+    }
+
+    return typeof target === 'string' && target.toLowerCase().includes('username');
   }
 }

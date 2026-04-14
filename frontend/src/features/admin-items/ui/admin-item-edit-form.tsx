@@ -2,10 +2,9 @@
 
 import { ArrowLeftIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
 import { useAdminItemsQuery } from "@/features/admin-items/api";
-import { useAdminAuthStore } from "@/features/auth/model";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 
@@ -15,44 +14,11 @@ interface AdminItemEditFormProps {
 
 export function AdminItemEditForm({ itemId }: AdminItemEditFormProps) {
   const router = useRouter();
-
-  const session = useAdminAuthStore((state) => state.session);
-  const isInitialized = useAdminAuthStore((state) => state.isInitialized);
-  const initializeSession = useAdminAuthStore((state) => state.initializeSession);
-  const clearSession = useAdminAuthStore((state) => state.clearSession);
-
-  useEffect(() => {
-    initializeSession();
-  }, [initializeSession]);
-
-  useEffect(() => {
-    if (!isInitialized) {
-      return;
-    }
-
-    if (!session?.accessToken) {
-      clearSession();
-      router.replace("/admin/login");
-    }
-  }, [clearSession, isInitialized, router, session?.accessToken]);
-
-  const hasAdminSession = Boolean(session?.accessToken);
-  const itemsQuery = useAdminItemsQuery(isInitialized, hasAdminSession, "all");
+  const itemsQuery = useAdminItemsQuery(true, true, "all");
   const item = useMemo(
     () => (itemsQuery.data ?? []).find((nextItem) => nextItem.id === itemId) ?? null,
     [itemId, itemsQuery.data],
   );
-
-  if (!isInitialized || !session) {
-    return (
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle>Item</CardTitle>
-          <CardDescription>Loading admin session...</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
 
   if (itemsQuery.isPending) {
     return (
