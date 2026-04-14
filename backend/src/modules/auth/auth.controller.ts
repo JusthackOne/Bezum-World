@@ -23,13 +23,15 @@ import {
 import type { Request, Response } from 'express';
 
 import { Public } from '../../common/decorators/public.decorator';
-import { AdminAuthTokensResponseDto } from './dto/admin-auth-tokens-response.dto';
-import { AdminLoginDto } from './dto/admin-login.dto';
-import { AuthenticatedAdminDto } from './dto/authenticated-admin.dto';
-import { AuthenticatedUserDto } from './dto/authenticated-user.dto';
-import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
-import { LoginByCodeDto } from './dto/login-by-code.dto';
-import { LogoutResponseDto } from './dto/logout-response.dto';
+import {
+  AdminAuthTokensResponseDto,
+  AdminLoginDto,
+  AuthenticatedAdminDto,
+  AuthenticatedUserDto,
+  AuthTokensResponseDto,
+  LoginByCodeDto,
+  LogoutResponseDto,
+} from './dto';
 import { AuthService } from './auth.service';
 import { AccessTokenGuard } from './guards/access-token.guard';
 import { AdminOnlyGuard } from './guards/admin-only.guard';

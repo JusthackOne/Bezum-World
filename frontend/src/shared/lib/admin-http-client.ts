@@ -1,4 +1,4 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
 import { env } from "@/shared/config/env";
 import { isApiSuccessResponse } from "@/shared/lib/api-response";
@@ -60,7 +60,27 @@ function readStoredAdminSession(): StoredAdminSession | null {
       return null;
     }
 
-    return parsedValue as StoredAdminSession;
+    const admin = parsedValue.admin;
+
+    if (
+      typeof admin.id !== "string" ||
+      typeof admin.username !== "string" ||
+      (admin.lastTimeLoggedIn !== null && typeof admin.lastTimeLoggedIn !== "string") ||
+      typeof admin.createdAt !== "string"
+    ) {
+      clearStoredAdminSession();
+      return null;
+    }
+
+    return {
+      accessToken: parsedValue.accessToken,
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        lastTimeLoggedIn: admin.lastTimeLoggedIn,
+        createdAt: admin.createdAt,
+      },
+    };
   } catch {
     clearStoredAdminSession();
     return null;
@@ -92,12 +112,24 @@ function redirectToAdminLogin(): void {
 }
 
 function setAuthorizationHeader(config: InternalAxiosRequestConfig, accessToken: string): void {
-  const headers = (config.headers ?? {}) as Record<string, string>;
-  headers.Authorization = `Bearer ${accessToken}`;
-  config.headers = headers;
+  if (!config.headers) {
+    config.headers = new AxiosHeaders();
+  }
+
+  if (config.headers instanceof AxiosHeaders) {
+    config.headers.set("Authorization", `Bearer ${accessToken}`);
+    return;
+  }
+
+  (config.headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
 }
 
 function hasAuthorizationHeader(config: InternalAxiosRequestConfig): boolean {
+  if (config.headers instanceof AxiosHeaders) {
+    const authorization = config.headers.get("Authorization");
+    return typeof authorization === "string" && authorization.trim().length > 0;
+  }
+
   const headers = config.headers as Record<string, unknown> | undefined;
   if (!headers) {
     return false;

@@ -13,14 +13,11 @@ import {
 } from '@nestjs/swagger';
 
 import { Public } from '../../common/decorators/public.decorator';
-import { AdminCreateAccountDto } from '../auth/dto/admin-create-account.dto';
-import { AdminCreateAccountResponseDto } from '../auth/dto/admin-create-account-response.dto';
+import { AdminCreateAccountDto, AdminCreateAccountResponseDto } from '../auth/dto';
 import { AuthService } from '../auth/auth.service';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import { AdminOnlyGuard } from '../auth/guards/admin-only.guard';
-import { GetPublicUserProfileParamsDto } from './dto/get-public-user-profile-params.dto';
-import { PublicUserProfileDto } from './dto/public-user-profile.dto';
-import { UserItemsResponseDto } from './dto/user-items-response.dto';
+import { GetPublicUserProfileParamsDto, PublicUserProfileDto, UserItemsResponseDto } from './dto';
 import { UsersService } from './users.service';
 
 @ApiTags('users')

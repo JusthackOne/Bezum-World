@@ -18,10 +18,10 @@ import { Input } from "@/shared/ui/input";
 const createUserSchema = z.object({
   username: z.string().trim().min(1, "Username is required").max(64),
   avatarUrl: z.string().max(2048).optional(),
-  strength: z.coerce.number().int().min(0).max(100),
-  charisma: z.coerce.number().int().min(0).max(100),
-  endurance: z.coerce.number().int().min(0).max(100),
-  intelligence: z.coerce.number().int().min(0).max(100),
+  strength: z.number().int().min(0).max(100),
+  charisma: z.number().int().min(0).max(100),
+  endurance: z.number().int().min(0).max(100),
+  intelligence: z.number().int().min(0).max(100),
 });
 
 type CreateUserFormValues = z.infer<typeof createUserSchema>;
@@ -148,7 +148,13 @@ export function AdminUserCreateForm() {
               <label htmlFor="strength" className="text-sm font-medium">
                 Strength
               </label>
-              <Input id="strength" type="number" min={0} max={100} {...form.register("strength")} />
+              <Input
+                id="strength"
+                type="number"
+                min={0}
+                max={100}
+                {...form.register("strength", { valueAsNumber: true })}
+              />
               {form.formState.errors.strength ? (
                 <p className="text-xs text-destructive">{form.formState.errors.strength.message}</p>
               ) : null}
@@ -158,7 +164,13 @@ export function AdminUserCreateForm() {
               <label htmlFor="charisma" className="text-sm font-medium">
                 Charisma
               </label>
-              <Input id="charisma" type="number" min={0} max={100} {...form.register("charisma")} />
+              <Input
+                id="charisma"
+                type="number"
+                min={0}
+                max={100}
+                {...form.register("charisma", { valueAsNumber: true })}
+              />
               {form.formState.errors.charisma ? (
                 <p className="text-xs text-destructive">{form.formState.errors.charisma.message}</p>
               ) : null}
@@ -168,7 +180,13 @@ export function AdminUserCreateForm() {
               <label htmlFor="endurance" className="text-sm font-medium">
                 Endurance
               </label>
-              <Input id="endurance" type="number" min={0} max={100} {...form.register("endurance")} />
+              <Input
+                id="endurance"
+                type="number"
+                min={0}
+                max={100}
+                {...form.register("endurance", { valueAsNumber: true })}
+              />
               {form.formState.errors.endurance ? (
                 <p className="text-xs text-destructive">{form.formState.errors.endurance.message}</p>
               ) : null}
@@ -183,7 +201,7 @@ export function AdminUserCreateForm() {
                 type="number"
                 min={0}
                 max={100}
-                {...form.register("intelligence")}
+                {...form.register("intelligence", { valueAsNumber: true })}
               />
               {form.formState.errors.intelligence ? (
                 <p className="text-xs text-destructive">{form.formState.errors.intelligence.message}</p>

@@ -25,16 +25,18 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
-import { Public } from '../../common/decorators/public.decorator';
-import type { RequestWithAuthUser } from '../auth/types/request-with-auth-user.type';
-import { CreateItemDto } from './dto/create-item.dto';
-import { CreateItemResponseDto } from './dto/create-item-response.dto';
-import { GetItemsQueryDto } from './dto/get-items-query.dto';
-import { PurchaseItemParamsDto } from './dto/purchase-item-params.dto';
-import { PurchaseItemResponseDto } from './dto/purchase-item-response.dto';
-import { ItemsService } from './items.service';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import { AdminOnlyGuard } from '../auth/guards/admin-only.guard';
+import type { RequestWithAuthUser } from '../auth/types/request-with-auth-user.type';
+import { Public } from '../../common/decorators/public.decorator';
+import {
+  CreateItemDto,
+  CreateItemResponseDto,
+  GetItemsQueryDto,
+  PurchaseItemParamsDto,
+  PurchaseItemResponseDto,
+} from './dto';
+import { ItemsService } from './items.service';
 import { ITEM_LOCATION_VALUES } from './types/item-location.type';
 
 @ApiTags('items')

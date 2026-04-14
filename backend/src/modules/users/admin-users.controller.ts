@@ -12,13 +12,15 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
-import { AuthenticatedUserDto } from '../auth/dto/authenticated-user.dto';
+import { AuthenticatedUserDto } from '../auth/dto';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import { AdminOnlyGuard } from '../auth/guards/admin-only.guard';
-import { AdminDeleteUserResponseDto } from './dto/admin-delete-user-response.dto';
-import { AdminUserWithCodeDto } from './dto/admin-user-with-code.dto';
-import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
-import { AdminUserIdParamsDto } from './dto/admin-user-id-params.dto';
+import {
+  AdminDeleteUserResponseDto,
+  AdminUpdateUserDto,
+  AdminUserIdParamsDto,
+  AdminUserWithCodeDto,
+} from './dto';
 import { UsersService } from './users.service';
 
 @ApiTags('users')

@@ -6,9 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AccessTokenGuard } from './guards/access-token.guard';
 import { AdminOnlyGuard } from './guards/admin-only.guard';
-import { AccountRepository } from './repositories/account.repository';
-import { AdminRepository } from './repositories/admin.repository';
-import { AuthCodeRepository } from './repositories/auth-code.repository';
+import { AccountRepository, AdminRepository, AuthCodeRepository } from './repositories';
 
 @Module({
   imports: [PrismaModule, JwtModule.register({})],

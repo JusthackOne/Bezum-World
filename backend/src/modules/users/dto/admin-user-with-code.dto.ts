@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { AuthenticatedUserDto } from '../../auth/dto/authenticated-user.dto';
+import { AuthenticatedUserDto } from '../../auth/dto';
 
 export class AdminUserWithCodeDto extends AuthenticatedUserDto {
   @ApiProperty({

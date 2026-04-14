@@ -8,11 +8,9 @@ import {
 import type { Item } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
-import { AccountRepository } from '../auth/repositories/account.repository';
-import { CreateItemDto } from './dto/create-item.dto';
-import { CreateItemResponseDto } from './dto/create-item-response.dto';
-import { PurchaseItemResponseDto } from './dto/purchase-item-response.dto';
-import { ItemRepository } from './repositories/item.repository';
+import { AccountRepository } from '../auth/repositories';
+import { CreateItemDto, CreateItemResponseDto, PurchaseItemResponseDto } from './dto';
+import { ItemRepository } from './repositories';
 import type { ItemLocation } from './types/item-location.type';
 
 @Injectable()

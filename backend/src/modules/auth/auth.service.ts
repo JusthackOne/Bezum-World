@@ -8,16 +8,16 @@ import type { Response } from 'express';
 
 import type { AppConfig } from '../../config/configuration';
 import { PrismaService } from '../../database/prisma/prisma.service';
-import { AdminAuthTokensResponseDto } from './dto/admin-auth-tokens-response.dto';
-import { AdminCreateAccountDto } from './dto/admin-create-account.dto';
-import { AdminCreateAccountResponseDto } from './dto/admin-create-account-response.dto';
-import { AdminLoginDto } from './dto/admin-login.dto';
-import { AuthenticatedAdminDto } from './dto/authenticated-admin.dto';
-import { AuthenticatedUserDto } from './dto/authenticated-user.dto';
-import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
-import { AccountRepository } from './repositories/account.repository';
-import { AdminRepository } from './repositories/admin.repository';
-import { AuthCodeRepository } from './repositories/auth-code.repository';
+import {
+  AdminAuthTokensResponseDto,
+  AdminCreateAccountDto,
+  AdminCreateAccountResponseDto,
+  AdminLoginDto,
+  AuthenticatedAdminDto,
+  AuthenticatedUserDto,
+  AuthTokensResponseDto,
+} from './dto';
+import { AccountRepository, AdminRepository, AuthCodeRepository } from './repositories';
 import type { AccessTokenPayload } from './types/access-token-payload.type';
 import type { RefreshTokenPayload } from './types/refresh-token-payload.type';
 

@@ -1,18 +1,16 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Account } from '@prisma/client';
 
-import { AuthenticatedUserDto } from '../auth/dto/authenticated-user.dto';
+import { AuthenticatedUserDto } from '../auth/dto';
+import { AccountRepository, type UpdateAccountInput } from '../auth/repositories';
 import {
-  AccountRepository,
-  type UpdateAccountInput,
-} from '../auth/repositories/account.repository';
-import { AdminDeleteUserResponseDto } from './dto/admin-delete-user-response.dto';
-import { AdminUserWithCodeDto } from './dto/admin-user-with-code.dto';
-import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
-import { PublicUserProfileDto } from './dto/public-user-profile.dto';
-import { UserItemsResponseDto } from './dto/user-items-response.dto';
-import { UserItemsRepository } from './repositories/user-items.repository';
-import { UserProfileRepository } from './repositories/user-profile.repository';
+  AdminDeleteUserResponseDto,
+  AdminUpdateUserDto,
+  AdminUserWithCodeDto,
+  PublicUserProfileDto,
+  UserItemsResponseDto,
+} from './dto';
+import { UserItemsRepository, UserProfileRepository } from './repositories';
 
 @Injectable()
 export class UsersService {
