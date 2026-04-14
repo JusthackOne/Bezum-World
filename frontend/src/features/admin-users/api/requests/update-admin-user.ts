@@ -1,7 +1,5 @@
-import { isAxiosError } from "axios";
-
-import { getErrorMessage, isApiSuccessResponse } from "@/shared/lib/api-response";
 import { adminHttpClient } from "@/shared/lib/admin-http-client";
+import { requestApiData } from "@/shared/lib/api-request";
 import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
 
 import type { AdminUpdateUserInput, AdminUpdateUserResponse } from "../../model/admin-user.types";
@@ -57,25 +55,15 @@ function buildMultipartPayload(payload: AdminUpdateUserInput): FormData {
 }
 
 export async function updateAdminUser(payload: AdminUpdateUserInput): Promise<AdminUpdateUserResponse> {
-  try {
-    const hasAvatarFile = payload.avatarFile instanceof File;
-    const requestBody = hasAvatarFile ? buildMultipartPayload(payload) : buildJsonPayload(payload);
+  const hasAvatarFile = payload.avatarFile instanceof File;
+  const requestBody = hasAvatarFile ? buildMultipartPayload(payload) : buildJsonPayload(payload);
 
-    const response = await adminHttpClient.patch<ApiSuccessResponse<AdminUpdateUserResponse>>(
-      `/admin/users/${payload.userId}`,
-      requestBody,
-    );
-
-    if (!isApiSuccessResponse(response.data)) {
-      throw new Error("Unexpected server response");
-    }
-
-    return response.data.data;
-  } catch (error: unknown) {
-    if (isAxiosError(error)) {
-      throw new Error(getErrorMessage(error.response?.data, "Failed to update user"));
-    }
-
-    throw error;
-  }
+  return requestApiData(
+    () =>
+      adminHttpClient.patch<ApiSuccessResponse<AdminUpdateUserResponse>>(
+        `/admin/users/${payload.userId}`,
+        requestBody,
+      ),
+    "Failed to update user",
+  );
 }
