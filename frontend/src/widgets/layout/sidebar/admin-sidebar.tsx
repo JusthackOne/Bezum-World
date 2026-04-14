@@ -1,16 +1,25 @@
-import {
-  SidebarHeader,
-  SidebarContent,
-  SidebarGroup,
-  SidebarFooter,
-  Sidebar,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarMenu,
-} from "@/shared/ui/sidebar";
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/shared/ui/sidebar";
 
 export function AdminSidebar() {
+  const pathname = usePathname();
+
+  const isUsersActive = pathname.startsWith("/admin/users");
+  const isItemsActive = pathname.startsWith("/admin/items");
+
   return (
     <Sidebar>
       <SidebarHeader />
@@ -18,8 +27,14 @@ export function AdminSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive>
-                <Link href={"/admin/users"}>Users</Link>
+              <SidebarMenuButton asChild isActive={isUsersActive}>
+                <Link href="/admin/users">Users</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isItemsActive}>
+                <Link href="/admin/items">Items</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

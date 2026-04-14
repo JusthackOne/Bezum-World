@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -7,13 +8,18 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ItemRarity } from '@prisma/client';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
   ApiConflictResponse,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -24,6 +30,9 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import { AdminOnlyGuard } from '../auth/guards/admin-only.guard';
@@ -38,6 +47,22 @@ import {
 } from './dto';
 import { ItemsService } from './items.service';
 import { ITEM_LOCATION_VALUES } from './types/item-location.type';
+
+const ITEM_IMAGES_UPLOAD_DIR = join(process.cwd(), 'uploads', 'items');
+const MAX_ITEM_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const ITEM_IMAGE_MIME_TO_EXTENSION: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
+interface UploadedItemImageFile {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
 
 @ApiTags('items')
 @Controller()
@@ -63,17 +88,52 @@ export class ItemsController {
 
   @Post('admin/items')
   @UseGuards(AccessTokenGuard, AdminOnlyGuard)
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: {
+        fileSize: MAX_ITEM_IMAGE_SIZE_BYTES,
+      },
+    }),
+  )
   @ApiOperation({
     summary: 'Create a unique item (admin only)',
     description: 'Creates a new unique item and puts it into the shop with no owner.',
   })
   @ApiBearerAuth('access-token')
-  @ApiBody({ type: CreateItemDto })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        description: { type: 'string' },
+        image_url: { type: 'string', nullable: true },
+        image: { type: 'string', format: 'binary' },
+        strength: { type: 'integer', minimum: 0, maximum: 100 },
+        charisma: { type: 'integer', minimum: 0, maximum: 100 },
+        agility: { type: 'integer', minimum: 0, maximum: 100 },
+        intelligence: { type: 'integer', minimum: 0, maximum: 100 },
+        price: { type: 'integer', minimum: 0, maximum: 1000 },
+        rarity: { type: 'string', enum: Object.values(ItemRarity) },
+        durability: { type: 'integer', minimum: 0, maximum: 100 },
+      },
+      required: ['name', 'description', 'price', 'rarity'],
+    },
+  })
   @ApiCreatedResponse({ type: CreateItemResponseDto })
   @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
   @ApiForbiddenResponse({ description: 'Admin access is required' })
-  async createItem(@Body() body: CreateItemDto): Promise<CreateItemResponseDto> {
-    return this.itemsService.createByAdmin(body);
+  async createItem(
+    @Body() body: CreateItemDto,
+    @UploadedFile() imageFile?: UploadedItemImageFile,
+  ): Promise<CreateItemResponseDto> {
+    const uploadedImageUrl = imageFile ? await this.storeItemImage(imageFile) : undefined;
+    const payload: CreateItemDto = {
+      ...body,
+      ...(uploadedImageUrl ? { image_url: uploadedImageUrl } : {}),
+    };
+
+    return this.itemsService.createByAdmin(payload);
   }
 
   @Post('items/:itemId/purchase')
@@ -103,5 +163,24 @@ export class ItemsController {
     }
 
     return this.itemsService.purchaseByUser(params.itemId, request.user.sub);
+  }
+
+  private async storeItemImage(file: UploadedItemImageFile): Promise<string> {
+    const imageExtension =
+      ITEM_IMAGE_MIME_TO_EXTENSION[file.mimetype] ?? extname(file.originalname).toLowerCase();
+
+    if (!imageExtension || !Object.values(ITEM_IMAGE_MIME_TO_EXTENSION).includes(imageExtension)) {
+      throw new BadRequestException('Item image must be jpeg, png, webp, or gif');
+    }
+
+    if (file.size > MAX_ITEM_IMAGE_SIZE_BYTES) {
+      throw new BadRequestException('Item image file is too large');
+    }
+
+    await mkdir(ITEM_IMAGES_UPLOAD_DIR, { recursive: true });
+    const fileName = `${randomUUID()}${imageExtension}`;
+    await writeFile(join(ITEM_IMAGES_UPLOAD_DIR, fileName), file.buffer);
+
+    return `/uploads/items/${fileName}`;
   }
 }

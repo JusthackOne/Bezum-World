@@ -1,5 +1,6 @@
 import { ItemRarity } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CreateItemDto {
@@ -37,6 +38,7 @@ export class CreateItemDto {
     example: 80,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -49,6 +51,7 @@ export class CreateItemDto {
     example: 10,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -61,6 +64,7 @@ export class CreateItemDto {
     example: 25,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -73,6 +77,7 @@ export class CreateItemDto {
     example: 5,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
@@ -84,6 +89,7 @@ export class CreateItemDto {
     maximum: 1000,
     example: 500,
   })
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(1000)
@@ -104,6 +110,7 @@ export class CreateItemDto {
     example: 100,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
