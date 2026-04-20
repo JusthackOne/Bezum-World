@@ -3,11 +3,7 @@
 import { CoinsIcon, ShieldIcon } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
-import {
-  formatBalance,
-  getItemAttributeRows,
-  resolveAssetUrl,
-} from "@/shared/lib/item-display";
+import { formatBalance, getItemAttributeRows, resolveAssetUrl } from "@/shared/lib/item-display";
 import type { ItemDisplay } from "@/shared/model/item-display.types";
 import {
   Dialog,
@@ -148,7 +144,9 @@ export function ItemDetailsModal({ item, open, onOpenChange }: ItemDetailsModalP
                     )}
                   >
                     <Icon className={cn("size-3.5", visual.iconClassName)} />
-                    <span className={cn("text-xs font-semibold tabular-nums", visual.valueClassName)}>
+                    <span
+                      className={cn("text-xs font-semibold tabular-nums", visual.valueClassName)}
+                    >
                       +{attribute.value}
                     </span>
                   </div>

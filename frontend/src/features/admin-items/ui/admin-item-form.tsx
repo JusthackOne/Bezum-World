@@ -14,7 +14,11 @@ const optionalIntField = (min: number, max: number, label: string) =>
   z
     .union([
       z.literal(""),
-      z.coerce.number().int().min(min, `${label} must be at least ${min}`).max(max, `${label} must be at most ${max}`),
+      z.coerce
+        .number()
+        .int()
+        .min(min, `${label} must be at least ${min}`)
+        .max(max, `${label} must be at most ${max}`),
     ])
     .transform<number | undefined>((value) => (value === "" ? undefined : value));
 
@@ -70,7 +74,10 @@ export function AdminItemForm({
     defaultValues: defaultFormValues,
   });
 
-  const imagePreviewUrl = useMemo(() => (imageFile ? URL.createObjectURL(imageFile) : null), [imageFile]);
+  const imagePreviewUrl = useMemo(
+    () => (imageFile ? URL.createObjectURL(imageFile) : null),
+    [imageFile],
+  );
 
   useEffect(() => {
     if (!imagePreviewUrl) {
@@ -107,7 +114,11 @@ export function AdminItemForm({
         >
           {displayImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={displayImageUrl} alt="Item image preview" className="h-full w-full object-cover" />
+            <img
+              src={displayImageUrl}
+              alt="Item image preview"
+              className="h-full w-full object-cover"
+            />
           ) : null}
 
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 transition-opacity group-hover:opacity-100">
@@ -142,7 +153,9 @@ export function AdminItemForm({
           Name
         </label>
         <Input id="name" placeholder="Sigma Sword" {...form.register("name")} />
-        {form.formState.errors.name ? <p className="text-xs text-destructive">{form.formState.errors.name.message}</p> : null}
+        {form.formState.errors.name ? (
+          <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -165,8 +178,16 @@ export function AdminItemForm({
           <label htmlFor="price" className="text-sm font-medium">
             Price
           </label>
-          <Input id="price" type="number" min={0} max={1000} {...form.register("price", { valueAsNumber: true })} />
-          {form.formState.errors.price ? <p className="text-xs text-destructive">{form.formState.errors.price.message}</p> : null}
+          <Input
+            id="price"
+            type="number"
+            min={0}
+            max={1000}
+            {...form.register("price", { valueAsNumber: true })}
+          />
+          {form.formState.errors.price ? (
+            <p className="text-xs text-destructive">{form.formState.errors.price.message}</p>
+          ) : null}
         </div>
 
         <div className="space-y-2">
@@ -183,7 +204,9 @@ export function AdminItemForm({
             <option value="sigma">sigma</option>
             <option value="bezumnyy">bezumnyy</option>
           </select>
-          {form.formState.errors.rarity ? <p className="text-xs text-destructive">{form.formState.errors.rarity.message}</p> : null}
+          {form.formState.errors.rarity ? (
+            <p className="text-xs text-destructive">{form.formState.errors.rarity.message}</p>
+          ) : null}
         </div>
 
         <div className="space-y-2">
@@ -212,7 +235,9 @@ export function AdminItemForm({
             Strength (optional)
           </label>
           <Input id="strength" type="number" min={0} max={100} {...form.register("strength")} />
-          {form.formState.errors.strength ? <p className="text-xs text-destructive">{form.formState.errors.strength.message}</p> : null}
+          {form.formState.errors.strength ? (
+            <p className="text-xs text-destructive">{form.formState.errors.strength.message}</p>
+          ) : null}
         </div>
 
         <div className="space-y-2">
@@ -220,7 +245,9 @@ export function AdminItemForm({
             Charisma (optional)
           </label>
           <Input id="charisma" type="number" min={0} max={100} {...form.register("charisma")} />
-          {form.formState.errors.charisma ? <p className="text-xs text-destructive">{form.formState.errors.charisma.message}</p> : null}
+          {form.formState.errors.charisma ? (
+            <p className="text-xs text-destructive">{form.formState.errors.charisma.message}</p>
+          ) : null}
         </div>
 
         <div className="space-y-2">
@@ -228,14 +255,22 @@ export function AdminItemForm({
             Agility (optional)
           </label>
           <Input id="agility" type="number" min={0} max={100} {...form.register("agility")} />
-          {form.formState.errors.agility ? <p className="text-xs text-destructive">{form.formState.errors.agility.message}</p> : null}
+          {form.formState.errors.agility ? (
+            <p className="text-xs text-destructive">{form.formState.errors.agility.message}</p>
+          ) : null}
         </div>
 
         <div className="space-y-2">
           <label htmlFor="intelligence" className="text-sm font-medium">
             Intelligence (optional)
           </label>
-          <Input id="intelligence" type="number" min={0} max={100} {...form.register("intelligence")} />
+          <Input
+            id="intelligence"
+            type="number"
+            min={0}
+            max={100}
+            {...form.register("intelligence")}
+          />
           {form.formState.errors.intelligence ? (
             <p className="text-xs text-destructive">{form.formState.errors.intelligence.message}</p>
           ) : null}

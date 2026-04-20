@@ -10,17 +10,14 @@ export async function getAdminTasks(
 ): Promise<AdminTasksListResponse> {
   return requestApiData(
     () =>
-      adminHttpClient.get<ApiSuccessResponse<AdminTasksListResponse>>(
-        adminTasksEndpoints.list,
-        {
-          params: {
-            ...(input.search ? { search: input.search } : {}),
-            ...(input.type ? { type: input.type } : {}),
-            ...(input.page !== undefined ? { page: input.page } : {}),
-            ...(input.limit !== undefined ? { limit: input.limit } : {}),
-          },
+      adminHttpClient.get<ApiSuccessResponse<AdminTasksListResponse>>(adminTasksEndpoints.list, {
+        params: {
+          ...(input.search ? { search: input.search } : {}),
+          ...(input.type ? { type: input.type } : {}),
+          ...(input.page !== undefined ? { page: input.page } : {}),
+          ...(input.limit !== undefined ? { limit: input.limit } : {}),
         },
-      ),
+      }),
     "Failed to load tasks",
   );
 }

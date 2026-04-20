@@ -144,9 +144,7 @@ export function AdminUserForm({
           }}
         />
 
-        <p className="text-muted-foreground text-xs">
-          Allowed: JPG, PNG, WEBP, GIF (up to 5MB).
-        </p>
+        <p className="text-muted-foreground text-xs">Allowed: JPG, PNG, WEBP, GIF (up to 5MB).</p>
       </div>
 
       <div className="space-y-2">

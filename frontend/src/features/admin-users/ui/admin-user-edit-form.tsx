@@ -56,10 +56,7 @@ export function AdminUserEditForm({ userId }: AdminUserEditFormProps) {
     () => (usersQuery.data ?? []).find((nextUser) => nextUser.id === userId) ?? null,
     [userId, usersQuery.data],
   );
-  const userProfileQuery = useUserProfileByUsernameQuery(
-    user?.username ?? null,
-    Boolean(user),
-  );
+  const userProfileQuery = useUserProfileByUsernameQuery(user?.username ?? null, Boolean(user));
   const initialFormValues = useMemo(
     () =>
       userProfileQuery.data

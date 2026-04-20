@@ -45,4 +45,3 @@ function Skeleton({ children, ...props }: BitSkeletonProp) {
 }
 
 export { Skeleton };
-

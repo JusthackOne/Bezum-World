@@ -7,7 +7,8 @@ import { publicUserApi } from "../endpoints";
 
 export async function getPublicUserProfile(username: string): Promise<PublicUserProfile> {
   return requestApiData(
-    () => clientHttpClient.get<ApiSuccessResponse<PublicUserProfile>>(publicUserApi.profile(username)),
+    () =>
+      clientHttpClient.get<ApiSuccessResponse<PublicUserProfile>>(publicUserApi.profile(username)),
     "Failed to load user profile",
   );
 }

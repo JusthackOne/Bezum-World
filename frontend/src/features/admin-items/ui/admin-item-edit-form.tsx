@@ -89,7 +89,9 @@ export function AdminItemEditForm({ itemId }: AdminItemEditFormProps) {
             variant="destructive"
             disabled={deleteItemMutation.isPending}
             onClick={async () => {
-              const shouldDelete = window.confirm("Delete this item? This action cannot be undone.");
+              const shouldDelete = window.confirm(
+                "Delete this item? This action cannot be undone.",
+              );
               if (!shouldDelete) {
                 return;
               }
@@ -107,19 +109,45 @@ export function AdminItemEditForm({ itemId }: AdminItemEditFormProps) {
         </div>
 
         <div className="grid grid-cols-1 gap-3 rounded-md border p-4 text-sm sm:grid-cols-2">
-          <div><span className="font-medium">ID:</span> {item.id}</div>
-          <div><span className="font-medium">Owner User ID:</span> {item.owner_user_id ?? "N/A"}</div>
-          <div><span className="font-medium">Name:</span> {item.name}</div>
-          <div><span className="font-medium">Description:</span> {item.description ?? "N/A"}</div>
-          <div><span className="font-medium">Image URL:</span> {item.image_url ?? "N/A"}</div>
-          <div><span className="font-medium">Strength:</span> {item.strength ?? "N/A"}</div>
-          <div><span className="font-medium">Charisma:</span> {item.charisma ?? "N/A"}</div>
-          <div><span className="font-medium">Agility:</span> {item.agility ?? "N/A"}</div>
-          <div><span className="font-medium">Intelligence:</span> {item.intelligence ?? "N/A"}</div>
-          <div><span className="font-medium">Price:</span> {item.price}</div>
-          <div><span className="font-medium">Rarity:</span> {item.rarity}</div>
-          <div><span className="font-medium">Durability:</span> {item.durability ?? "N/A"}</div>
-          <div className="sm:col-span-2"><span className="font-medium">Created At:</span> {item.created_at}</div>
+          <div>
+            <span className="font-medium">ID:</span> {item.id}
+          </div>
+          <div>
+            <span className="font-medium">Owner User ID:</span> {item.owner_user_id ?? "N/A"}
+          </div>
+          <div>
+            <span className="font-medium">Name:</span> {item.name}
+          </div>
+          <div>
+            <span className="font-medium">Description:</span> {item.description ?? "N/A"}
+          </div>
+          <div>
+            <span className="font-medium">Image URL:</span> {item.image_url ?? "N/A"}
+          </div>
+          <div>
+            <span className="font-medium">Strength:</span> {item.strength ?? "N/A"}
+          </div>
+          <div>
+            <span className="font-medium">Charisma:</span> {item.charisma ?? "N/A"}
+          </div>
+          <div>
+            <span className="font-medium">Agility:</span> {item.agility ?? "N/A"}
+          </div>
+          <div>
+            <span className="font-medium">Intelligence:</span> {item.intelligence ?? "N/A"}
+          </div>
+          <div>
+            <span className="font-medium">Price:</span> {item.price}
+          </div>
+          <div>
+            <span className="font-medium">Rarity:</span> {item.rarity}
+          </div>
+          <div>
+            <span className="font-medium">Durability:</span> {item.durability ?? "N/A"}
+          </div>
+          <div className="sm:col-span-2">
+            <span className="font-medium">Created At:</span> {item.created_at}
+          </div>
         </div>
       </CardContent>
     </Card>

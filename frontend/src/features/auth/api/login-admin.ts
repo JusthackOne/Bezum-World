@@ -7,7 +7,10 @@ import type { AdminAuthTokensResponse, AdminLoginPayload } from "../model/admin-
 export async function loginAdmin(payload: AdminLoginPayload): Promise<AdminAuthTokensResponse> {
   return requestApiData(
     () =>
-      adminHttpClient.post<ApiSuccessResponse<AdminAuthTokensResponse>>("/auth/admin/login", payload),
+      adminHttpClient.post<ApiSuccessResponse<AdminAuthTokensResponse>>(
+        "/auth/admin/login",
+        payload,
+      ),
     "Admin login failed",
   );
 }

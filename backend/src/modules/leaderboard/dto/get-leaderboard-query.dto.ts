@@ -13,4 +13,3 @@ export class GetLeaderboardQueryDto {
   @IsEnum(LeaderboardPeriod)
   period?: LeaderboardPeriod;
 }
-

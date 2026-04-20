@@ -46,12 +46,7 @@ function Table({
   variant?: VariantProps<typeof tableVariants>["variant"];
 }) {
   return (
-    <div
-      className={cn(
-        "relative flex justify-center w-fit",
-        tableVariants({ font, variant })
-      )}
-    >
+    <div className={cn("relative flex justify-center w-fit", tableVariants({ font, variant }))}>
       <ShadcnTable className={className} {...props} />
 
       {variant !== "borderless" && (
@@ -84,10 +79,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <ShadcnTableRow
-      className={cn(
-        className,
-        "border-dashed border-b-4 border-foreground dark:border-ring"
-      )}
+      className={cn(className, "border-dashed border-b-4 border-foreground dark:border-ring")}
       {...props}
     />
   );
@@ -101,21 +93,8 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return <ShadcnTableCell className={cn(className)} {...props} />;
 }
 
-function TableCaption({
-  className,
-  ...props
-}: React.ComponentProps<"caption">) {
+function TableCaption({ className, ...props }: React.ComponentProps<"caption">) {
   return <ShadcnTableCaption className={cn(className)} {...props} />;
 }
 
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableCaption,
-};
-
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };

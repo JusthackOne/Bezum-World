@@ -7,7 +7,10 @@ import { publicUserApi } from "../endpoints";
 
 export async function getPublicUserItems(username: string): Promise<PublicUserItemsResponse> {
   return requestApiData(
-    () => clientHttpClient.get<ApiSuccessResponse<PublicUserItemsResponse>>(publicUserApi.items(username)),
+    () =>
+      clientHttpClient.get<ApiSuccessResponse<PublicUserItemsResponse>>(
+        publicUserApi.items(username),
+      ),
     "Failed to load user items",
   );
 }

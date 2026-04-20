@@ -16,4 +16,3 @@ export async function getLeaderboard(period: LeaderboardPeriod): Promise<Leaderb
     "Failed to load leaderboard",
   );
 }
-

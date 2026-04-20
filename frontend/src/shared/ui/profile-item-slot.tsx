@@ -18,7 +18,8 @@ const equipmentRarityStyles: Record<
   unterlyanskiy: {
     slotBorderClassName: "border-amber-900/95",
     slotGlowClassName: "shadow-[0_0_0_1px_rgba(120,53,15,0.42),0_0_18px_rgba(69,26,3,0.28)]",
-    tooltipBorderClassName: "border-amber-900/95 shadow-[0_0_0_1px_rgba(120,53,15,0.38),0_10px_24px_rgba(69,26,3,0.25)]",
+    tooltipBorderClassName:
+      "border-amber-900/95 shadow-[0_0_0_1px_rgba(120,53,15,0.38),0_10px_24px_rgba(69,26,3,0.25)]",
   },
   basic_minimum: {
     slotBorderClassName: "border-emerald-400/95",
@@ -88,7 +89,9 @@ export function ItemTooltip({ item }: { item: ItemDisplay }) {
   return (
     <div className="space-y-2">
       <p className="text-sm font-semibold">{item.name}</p>
-      <p className="text-muted-foreground text-xs">{item.description ?? "No description available."}</p>
+      <p className="text-muted-foreground text-xs">
+        {item.description ?? "No description available."}
+      </p>
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground text-[10px]">Rarity</span>
         <span className={cn("text-[11px] font-semibold capitalize", rarityTextClassName)}>
@@ -111,7 +114,9 @@ export function ItemTooltip({ item }: { item: ItemDisplay }) {
                 )}
               >
                 <Icon className={cn("size-3", visual.iconClassName)} />
-                <span className={cn("text-[10px] font-semibold tabular-nums", visual.valueClassName)}>
+                <span
+                  className={cn("text-[10px] font-semibold tabular-nums", visual.valueClassName)}
+                >
                   +{attribute.value}
                 </span>
               </div>
@@ -137,11 +142,11 @@ export function ProfileItemSlot({ label, item, icon: Icon, className }: ProfileI
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const hasImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
   const rarityStyle = item
-    ? equipmentRarityStyles[item.rarity] ?? {
+    ? (equipmentRarityStyles[item.rarity] ?? {
         slotBorderClassName: "border-border/70",
         slotGlowClassName: "shadow-sm",
         tooltipBorderClassName: "border-border shadow-sm",
-      }
+      })
     : null;
 
   const trigger = (
@@ -176,13 +181,15 @@ export function ProfileItemSlot({ label, item, icon: Icon, className }: ProfileI
     return trigger;
   }
 
+  const tooltipBorderClassName = rarityStyle?.tooltipBorderClassName ?? "border-border shadow-sm";
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>{trigger}</TooltipTrigger>
       <TooltipContent
         className={cn(
           "border-2 bg-card text-foreground w-64 p-3",
-          rarityStyle.tooltipBorderClassName,
+          tooltipBorderClassName,
         )}
         sideOffset={8}
       >

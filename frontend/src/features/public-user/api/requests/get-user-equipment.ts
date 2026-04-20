@@ -7,7 +7,10 @@ import { publicUserApi } from "../endpoints";
 
 export async function getUserEquipment(userId: string): Promise<PublicUserEquipment> {
   return requestApiData(
-    () => clientHttpClient.get<ApiSuccessResponse<PublicUserEquipment>>(publicUserApi.equipment(userId)),
+    () =>
+      clientHttpClient.get<ApiSuccessResponse<PublicUserEquipment>>(
+        publicUserApi.equipment(userId),
+      ),
     "Failed to load user equipment",
   );
 }

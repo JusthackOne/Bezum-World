@@ -7,7 +7,8 @@ import { publicUserApi } from "../endpoints";
 
 export async function equipUserItem(itemId: string): Promise<EquipItemResponse> {
   return requestApiData(
-    () => clientHttpClient.patch<ApiSuccessResponse<EquipItemResponse>>(publicUserApi.equip(itemId)),
+    () =>
+      clientHttpClient.patch<ApiSuccessResponse<EquipItemResponse>>(publicUserApi.equip(itemId)),
     "Failed to equip item",
   );
 }

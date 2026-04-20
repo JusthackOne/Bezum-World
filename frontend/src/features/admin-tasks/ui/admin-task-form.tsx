@@ -137,7 +137,11 @@ export function AdminTaskForm({
           >
             {displayImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={displayImageUrl} alt="Task image preview" className="h-full w-full object-cover" />
+              <img
+                src={displayImageUrl}
+                alt="Task image preview"
+                className="h-full w-full object-cover"
+              />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
                 <CameraIcon className="size-7" />
@@ -234,13 +238,16 @@ export function AdminTaskForm({
           </label>
           <Input id="rewardGameScore" type="number" min={0} {...form.register("rewardGameScore")} />
           {form.formState.errors.rewardGameScore ? (
-            <p className="text-xs text-destructive">{form.formState.errors.rewardGameScore.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.rewardGameScore.message}
+            </p>
           ) : null}
         </div>
 
         <div className="space-y-2">
           <label htmlFor="submissionLimit" className="text-sm font-medium">
-            Submission Limit {watchedType === "daily" ? "(daily only)" : "(ignored for current type)"}
+            Submission Limit{" "}
+            {watchedType === "daily" ? "(daily only)" : "(ignored for current type)"}
           </label>
           <Input
             id="submissionLimit"
@@ -250,7 +257,9 @@ export function AdminTaskForm({
             {...form.register("submissionLimit")}
           />
           {form.formState.errors.submissionLimit ? (
-            <p className="text-xs text-destructive">{form.formState.errors.submissionLimit.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.submissionLimit.message}
+            </p>
           ) : null}
         </div>
 
@@ -258,9 +267,17 @@ export function AdminTaskForm({
           <label htmlFor="rewardStrength" className="text-sm font-medium">
             Strength Reward (optional)
           </label>
-          <Input id="rewardStrength" type="number" min={0} max={100} {...form.register("rewardStrength")} />
+          <Input
+            id="rewardStrength"
+            type="number"
+            min={0}
+            max={100}
+            {...form.register("rewardStrength")}
+          />
           {form.formState.errors.rewardStrength ? (
-            <p className="text-xs text-destructive">{form.formState.errors.rewardStrength.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.rewardStrength.message}
+            </p>
           ) : null}
         </div>
 
@@ -286,9 +303,17 @@ export function AdminTaskForm({
           <label htmlFor="rewardCharisma" className="text-sm font-medium">
             Charisma Reward (optional)
           </label>
-          <Input id="rewardCharisma" type="number" min={0} max={100} {...form.register("rewardCharisma")} />
+          <Input
+            id="rewardCharisma"
+            type="number"
+            min={0}
+            max={100}
+            {...form.register("rewardCharisma")}
+          />
           {form.formState.errors.rewardCharisma ? (
-            <p className="text-xs text-destructive">{form.formState.errors.rewardCharisma.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.rewardCharisma.message}
+            </p>
           ) : null}
         </div>
 
@@ -296,9 +321,17 @@ export function AdminTaskForm({
           <label htmlFor="rewardEndurance" className="text-sm font-medium">
             Endurance Reward (optional)
           </label>
-          <Input id="rewardEndurance" type="number" min={0} max={100} {...form.register("rewardEndurance")} />
+          <Input
+            id="rewardEndurance"
+            type="number"
+            min={0}
+            max={100}
+            {...form.register("rewardEndurance")}
+          />
           {form.formState.errors.rewardEndurance ? (
-            <p className="text-xs text-destructive">{form.formState.errors.rewardEndurance.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.rewardEndurance.message}
+            </p>
           ) : null}
         </div>
       </div>

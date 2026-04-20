@@ -3,4 +3,3 @@ export enum LeaderboardPeriod {
   weekly = 'weekly',
   daily = 'daily',
 }
-

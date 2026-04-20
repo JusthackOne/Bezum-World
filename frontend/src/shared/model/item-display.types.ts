@@ -1,4 +1,9 @@
-export type ItemDisplayRarity = "unterlyanskiy" | "basic_minimum" | "sigma" | "bezumnyy" | (string & {});
+export type ItemDisplayRarity =
+  | "unterlyanskiy"
+  | "basic_minimum"
+  | "sigma"
+  | "bezumnyy"
+  | (string & {});
 
 export interface ItemDisplay {
   id: string;

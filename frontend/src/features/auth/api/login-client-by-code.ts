@@ -11,7 +11,11 @@ export async function loginClientByCode(
   payload: ClientLoginByCodePayload,
 ): Promise<ClientAuthTokensResponse> {
   return requestApiData(
-    () => clientHttpClient.post<ApiSuccessResponse<ClientAuthTokensResponse>>("/auth/login/code", payload),
+    () =>
+      clientHttpClient.post<ApiSuccessResponse<ClientAuthTokensResponse>>(
+        "/auth/login/code",
+        payload,
+      ),
     "Client login failed",
   );
 }

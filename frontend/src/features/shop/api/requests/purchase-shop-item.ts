@@ -7,7 +7,8 @@ import { shopApi } from "../endpoints";
 
 export async function purchaseShopItem(itemId: string): Promise<PurchaseShopItemResponse> {
   return requestApiData(
-    () => clientHttpClient.post<ApiSuccessResponse<PurchaseShopItemResponse>>(shopApi.purchase(itemId)),
+    () =>
+      clientHttpClient.post<ApiSuccessResponse<PurchaseShopItemResponse>>(shopApi.purchase(itemId)),
     "Failed to purchase item",
   );
 }

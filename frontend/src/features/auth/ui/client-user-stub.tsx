@@ -6,9 +6,7 @@ export function ClientUserStub() {
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle>Client User Page</CardTitle>
-          <CardDescription>
-            This is a placeholder page for the client user area.
-          </CardDescription>
+          <CardDescription>This is a placeholder page for the client user area.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">

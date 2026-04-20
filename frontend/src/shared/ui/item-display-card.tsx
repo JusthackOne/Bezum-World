@@ -65,7 +65,7 @@ interface ItemDisplayCardProps<TItem extends ItemDisplay> {
   actionAriaLabel?: string;
   actionLoadingLabel?: string;
   isActionLoading?: boolean;
-  isShopCard: boolean;
+  isShopCard?: boolean;
 }
 
 export function ItemDisplayCard<TItem extends ItemDisplay>({
@@ -151,7 +151,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
               className="h-7 w-full rounded-md border-none bg-white/12 px-2 text-[8px] text-white shadow-none ring-0 outline-none hover:bg-white/20 hover:text-white focus-visible:ring-0 focus-visible:outline-none"
               onClick={(event) => {
                 event.stopPropagation();
-                onAction(item);
+                onAction?.(item);
               }}
               aria-label={actionAriaLabel ?? `${actionLabel} ${item.name}`}
             >

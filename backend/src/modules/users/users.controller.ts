@@ -32,11 +32,7 @@ import { AdminCreateAccountDto, AdminCreateAccountResponseDto } from '../auth/dt
 import { AuthService } from '../auth/auth.service';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import { AdminOnlyGuard } from '../auth/guards/admin-only.guard';
-import {
-  GetPublicUserProfileParamsDto,
-  PublicUserProfileDto,
-  UserItemsResponseDto,
-} from './dto';
+import { GetPublicUserProfileParamsDto, PublicUserProfileDto, UserItemsResponseDto } from './dto';
 import { UsersService } from './users.service';
 
 const AVATARS_UPLOAD_DIR = join(process.cwd(), 'uploads', 'avatars');

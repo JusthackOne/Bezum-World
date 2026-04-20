@@ -44,9 +44,7 @@ function toFormValues(task: AdminTask): AdminTaskFormValues {
 function buildRewardAttributes(values: AdminTaskFormValues): AdminTaskRewardAttributes | undefined {
   const rewardAttributes = {
     ...(values.rewardStrength !== undefined ? { strength: values.rewardStrength } : {}),
-    ...(values.rewardIntelligence !== undefined
-      ? { intelligence: values.rewardIntelligence }
-      : {}),
+    ...(values.rewardIntelligence !== undefined ? { intelligence: values.rewardIntelligence } : {}),
     ...(values.rewardCharisma !== undefined ? { charisma: values.rewardCharisma } : {}),
     ...(values.rewardEndurance !== undefined ? { endurance: values.rewardEndurance } : {}),
   };
@@ -185,7 +183,9 @@ export function AdminTaskEditForm({ taskId }: AdminTaskEditFormProps) {
             variant="destructive"
             disabled={deleteTaskMutation.isPending}
             onClick={async () => {
-              const shouldDelete = window.confirm("Delete this task? This action cannot be undone.");
+              const shouldDelete = window.confirm(
+                "Delete this task? This action cannot be undone.",
+              );
               if (!shouldDelete) {
                 return;
               }

@@ -90,7 +90,9 @@ export class TasksService {
       ...(payload.description !== undefined
         ? { description: this.normalizeNullableString(payload.description) }
         : {}),
-      ...(payload.image !== undefined ? { image: this.normalizeNullableString(payload.image) } : {}),
+      ...(payload.image !== undefined
+        ? { image: this.normalizeNullableString(payload.image) }
+        : {}),
       ...(uploadedImageUrl !== undefined ? { image: uploadedImageUrl } : {}),
       ...(payload.rewardMoney !== undefined ? { rewardMoney: payload.rewardMoney } : {}),
       ...(payload.rewardGameScore !== undefined
@@ -207,7 +209,11 @@ export class TasksService {
     };
   }
 
-  async submitTask(taskId: string, userId: string, payload: SubmitTaskDto): Promise<SubmitTaskResponseDto> {
+  async submitTask(
+    taskId: string,
+    userId: string,
+    payload: SubmitTaskDto,
+  ): Promise<SubmitTaskResponseDto> {
     return this.prisma.$transaction(async (tx) => {
       const account = await this.accountRepository.findByIdInTransaction(userId, tx);
 
@@ -429,7 +435,9 @@ export class TasksService {
       normalized.endurance = rewardAttributes.endurance;
     }
 
-    return Object.keys(normalized).length > 0 ? (normalized as Prisma.InputJsonObject) : Prisma.DbNull;
+    return Object.keys(normalized).length > 0
+      ? (normalized as Prisma.InputJsonObject)
+      : Prisma.DbNull;
   }
 
   private fromRewardAttributesJson(value: Prisma.JsonValue | null): TaskRewardAttributes {

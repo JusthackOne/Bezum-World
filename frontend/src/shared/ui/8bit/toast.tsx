@@ -17,9 +17,17 @@ import {
 import "@/shared/ui/8bit/styles/retro.css";
 
 export function toast(toast: string) {
-  return sonnerToast.custom((id) => (
-    <div className="retro rounded-none border-y-6 border-foreground bg-background p-4 text-foreground shadow-lg dark:border-ring">
-      <div className="absolute inset-0 -mx-1.5 border-x-6 border-inherit pointer-events-none" aria-hidden="true" />
+  return sonnerToast.custom(() => (
+    <div
+      className={cn(
+        toastVariants(),
+        "rounded-none border-y-6 border-foreground bg-background p-4 text-foreground shadow-lg dark:border-ring",
+      )}
+    >
+      <div
+        className="absolute inset-0 -mx-1.5 border-x-6 border-inherit pointer-events-none"
+        aria-hidden="true"
+      />
       <p className="text-sm font-medium">{toast}</p>
     </div>
   ));
@@ -52,7 +60,7 @@ function Toast({ className, font, ...props }: BitToastProps) {
     <ShadcnToast
       className={cn(
         "relative rounded-none border-y-6 border-foreground bg-card text-card-foreground p-4 dark:border-ring",
-        font !== "normal" && "retro",
+        toastVariants({ font }),
         className,
       )}
       {...props}
@@ -63,13 +71,13 @@ function Toast({ className, font, ...props }: BitToastProps) {
 const ToastProvider = ShadcnToastProvider;
 
 function ToastViewport({ className, ...props }: React.ComponentProps<typeof ShadcnToastViewport>) {
-  return <ShadcnToastViewport className={cn(className, "retro")} {...props} />;
+  return <ShadcnToastViewport className={cn(className, toastVariants())} {...props} />;
 }
 
 function ToastTitle({ className, font, ...props }: BitToastTextProps) {
   return (
     <ShadcnToastTitle
-      className={cn(font !== "normal" && "retro", className)}
+      className={cn(toastVariants({ font }), className)}
       {...(props as React.ComponentProps<typeof ShadcnToastTitle>)}
     />
   );
@@ -78,7 +86,7 @@ function ToastTitle({ className, font, ...props }: BitToastTextProps) {
 function ToastDescription({ className, font, ...props }: BitToastTextProps) {
   return (
     <ShadcnToastDescription
-      className={cn(font !== "normal" && "retro", className)}
+      className={cn(toastVariants({ font }), className)}
       {...(props as React.ComponentProps<typeof ShadcnToastDescription>)}
     />
   );

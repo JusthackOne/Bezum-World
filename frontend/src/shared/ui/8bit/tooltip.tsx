@@ -28,15 +28,11 @@ export const tooltipVariants = cva("", {
 });
 
 export interface BitTooltipContentProps
-  extends React.ComponentPropsWithoutRef<typeof ShadcnTooltipContent>,
+  extends
+    React.ComponentPropsWithoutRef<typeof ShadcnTooltipContent>,
     VariantProps<typeof tooltipVariants> {}
 
-function TooltipContent({
-  className,
-  children,
-  font,
-  ...props
-}: BitTooltipContentProps) {
+function TooltipContent({ className, children, font, ...props }: BitTooltipContentProps) {
   const color = tooltipVariants({ font });
 
   return (
@@ -46,24 +42,15 @@ function TooltipContent({
       className={cn("rounded-none", color, className)}
     >
       {children}
-      <div
-        className={cn(
-          "absolute top-1.5 bottom-1.5 -left-1.5 w-1.5 bg-primary",
-          color
-        )}
-      />
-      <div
-        className={cn(
-          "absolute top-1.5 bottom-1.5 -right-1.5 w-1.5 bg-primary ",
-          color
-        )}
-      />
+      <div className={cn("absolute top-1.5 bottom-1.5 -left-1.5 w-1.5 bg-primary", color)} />
+      <div className={cn("absolute top-1.5 bottom-1.5 -right-1.5 w-1.5 bg-primary ", color)} />
     </ShadcnTooltipContent>
   );
 }
 
 export interface BitTooltipProps
-  extends React.ComponentPropsWithoutRef<typeof ShadcnTooltip>,
+  extends
+    React.ComponentPropsWithoutRef<typeof ShadcnTooltip>,
     VariantProps<typeof tooltipVariants> {}
 
 function Tooltip({ children, ...props }: BitTooltipProps) {
@@ -74,16 +61,13 @@ function Tooltip({ children, ...props }: BitTooltipProps) {
   );
 }
 
-export interface BitTooltipProviderProps
-  extends React.ComponentPropsWithoutRef<typeof ShadcnTooltipProvider> {
+export interface BitTooltipProviderProps extends React.ComponentPropsWithoutRef<
+  typeof ShadcnTooltipProvider
+> {
   delayDuration?: number;
 }
 
-function TooltipProvider({
-  children,
-  delayDuration = 0,
-  ...props
-}: BitTooltipProviderProps) {
+function TooltipProvider({ children, delayDuration = 0, ...props }: BitTooltipProviderProps) {
   return (
     <ShadcnTooltipProvider delayDuration={delayDuration} {...props}>
       {children}
@@ -97,11 +81,7 @@ function TooltipTrigger({
   ...props
 }: React.ComponentPropsWithoutRef<typeof ShadcnTooltipTrigger>) {
   return (
-    <ShadcnTooltipTrigger
-      data-slot="tooltip-trigger"
-      asChild={asChild}
-      {...props}
-    >
+    <ShadcnTooltipTrigger data-slot="tooltip-trigger" asChild={asChild} {...props}>
       {children}
     </ShadcnTooltipTrigger>
   );

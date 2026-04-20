@@ -1,12 +1,4 @@
-import {
-  Controller,
-  ForbiddenException,
-  Get,
-  Param,
-  Patch,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,

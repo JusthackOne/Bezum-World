@@ -1,7 +1,18 @@
 FROM oven/bun:1.3.11 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN set -e; \
+  for attempt in 1 2 3 4 5; do \
+    echo "bun install attempt ${attempt}/5"; \
+    if bun install --frozen-lockfile; then \
+      exit 0; \
+    fi; \
+    echo "bun install failed, cleaning cache and retrying..."; \
+    rm -rf /root/.bun/install/cache || true; \
+    sleep 3; \
+  done; \
+  echo "bun install failed after 5 attempts"; \
+  exit 1
 
 FROM oven/bun:1.3.11 AS builder
 WORKDIR /app

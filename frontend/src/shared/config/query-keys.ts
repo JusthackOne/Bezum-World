@@ -7,22 +7,12 @@ export const queryKeys = {
     type: "all" | "daily" | "weekly" | "event";
     page: number;
     limit: number;
-  }) =>
-    [
-      "admin",
-      "tasks",
-      filters.search,
-      filters.type,
-      filters.page,
-      filters.limit,
-    ] as const,
+  }) => ["admin", "tasks", filters.search, filters.type, filters.page, filters.limit] as const,
   adminTaskById: (taskId: string) => ["admin", "tasks", "by-id", taskId] as const,
   shopItems: ["shop", "items"] as const,
   clientTasksPrefix: ["client", "tasks"] as const,
-  clientTasks: (filters: {
-    search: string;
-    type: "all" | "daily" | "weekly" | "event";
-  }) => ["client", "tasks", filters.search, filters.type] as const,
+  clientTasks: (filters: { search: string; type: "all" | "daily" | "weekly" | "event" }) =>
+    ["client", "tasks", filters.search, filters.type] as const,
   leaderboard: (period: "all" | "weekly" | "daily") => ["leaderboard", period] as const,
   battlesPlayers: ["battles", "players"] as const,
   userProfile: (username: string) => ["users", "profile", username] as const,

@@ -18,9 +18,7 @@ import { AdminTaskForm, type AdminTaskFormValues } from "./admin-task-form";
 function buildRewardAttributes(values: AdminTaskFormValues): AdminTaskRewardAttributes | undefined {
   const rewardAttributes = {
     ...(values.rewardStrength !== undefined ? { strength: values.rewardStrength } : {}),
-    ...(values.rewardIntelligence !== undefined
-      ? { intelligence: values.rewardIntelligence }
-      : {}),
+    ...(values.rewardIntelligence !== undefined ? { intelligence: values.rewardIntelligence } : {}),
     ...(values.rewardCharisma !== undefined ? { charisma: values.rewardCharisma } : {}),
     ...(values.rewardEndurance !== undefined ? { endurance: values.rewardEndurance } : {}),
   };

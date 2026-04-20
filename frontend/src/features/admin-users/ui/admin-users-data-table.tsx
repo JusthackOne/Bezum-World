@@ -209,11 +209,17 @@ export function AdminUsersDataTable() {
         <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="text-2xl font-semibold">Users</h1>
-            <p className="text-muted-foreground text-sm">Manage player accounts and base attributes.</p>
+            <p className="text-muted-foreground text-sm">
+              Manage player accounts and base attributes.
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={() => router.push("/admin/users/create")}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push("/admin/users/create")}
+            >
               <PlusIcon className="size-4" />
               Add user
             </Button>
@@ -234,7 +240,9 @@ export function AdminUsersDataTable() {
           <CardHeader>
             <CardTitle>Admin Users Table</CardTitle>
             <CardDescription>
-              {usersQuery.isPending ? "Loading users..." : `${users.length} user${users.length === 1 ? "" : "s"} loaded`}
+              {usersQuery.isPending
+                ? "Loading users..."
+                : `${users.length} user${users.length === 1 ? "" : "s"} loaded`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -294,7 +302,9 @@ export function AdminUsersDataTable() {
                             }
                           />
                         </TableCell>
-                        <TableCell className="max-w-[160px] truncate font-mono text-xs">{user.id}</TableCell>
+                        <TableCell className="max-w-[160px] truncate font-mono text-xs">
+                          {user.id}
+                        </TableCell>
                         <TableCell>{user.username}</TableCell>
                         <TableCell className="font-mono text-xs">{user.code ?? "N/A"}</TableCell>
                         <TableCell className="max-w-[220px] truncate">
@@ -321,8 +331,8 @@ export function AdminUsersDataTable() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete selected users?</AlertDialogTitle>
               <AlertDialogDescription>
-                You are about to delete {selectedCount} selected user{selectedCount === 1 ? "" : "s"}.
-                This action cannot be undone.
+                You are about to delete {selectedCount} selected user
+                {selectedCount === 1 ? "" : "s"}. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

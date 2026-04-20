@@ -64,7 +64,11 @@ export class TaskRepository {
     });
   }
 
-  async updateById(id: string, input: UpdateTaskInput, tx?: Prisma.TransactionClient): Promise<Task> {
+  async updateById(
+    id: string,
+    input: UpdateTaskInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<Task> {
     return this.getClient(tx).task.update({
       where: { id },
       data: {
@@ -74,7 +78,9 @@ export class TaskRepository {
         ...(input.image !== undefined ? { image: input.image } : {}),
         ...(input.rewardMoney !== undefined ? { rewardMoney: input.rewardMoney } : {}),
         ...(input.rewardGameScore !== undefined ? { rewardGameScore: input.rewardGameScore } : {}),
-        ...(input.rewardAttributes !== undefined ? { rewardAttributes: input.rewardAttributes } : {}),
+        ...(input.rewardAttributes !== undefined
+          ? { rewardAttributes: input.rewardAttributes }
+          : {}),
         ...(input.requiresProofImage !== undefined
           ? { requiresProofImage: input.requiresProofImage }
           : {}),

@@ -96,7 +96,9 @@ export function AdminLoginForm() {
               ) : null}
             </div>
 
-            {loginMutation.isError ? <p className="text-sm text-destructive">{mutationError}</p> : null}
+            {loginMutation.isError ? (
+              <p className="text-sm text-destructive">{mutationError}</p>
+            ) : null}
 
             <Button
               type="submit"

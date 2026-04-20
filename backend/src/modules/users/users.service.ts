@@ -279,9 +279,7 @@ export class UsersService {
       return null;
     }
 
-    return (
-      this.configService.get('APP_DOMAIN') + ':' + this.configService.get('PORT') + imageUrl
-    );
+    return this.configService.get('APP_DOMAIN') + ':' + this.configService.get('PORT') + imageUrl;
   }
 
   private toUserItemType(slotType: EquipmentSlotType): UserOwnedItemDto['type'] {

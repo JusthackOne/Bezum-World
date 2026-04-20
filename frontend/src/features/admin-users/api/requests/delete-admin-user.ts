@@ -4,11 +4,10 @@ import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
 
 import type { AdminDeleteUserResponse } from "../../model/admin-user.types";
 
-export async function deleteAdminUser(
-  userId: string,
-): Promise<AdminDeleteUserResponse> {
+export async function deleteAdminUser(userId: string): Promise<AdminDeleteUserResponse> {
   return requestApiData(
-    () => adminHttpClient.delete<ApiSuccessResponse<AdminDeleteUserResponse>>(`/admin/users/${userId}`),
+    () =>
+      adminHttpClient.delete<ApiSuccessResponse<AdminDeleteUserResponse>>(`/admin/users/${userId}`),
     "Failed to delete user",
   );
 }

@@ -157,7 +157,9 @@ export class ItemsController {
   @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
   @ApiForbiddenResponse({ description: 'Admin access is required' })
   @ApiNotFoundResponse({ description: 'Item is not found' })
-  async deleteItemByAdmin(@Param() params: PurchaseItemParamsDto): Promise<AdminDeleteItemResponseDto> {
+  async deleteItemByAdmin(
+    @Param() params: PurchaseItemParamsDto,
+  ): Promise<AdminDeleteItemResponseDto> {
     return this.itemsService.deleteByAdmin(params.itemId);
   }
 

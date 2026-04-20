@@ -31,7 +31,14 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { AvatarImage } from "@/shared/ui/avatar-image";
-import { AttributeBadge, attributeVisuals, GameScoreIcon, ItemDetailsModal, ItemDisplayCard, ProfileItemSlot } from "@/shared/ui";
+import {
+  AttributeBadge,
+  attributeVisuals,
+  GameScoreIcon,
+  ItemDetailsModal,
+  ItemDisplayCard,
+  ProfileItemSlot,
+} from "@/shared/ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
 import { Separator } from "@/shared/ui/8bit";
 
@@ -261,7 +268,9 @@ function UserItemsCard({
               : `${items.length} item${items.length === 1 ? "" : "s"} in inventory`}
           </CardDescription>
         </CardHeader>
-        <CardContent className={cn("min-h-0 flex-1 space-y-4 overflow-x-hidden pr-4", hiddenScrollbarClass)}>
+        <CardContent
+          className={cn("min-h-0 flex-1 space-y-4 overflow-x-hidden pr-4", hiddenScrollbarClass)}
+        >
           {isPending ? (
             <p className="text-muted-foreground text-sm">Loading items...</p>
           ) : items.length === 0 ? (

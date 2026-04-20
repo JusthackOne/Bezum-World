@@ -13,7 +13,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Checkbox } from "@/shared/ui/checkbox";
 import { ItemDetailsModal } from "@/shared/ui";
 import { ItemDisplayCard } from "@/shared/ui";
-import { Toast, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/shared/ui/8bit/toast";
+import {
+  Toast,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
+} from "@/shared/ui/8bit/toast";
 
 type RarityFilterValue = "unterlyanskiy" | "basic_minimum" | "sigma" | "bezumnyy";
 type RarityFilterOptionValue = RarityFilterValue | "all";

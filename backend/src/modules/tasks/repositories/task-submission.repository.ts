@@ -14,7 +14,10 @@ export interface CreateTaskSubmissionInput {
 export class TaskSubmissionRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(input: CreateTaskSubmissionInput, tx: Prisma.TransactionClient): Promise<TaskSubmission> {
+  async create(
+    input: CreateTaskSubmissionInput,
+    tx: Prisma.TransactionClient,
+  ): Promise<TaskSubmission> {
     return this.getClient(tx).taskSubmission.create({
       data: {
         taskId: input.taskId,

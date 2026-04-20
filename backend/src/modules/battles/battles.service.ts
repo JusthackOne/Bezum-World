@@ -101,7 +101,10 @@ export class BattlesService {
     };
   }
 
-  async startBattle(currentUserId: string, opponentUserId: string): Promise<StartBattleResponseDto> {
+  async startBattle(
+    currentUserId: string,
+    opponentUserId: string,
+  ): Promise<StartBattleResponseDto> {
     if (currentUserId === opponentUserId) {
       throw new BadRequestException('You cannot battle yourself');
     }
@@ -194,15 +197,23 @@ export class BattlesService {
     });
   }
 
-  private async prismaSerializableTransaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  private async prismaSerializableTransaction<T>(
+    callback: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
     return this.prisma.$transaction(callback, {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     });
   }
 
   private getFinalStats(player: BattlePlayerRecord): FinalBattleStats {
-    const bonusStrength = player.equipment.reduce((sum, slot) => sum + (slot.item?.strength ?? 0), 0);
-    const bonusCharisma = player.equipment.reduce((sum, slot) => sum + (slot.item?.charisma ?? 0), 0);
+    const bonusStrength = player.equipment.reduce(
+      (sum, slot) => sum + (slot.item?.strength ?? 0),
+      0,
+    );
+    const bonusCharisma = player.equipment.reduce(
+      (sum, slot) => sum + (slot.item?.charisma ?? 0),
+      0,
+    );
     const bonusIntelligence = player.equipment.reduce(
       (sum, slot) => sum + (slot.item?.intelligence ?? 0),
       0,
@@ -248,7 +259,11 @@ export class BattlesService {
     return Number((probability * 100).toFixed(2));
   }
 
-  private calculateCoinReward(winnerPower: number, loserPower: number, loserBalance: number): number {
+  private calculateCoinReward(
+    winnerPower: number,
+    loserPower: number,
+    loserBalance: number,
+  ): number {
     if (loserBalance <= 0) {
       return 0;
     }
@@ -301,9 +316,7 @@ export class BattlesService {
     }, {});
   }
 
-  private mapEquipmentSlot(
-    slotType: EquipmentSlotType,
-  ): keyof BattlePlayerEquipmentDto {
+  private mapEquipmentSlot(slotType: EquipmentSlotType): keyof BattlePlayerEquipmentDto {
     switch (slotType) {
       case EquipmentSlotType.HELMET:
         return 'helmet';

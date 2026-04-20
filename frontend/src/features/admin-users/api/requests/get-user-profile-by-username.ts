@@ -6,7 +6,10 @@ import type { UserProfileByUsername } from "../../model/admin-user.types";
 
 export async function getUserProfileByUsername(username: string): Promise<UserProfileByUsername> {
   return requestApiData(
-    () => adminHttpClient.get<ApiSuccessResponse<UserProfileByUsername>>(`/users/${encodeURIComponent(username)}`),
+    () =>
+      adminHttpClient.get<ApiSuccessResponse<UserProfileByUsername>>(
+        `/users/${encodeURIComponent(username)}`,
+      ),
     "Failed to load user profile",
   );
 }

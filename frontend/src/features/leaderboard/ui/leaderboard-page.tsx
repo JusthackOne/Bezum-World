@@ -46,11 +46,7 @@ function LeaderAvatar({
   sizeClassName: string;
 }) {
   return (
-    <AvatarImage
-      avatarUrl={avatar}
-      alt={`${username} avatar`}
-      sizeClassName={sizeClassName}
-    />
+    <AvatarImage avatarUrl={avatar} alt={`${username} avatar`} sizeClassName={sizeClassName} />
   );
 }
 
@@ -112,11 +108,7 @@ function TopLeaderCard({
   );
 }
 
-function LeaderListRow({
-  leader,
-}: {
-  leader: LeaderboardLeader;
-}) {
+function LeaderListRow({ leader }: { leader: LeaderboardLeader }) {
   return (
     <Link
       href={publicUserRoutes.profile(leader.username)}
@@ -180,9 +172,7 @@ export function LeaderBoardPage() {
           <CrownIcon className="size-5 text-amber-500" />
           <h1 className="text-2xl font-semibold">LeaderBoard</h1>
         </div>
-        <p className="text-muted-foreground text-sm">
-          Track top players by total score.
-        </p>
+        <p className="text-muted-foreground text-sm">Track top players by total score.</p>
       </div>
 
       {leaderboardQuery.isPending ? (

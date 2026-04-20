@@ -1,10 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  SearchIcon,
-  UploadIcon,
-} from "lucide-react";
+import { SearchIcon, UploadIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";

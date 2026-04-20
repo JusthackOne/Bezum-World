@@ -14,4 +14,3 @@ export interface LeaderboardResponse {
   period: LeaderboardPeriod;
   leaders: LeaderboardLeader[];
 }
-

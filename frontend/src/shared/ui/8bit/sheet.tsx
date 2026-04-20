@@ -41,9 +41,7 @@ export const sheetVariants = cva("", {
   },
 });
 
-function SheetPortal({
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Portal>) {
+function SheetPortal({ ...props }: React.ComponentProps<typeof SheetPrimitive.Portal>) {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />;
 }
 
@@ -56,27 +54,19 @@ function SheetOverlay({
       data-slot="sheet-overlay"
       className={cn(
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
-        className
+        className,
       )}
       {...props}
     />
   );
 }
 
-export type BitSheetProps = React.ComponentProps<
-  typeof SheetPrimitive.Content
-> &
+export type BitSheetProps = React.ComponentProps<typeof SheetPrimitive.Content> &
   VariantProps<typeof sheetVariants> & {
     side?: "top" | "right" | "bottom" | "left";
   };
 
-function SheetContent({
-  className,
-  children,
-  side = "right",
-  font,
-  ...props
-}: BitSheetProps) {
+function SheetContent({ className, children, side = "right", font, ...props }: BitSheetProps) {
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -95,7 +85,7 @@ function SheetContent({
           sheetVariants({
             font,
             className,
-          })
+          }),
         )}
         {...props}
       >
@@ -152,114 +142,24 @@ function SheetContent({
             className="w-6 h-6"
             aria-label="x"
           >
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 120 152)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 104 168)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 184 184)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 88 184)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 168 104)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 184 88)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 200 72)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 200 200)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 152 120)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 152 152)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 136 136)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 120 120)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 136 136)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 168 168)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 88 88)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 72 72)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 72 200)"
-            />
-            <rect
-              width={14}
-              height={14}
-              rx={1}
-              transform="matrix(0 -1 -1 0 104 104)"
-            />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 120 152)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 104 168)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 184 184)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 88 184)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 168 104)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 184 88)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 200 72)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 200 200)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 152 120)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 152 152)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 136 136)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 120 120)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 136 136)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 168 168)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 88 88)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 72 72)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 72 200)" />
+            <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 104 104)" />
           </svg>
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
@@ -278,4 +178,3 @@ export {
   SheetHeader,
   SheetTitle,
 };
-

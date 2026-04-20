@@ -13,11 +13,7 @@ import {
 
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import type { RequestWithAuthUser } from '../auth/types/request-with-auth-user.type';
-import {
-  BattlePlayersResponseDto,
-  StartBattleParamsDto,
-  StartBattleResponseDto,
-} from './dto';
+import { BattlePlayersResponseDto, StartBattleParamsDto, StartBattleResponseDto } from './dto';
 import { BattlesService } from './battles.service';
 
 @ApiTags('battles')

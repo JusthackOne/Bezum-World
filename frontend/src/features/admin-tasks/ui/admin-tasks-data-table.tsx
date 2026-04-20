@@ -9,7 +9,14 @@ import type { AdminTaskTypeFilter } from "@/features/admin-tasks/model/admin-tas
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { Input } from "@/shared/ui/8bit/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/8bit/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/ui/8bit/table";
 
 const taskTypeFilterOptions: Array<{ label: string; value: AdminTaskTypeFilter }> = [
   { label: "All", value: "all" },

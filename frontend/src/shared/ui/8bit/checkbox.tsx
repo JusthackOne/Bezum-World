@@ -22,7 +22,8 @@ export const checkboxVariants = cva("", {
 });
 
 export interface BitCheckboxProps
-  extends React.ComponentProps<typeof CheckboxPrimitive.Root>,
+  extends
+    React.ComponentProps<typeof CheckboxPrimitive.Root>,
     VariantProps<typeof checkboxVariants> {
   asChild?: boolean;
 }
@@ -32,14 +33,14 @@ function Checkbox({ className, font, ...props }: BitCheckboxProps) {
     <div
       className={cn(
         "relative flex items-center justify-center border-y-6 border-foreground dark:border-ring",
-        className
+        className,
       )}
     >
       <ShadcnCheckbox
         className={cn(
           "rounded-none size-5 ring-0 border-none",
           font !== "normal" && "retro",
-          className
+          className,
         )}
         {...props}
       />
@@ -53,4 +54,3 @@ function Checkbox({ className, font, ...props }: BitCheckboxProps) {
 }
 
 export { Checkbox };
-

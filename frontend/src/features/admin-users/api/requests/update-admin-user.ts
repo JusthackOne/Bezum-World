@@ -54,7 +54,9 @@ function buildMultipartPayload(payload: AdminUpdateUserInput): FormData {
   return formData;
 }
 
-export async function updateAdminUser(payload: AdminUpdateUserInput): Promise<AdminUpdateUserResponse> {
+export async function updateAdminUser(
+  payload: AdminUpdateUserInput,
+): Promise<AdminUpdateUserResponse> {
   const hasAvatarFile = payload.avatarFile instanceof File;
   const requestBody = hasAvatarFile ? buildMultipartPayload(payload) : buildJsonPayload(payload);
 

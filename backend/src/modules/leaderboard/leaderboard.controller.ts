@@ -43,4 +43,3 @@ export class LeaderboardController {
     return this.leaderboardService.getLeaderboard(query.period ?? LeaderboardPeriod.all);
   }
 }
-
