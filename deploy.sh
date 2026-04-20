@@ -71,6 +71,53 @@ start_stack() {
   docker compose -f "$COMPOSE_FILE" ps
 }
 
+ensure_env_file() {
+  local target_file="$1"
+  local example_file="$2"
+
+  if [[ -f "$target_file" ]]; then
+    log "Using existing env file: ${target_file}"
+    return
+  fi
+
+  if [[ ! -f "$example_file" ]]; then
+    echo "ERROR: Missing env files:"
+    echo "  - ${target_file} (not found)"
+    echo "  - ${example_file} (template not found)"
+    exit 1
+  fi
+
+  cp "$example_file" "$target_file"
+  log "Created ${target_file} from ${example_file}"
+}
+
+validate_env_placeholders() {
+  local env_file="$1"
+  local errors=0
+
+  if grep -En '(^|=)(replace-with-[^[:space:]]*|change-this-[^[:space:]]*)' "$env_file" >/dev/null; then
+    echo "ERROR: ${env_file} contains placeholder values."
+    echo "Please replace all 'replace-with-*' and 'change-this-*' values before deploy."
+    errors=1
+  fi
+
+  if [[ "$errors" -ne 0 ]]; then
+    echo "Failing deployment due to unresolved placeholders in ${env_file}."
+    exit 1
+  fi
+}
+
+prepare_env_files() {
+  log "Preparing production env files"
+  cd "$APP_DIR"
+
+  ensure_env_file "backend/.env.production" "backend/.env.production.example"
+  ensure_env_file "frontend/.env.production" "frontend/.env.production.example"
+
+  validate_env_placeholders "backend/.env.production"
+  validate_env_placeholders "frontend/.env.production"
+}
+
 print_result() {
   IP_ADDRESS="$(hostname -I | awk '{print $1}')"
   log "Done"
@@ -82,6 +129,7 @@ main() {
   install_base_packages
   install_docker_if_missing
   prepare_repo
+  prepare_env_files
   start_stack
   print_result
 }
