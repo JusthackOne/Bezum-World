@@ -3,13 +3,10 @@
 import { CoinsIcon } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
-import {
-  formatBalance,
-  getItemAttributeRows,
-  resolveAssetUrl,
-} from "@/shared/lib/item-display";
+import { formatBalance, getItemAttributeRows, resolveAssetUrl } from "@/shared/lib/item-display";
 import type { ItemDisplay } from "@/shared/model/item-display.types";
 import { Button } from "@/shared/ui/8bit/button";
+import clsx from "clsx";
 
 const itemAttributeVisuals: Record<
   "strength" | "intelligence" | "charisma" | "endurance",
@@ -68,6 +65,7 @@ interface ItemDisplayCardProps<TItem extends ItemDisplay> {
   actionAriaLabel?: string;
   actionLoadingLabel?: string;
   isActionLoading?: boolean;
+  isShopCard: boolean;
 }
 
 export function ItemDisplayCard<TItem extends ItemDisplay>({
@@ -79,6 +77,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
   actionAriaLabel,
   actionLoadingLabel,
   isActionLoading = false,
+  isShopCard = false,
 }: ItemDisplayCardProps<TItem>) {
   const rarityStyle = inventoryRarityStyles[item.rarity] ?? {
     borderClassName: "border-border",
@@ -136,7 +135,12 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
         </span>
       </div>
 
-      <div className="absolute inset-x-3 bottom-3 z-20 rounded-lg border border-white/20 bg-slate-950/56 p-3 backdrop-blur-[2px]">
+      <div
+        className={clsx(
+          "absolute inset-x-3 mx-auto bottom-3 z-20 rounded-lg border border-white/20 bg-slate-950/56 p-3 backdrop-blur-[2px]",
+          isShopCard && "w-2/3",
+        )}
+      >
         <div className="flex flex-col-reverse gap-2.5">
           {hasAction ? (
             <Button

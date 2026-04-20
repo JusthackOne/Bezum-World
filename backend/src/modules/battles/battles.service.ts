@@ -21,7 +21,6 @@ const BASE_GAME_SCORE_REWARD = 100;
 const BASE_COIN_REWARD = 100;
 const MIN_COIN_REWARD = 10;
 const MAX_COIN_REWARD = 300;
-const WIN_CHANCE_SIMULATION_ROUNDS = 400;
 
 interface FinalBattleStats {
   strength: number;
@@ -239,21 +238,13 @@ export class BattlesService {
     return power * (0.9 + Math.random() * 0.2);
   }
 
+  private calculateWinProbability(attackerPower: number, defenderPower: number): number {
+    const delta = attackerPower - defenderPower;
+    return 1 / (1 + Math.exp(-delta / 10));
+  }
+
   private estimateWinChancePercent(currentUserPower: number, opponentPower: number): number {
-    let wins = 0;
-
-    for (let index = 0; index < WIN_CHANCE_SIMULATION_ROUNDS; index += 1) {
-      const noisyCurrent = this.applyPowerNoise(currentUserPower);
-      const noisyOpponent = this.applyPowerNoise(opponentPower);
-      const delta = noisyCurrent - noisyOpponent;
-      const winProbability = 1 / (1 + Math.exp(-delta / 10));
-
-      if (Math.random() < winProbability) {
-        wins += 1;
-      }
-    }
-
-    const probability = wins / WIN_CHANCE_SIMULATION_ROUNDS;
+    const probability = this.calculateWinProbability(currentUserPower, opponentPower);
     return Number((probability * 100).toFixed(2));
   }
 

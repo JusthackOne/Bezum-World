@@ -2,8 +2,6 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  BrainIcon,
-  DumbbellIcon,
   FootprintsIcon,
   HardHatIcon,
   PersonStandingIcon,
@@ -16,9 +14,15 @@ import { useMemo, useState, type ComponentType } from "react";
 
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { useBattlePlayersQuery, useStartBattleMutation } from "@/features/battles/api";
-import type { BattleEquipmentItem, BattlePlayer, BattlePlayerEquipment } from "@/features/battles/model/battles.types";
+import type { BattlePlayer, BattlePlayerEquipment } from "@/features/battles/model/battles.types";
 import { queryKeys } from "@/shared/config/query-keys";
-import { getItemAttributeRows, resolveAssetUrl } from "@/shared/lib/item-display";
+import { resolveAssetUrl } from "@/shared/lib/item-display";
+import {
+  AttributeBadge,
+  ProfileItemSlot,
+  RewardBadgesList,
+  type RewardBadgeItem,
+} from "@/shared/ui";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import {
@@ -28,7 +32,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/shared/ui/8bit/toast";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
+import { TooltipProvider } from "@/shared/ui/8bit/tooltip";
 
 type ToastVariant = "default" | "destructive";
 
@@ -37,21 +41,10 @@ interface ToastState {
   open: boolean;
   title: string;
   description: string;
+  rewards: RewardBadgeItem[];
+  showRewardPlusSign: boolean;
   variant: ToastVariant;
 }
-
-interface AttributeVisual {
-  key: "strength" | "intelligence" | "charisma" | "endurance";
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-}
-
-const attributeVisuals: AttributeVisual[] = [
-  { key: "strength", label: "Strength", icon: DumbbellIcon },
-  { key: "intelligence", label: "Intelligence", icon: BrainIcon },
-  { key: "charisma", label: "Charisma", icon: UserCircle2Icon },
-  { key: "endurance", label: "Endurance", icon: ShieldIcon },
-];
 
 const equipmentSlots: Array<{
   key: keyof BattlePlayerEquipment;
@@ -65,84 +58,6 @@ const equipmentSlots: Array<{
   { key: "pants", label: "Pants", icon: PersonStandingIcon },
   { key: "boots", label: "Boots", icon: FootprintsIcon },
 ];
-
-function ItemQuickTooltip({ item }: { item: BattleEquipmentItem }) {
-  const itemAttributes = getItemAttributeRows(item);
-
-  return (
-    <div className="space-y-2">
-      <div className="space-y-1">
-        <p className="text-sm font-semibold">{item.name}</p>
-        <p className="text-muted-foreground text-xs">{item.description ?? "No description available."}</p>
-      </div>
-
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Rarity</span>
-        <span className="font-semibold capitalize">{item.rarity.replaceAll("_", " ")}</span>
-      </div>
-
-      {itemAttributes.length > 0 ? (
-        <div className="grid grid-cols-2 gap-1.5">
-          {itemAttributes.map((attribute) => {
-            const Icon = attribute.icon;
-
-            return (
-              <div
-                key={attribute.key}
-                className="bg-muted/20 flex items-center justify-between rounded border px-1.5 py-1"
-              >
-                <Icon className="text-muted-foreground size-3" />
-                <span className="text-xs font-medium tabular-nums">{attribute.value}</span>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="text-muted-foreground text-xs">No attributes</p>
-      )}
-    </div>
-  );
-}
-
-function EquipmentSlot({
-  label,
-  icon: Icon,
-  item,
-}: {
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-  item?: BattleEquipmentItem;
-}) {
-  const imageUrl = item?.image_url ? resolveAssetUrl(item.image_url) : null;
-  const trigger = (
-    <div className="bg-muted/20 hover:border-primary/50 relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border transition-colors">
-      {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={item?.name ?? label} className="h-full w-full object-cover" />
-      ) : (
-        <>
-          <Icon className="text-muted-foreground/45 size-6" />
-          <span className="bg-background/90 absolute right-1 bottom-1 rounded px-1 py-0.5 text-[10px] leading-none">
-            {label}
-          </span>
-        </>
-      )}
-    </div>
-  );
-
-  if (!item) {
-    return trigger;
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-      <TooltipContent className="border bg-card text-foreground w-64 p-3" sideOffset={8}>
-        <ItemQuickTooltip item={item} />
-      </TooltipContent>
-    </Tooltip>
-  );
-}
 
 function PlayerRow({
   player,
@@ -161,55 +76,54 @@ function PlayerRow({
         <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border bg-muted/30">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt={`${player.username} avatar`} className="h-full w-full object-cover" />
+            <img
+              src={avatarUrl}
+              alt={`${player.username} avatar`}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <UserCircle2Icon className="size-10 text-muted-foreground/70" />
           )}
         </div>
         <div>
           <p className="text-base font-semibold break-all">{player.username}</p>
-          <p className="text-muted-foreground text-xs">Opponent</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {equipmentSlots.map((slot) => (
-          <EquipmentSlot
-            key={slot.key}
-            label={slot.label}
-            icon={slot.icon}
-            item={player.equipment[slot.key]}
-          />
-        ))}
-      </div>
+      <TooltipProvider>
+        <div className="grid grid-cols-3 gap-2">
+          {equipmentSlots.map((slot) => (
+            <ProfileItemSlot
+              key={slot.key}
+              label={slot.label}
+              icon={slot.icon}
+              item={player.equipment[slot.key]}
+              className="h-16 w-16"
+            />
+          ))}
+        </div>
+      </TooltipProvider>
 
-      <div className="grid grid-cols-2 gap-2">
-        {attributeVisuals.map((attribute) => {
-          const Icon = attribute.icon;
-
-          return (
-            <div
-              key={attribute.key}
-              className="flex items-center justify-between rounded-md border bg-muted/15 px-2 py-1.5"
-            >
-              <Icon className="text-muted-foreground size-3.5" />
-              <span className="text-xs font-medium tabular-nums">{player.stats[attribute.key]}</span>
-            </div>
-          );
-        })}
-      </div>
+      <TooltipProvider>
+        <div className="grid grid-cols-2 gap-2">
+          <AttributeBadge attribute="strength" value={player.stats.strength} />
+          <AttributeBadge attribute="charisma" value={player.stats.charisma} />
+          <AttributeBadge attribute="endurance" value={player.stats.endurance} />
+          <AttributeBadge attribute="intelligence" value={player.stats.intelligence} />
+        </div>
+      </TooltipProvider>
 
       <div className="rounded-lg border bg-muted/10 px-3 py-2 text-center">
         <p className="text-muted-foreground text-xs">Win Chance</p>
-        <p className="text-lg font-semibold tabular-nums">{player.winChancePercent.toFixed(2)}%</p>
+        <p className="font-semibold tabular-nums">{player.winChancePercent.toFixed(2)}%</p>
       </div>
 
-      <Button type="button" disabled={!player.isBattleAvailableToday || isBattling} onClick={onBattle}>
-        {isBattling
-          ? "Battling..."
-          : player.isBattleAvailableToday
-            ? "Battle"
-            : "Already battled today"}
+      <Button
+        type="button"
+        disabled={!player.isBattleAvailableToday || isBattling}
+        onClick={onBattle}
+      >
+        {isBattling ? "Battling..." : player.isBattleAvailableToday ? "Battle" : "Done"}
       </Button>
     </article>
   );
@@ -228,17 +142,27 @@ export function BattlesPage() {
     open: false,
     title: "",
     description: "",
+    rewards: [],
+    showRewardPlusSign: true,
     variant: "default",
   });
 
   const players = useMemo(() => playersQuery.data?.players ?? [], [playersQuery.data?.players]);
 
-  function showToast(title: string, description: string, variant: ToastVariant = "default") {
+  function showToast(
+    title: string,
+    description: string,
+    rewards: RewardBadgeItem[] = [],
+    showRewardPlusSign = true,
+    variant: ToastVariant = "default",
+  ) {
     setToastState((previousState) => ({
       key: previousState.key + 1,
       open: true,
       title,
       description,
+      rewards,
+      showRewardPlusSign,
       variant,
     }));
   }
@@ -283,16 +207,28 @@ export function BattlesPage() {
         queryKey: queryKeys.battlesPlayers,
       });
 
+      const battleRewards: RewardBadgeItem[] = [];
+      if (response.result === "win") {
+        battleRewards.push({ kind: "balance", value: response.transferredCoins });
+        if (response.gameScoreReward) {
+          battleRewards.push({ kind: "gameScore", value: response.gameScoreReward });
+        }
+      } else {
+        battleRewards.push({ kind: "balance", value: -response.transferredCoins });
+      }
+
       showToast(
         response.result === "win" ? "You won the battle" : "You lost the battle",
-        response.result === "win"
-          ? `+${response.transferredCoins} coins${response.gameScoreReward ? `, +${response.gameScoreReward} GameScore` : ""}`
-          : `-${response.transferredCoins} coins`,
+        response.result === "win" ? "Rewards received:" : "Penalty:",
+        battleRewards,
+        response.result === "win",
       );
     } catch (error: unknown) {
       showToast(
         "Battle failed",
         error instanceof Error ? error.message : "Unable to start battle.",
+        [],
+        true,
         "destructive",
       );
     } finally {
@@ -363,6 +299,12 @@ export function BattlesPage() {
         <div className="grid gap-1">
           <ToastTitle>{toastState.title}</ToastTitle>
           <ToastDescription>{toastState.description}</ToastDescription>
+          {toastState.rewards.length > 0 ? (
+            <RewardBadgesList
+              rewards={toastState.rewards}
+              showPlusSign={toastState.showRewardPlusSign}
+            />
+          ) : null}
         </div>
       </Toast>
       <ToastViewport />

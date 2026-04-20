@@ -26,8 +26,16 @@ interface RarityFilterOption {
 
 const rarityFilterOptions: ReadonlyArray<RarityFilterOption> = [
   { value: "all", label: "All", textClassName: "text-foreground" },
-  { value: "unterlyanskiy", label: "Unterlyanskiy", textClassName: "text-amber-700 dark:text-amber-300" },
-  { value: "basic_minimum", label: "Basic minimum", textClassName: "text-emerald-600 dark:text-emerald-300" },
+  {
+    value: "unterlyanskiy",
+    label: "Unterlyanskiy",
+    textClassName: "text-amber-700 dark:text-amber-300",
+  },
+  {
+    value: "basic_minimum",
+    label: "Basic minimum",
+    textClassName: "text-emerald-600 dark:text-emerald-300",
+  },
   { value: "sigma", label: "Sigma", textClassName: "text-violet-600 dark:text-violet-300" },
   { value: "bezumnyy", label: "Bezumnyy", textClassName: "text-amber-500 dark:text-amber-300" },
 ];
@@ -69,15 +77,14 @@ export function ShopPage() {
       return [];
     }
 
-    return selectedRarities.filter(
-      (value): value is RarityFilterValue => value !== "all",
-    );
+    return selectedRarities.filter((value): value is RarityFilterValue => value !== "all");
   }, [selectedRarities]);
 
   const filteredAndSortedItems = useMemo(() => {
-    const filteredItems = selectedRarityValues.length > 0
-      ? items.filter((item) => selectedRarityValues.includes(item.rarity as RarityFilterValue))
-      : items;
+    const filteredItems =
+      selectedRarityValues.length > 0
+        ? items.filter((item) => selectedRarityValues.includes(item.rarity as RarityFilterValue))
+        : items;
 
     const sortedItems = [...filteredItems];
 
@@ -245,9 +252,10 @@ export function ShopPage() {
                 <div className="bg-card absolute z-30 mt-1.5 w-full rounded-md border p-2 shadow-lg">
                   <div className="space-y-1">
                     {rarityFilterOptions.map((option) => {
-                      const isChecked = option.value === "all"
-                        ? selectedRarityValues.length === 0
-                        : selectedRarityValues.includes(option.value);
+                      const isChecked =
+                        option.value === "all"
+                          ? selectedRarityValues.length === 0
+                          : selectedRarityValues.includes(option.value);
 
                       return (
                         <label
@@ -263,7 +271,9 @@ export function ShopPage() {
                             aria-label={option.label}
                             className="size-3.5 rounded-[3px] [&_svg]:size-2.5"
                           />
-                          <span className={cn("text-xs font-medium", option.textClassName)}>{option.label}</span>
+                          <span className={cn("text-xs font-medium", option.textClassName)}>
+                            {option.label}
+                          </span>
                         </label>
                       );
                     })}
@@ -331,6 +341,7 @@ export function ShopPage() {
 
                 return (
                   <ItemDisplayCard
+                    isShopCard={true}
                     key={item.id}
                     item={item}
                     onOpenDetails={setSelectedItem}

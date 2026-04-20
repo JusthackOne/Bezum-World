@@ -9,7 +9,14 @@ import type { AdminItemLocationFilter } from "@/features/admin-items/model/admin
 import { env } from "@/shared/config/env";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/8bit/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/ui/8bit/table";
 
 function formatDate(value: string): string {
   const parsedDate = new Date(value);
@@ -21,7 +28,11 @@ function formatDate(value: string): string {
 }
 
 function resolveImageUrl(imageUrl: string): string {
-  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("blob:")) {
+  if (
+    imageUrl.startsWith("http://") ||
+    imageUrl.startsWith("https://") ||
+    imageUrl.startsWith("blob:")
+  ) {
     return imageUrl;
   }
 
@@ -137,12 +148,16 @@ export function AdminItemsDataTable() {
                       className="cursor-pointer"
                       onClick={() => router.push(`/admin/items/${item.id}`)}
                     >
-                      <TableCell className="max-w-[220px] truncate font-mono text-xs">{item.id}</TableCell>
+                      <TableCell className="max-w-[220px] truncate font-mono text-xs">
+                        {item.id}
+                      </TableCell>
                       <TableCell className="max-w-[220px] truncate font-mono text-xs">
                         {item.owner_user_id ?? "N/A"}
                       </TableCell>
                       <TableCell>{item.name}</TableCell>
-                      <TableCell className="max-w-[280px] truncate">{item.description ?? "N/A"}</TableCell>
+                      <TableCell className="max-w-[280px] truncate">
+                        {item.description ?? "N/A"}
+                      </TableCell>
                       <TableCell className="max-w-[260px]">
                         {item.image_url ? (
                           <a
