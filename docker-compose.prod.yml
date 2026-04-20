@@ -1,13 +1,11 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: social-rpg-postgres-dev
+    container_name: social-rpg-postgres
     environment:
       POSTGRES_DB: social_rpg
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,10 +16,8 @@ services:
 
   redis:
     image: redis:8-alpine
-    container_name: social-rpg-redis-dev
+    container_name: social-rpg-redis
     command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -34,18 +30,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: social-rpg-backend-dev
-    environment:
-      APP_DOMAIN: http://localhost
-      NODE_ENV: development
-      PORT: 3000
-      LOG_LEVEL: debug
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/social_rpg?schema=public
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_DB: 0
-      REDIS_PASSWORD: ""
-      QUEUE_DEFAULT_NAME: default
+    container_name: social-rpg-backend
+    env_file:
+      - ./backend/.env.production
     ports:
       - "3001:3000"
     depends_on:
@@ -58,12 +45,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: social-rpg-frontend-dev
-    environment:
-      NODE_ENV: development
-      PORT: 3000
-      NEXT_PUBLIC_APP_NAME: Bezum World Frontend
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api
+    container_name: social-rpg-frontend
+    env_file:
+      - ./frontend/.env.production
     ports:
       - "3000:3000"
     depends_on:

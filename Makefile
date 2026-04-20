@@ -1,4 +1,4 @@
-.PHONY: install install-frontend install-backend dev-frontend dev-backend lint lint-frontend lint-backend build build-frontend build-backend docker-up docker-down docker-up-full
+.PHONY: install install-frontend install-backend dev-frontend dev-backend lint lint-frontend lint-backend build build-frontend build-backend docker-up docker-down docker-up-full docker-up-prod docker-down-prod docker-up-full-prod
 
 install: install-frontend install-backend
 
@@ -38,3 +38,12 @@ docker-down:
 
 docker-up-full:
 	docker compose up -d --build
+
+docker-up-prod:
+	docker compose -f docker-compose.prod.yml up -d postgres redis
+
+docker-down-prod:
+	docker compose -f docker-compose.prod.yml down
+
+docker-up-full-prod:
+	docker compose -f docker-compose.prod.yml up -d --build

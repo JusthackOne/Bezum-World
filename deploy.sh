@@ -5,7 +5,7 @@ set -Eeuo pipefail
 REPO_URL="${REPO_URL:-}"
 APP_DIR="${APP_DIR:-/opt/bezum-world}"
 BRANCH="${BRANCH:-main}"
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 
 if [[ -z "$REPO_URL" ]]; then
   echo "ERROR: REPO_URL is required."
