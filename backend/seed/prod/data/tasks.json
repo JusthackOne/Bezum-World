@@ -1,0 +1,122 @@
+[
+  {
+    "id": "bbbbbbb1-bbbb-4bbb-8bbb-bbbbbbbbbbb1",
+    "type": "daily",
+    "title": "Drink 2 Liters of Water",
+    "description": "Drink at least 2 liters of water during the day.",
+    "image": "tasks/daily-water.jpg",
+    "rewardMoney": 50,
+    "rewardGameScore": 10,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "bbbbbbb2-bbbb-4bbb-8bbb-bbbbbbbbbbb2",
+    "type": "daily",
+    "title": "Walk 6,000 Steps",
+    "description": "Complete at least 6,000 steps in one day.",
+    "image": "tasks/daily-steps.jpg",
+    "rewardMoney": 70,
+    "rewardGameScore": 12,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "bbbbbbb3-bbbb-4bbb-8bbb-bbbbbbbbbbb3",
+    "type": "daily",
+    "title": "Read for 20 Minutes",
+    "description": "Read any book or article for at least 20 minutes.",
+    "image": "tasks/daily-reading.jpg",
+    "rewardMoney": 60,
+    "rewardGameScore": 11,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "bbbbbbb4-bbbb-4bbb-8bbb-bbbbbbbbbbb4",
+    "type": "daily",
+    "title": "30-Minute Workout",
+    "description": "Complete any workout session lasting at least 30 minutes.",
+    "image": "tasks/daily-workout.jpg",
+    "rewardMoney": 90,
+    "rewardGameScore": 15,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "bbbbbbb5-bbbb-4bbb-8bbb-bbbbbbbbbbb5",
+    "type": "daily",
+    "title": "Plan Tomorrow",
+    "description": "Create a short plan with at least three tasks for tomorrow.",
+    "image": "tasks/daily-planning.jpg",
+    "rewardMoney": 40,
+    "rewardGameScore": 9,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "bbbbbbb6-bbbb-4bbb-8bbb-bbbbbbbbbbb6",
+    "type": "weekly",
+    "title": "Workout 4 Times",
+    "description": "Complete at least four workout sessions during the week.",
+    "image": "tasks/weekly-workouts.jpg",
+    "rewardMoney": 350,
+    "rewardGameScore": 60,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "bbbbbbb7-bbbb-4bbb-8bbb-bbbbbbbbbbb7",
+    "type": "weekly",
+    "title": "Read 120 Pages",
+    "description": "Read at least 120 pages in total over the week.",
+    "image": "tasks/weekly-reading.jpg",
+    "rewardMoney": 300,
+    "rewardGameScore": 55,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "bbbbbbb8-bbbb-4bbb-8bbb-bbbbbbbbbbb8",
+    "type": "weekly",
+    "title": "No Missed Morning Routine",
+    "description": "Complete your morning routine every day this week.",
+    "image": "tasks/weekly-routine.jpg",
+    "rewardMoney": 320,
+    "rewardGameScore": 58,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "bbbbbbb9-bbbb-4bbb-8bbb-bbbbbbbbbbb9",
+    "type": "weekly",
+    "title": "Three Productive Blocks",
+    "description": "Finish three focused 60-minute work or study blocks this week.",
+    "image": "tasks/weekly-focus.jpg",
+    "rewardMoney": 280,
+    "rewardGameScore": 52,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  },
+  {
+    "id": "bbbbbbba-bbbb-4bbb-8bbb-bbbbbbbbbbb0",
+    "type": "weekly",
+    "title": "Social Check-In",
+    "description": "Have at least two meaningful conversations with friends or family.",
+    "image": "tasks/weekly-social.jpg",
+    "rewardMoney": 260,
+    "rewardGameScore": 50,
+    "rewardAttributes": null,
+    "requiresProofImage": false,
+    "submissionLimit": 1
+  }
+]

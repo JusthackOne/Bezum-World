@@ -85,8 +85,19 @@ const prisma = new PrismaClient({
 });
 
 const ROOT_DIR = process.cwd();
-const SEED_DATA_DIR = join(ROOT_DIR, 'seed', 'data');
-const SEED_ASSETS_DIR = join(ROOT_DIR, 'seed', 'assets');
+const rawSeedEnv = process.env.SEED_ENV ?? 'test';
+const SEED_ENV = rawSeedEnv.trim().toLowerCase();
+const SUPPORTED_SEED_ENVS = new Set(['test', 'prod']);
+
+if (!SUPPORTED_SEED_ENVS.has(SEED_ENV)) {
+  throw new Error(
+    `Unsupported SEED_ENV: "${rawSeedEnv}". Supported values: ${[...SUPPORTED_SEED_ENVS].join(', ')}`,
+  );
+}
+
+const SEED_ROOT_DIR = join(ROOT_DIR, 'seed', SEED_ENV);
+const SEED_DATA_DIR = join(SEED_ROOT_DIR, 'data');
+const SEED_ASSETS_DIR = join(SEED_ROOT_DIR, 'assets');
 const UPLOADS_DIR = join(ROOT_DIR, 'uploads');
 
 const SLOT_MAP: Record<keyof SeedUserEquipment, EquipmentSlotTypeValue> = {
@@ -318,7 +329,7 @@ async function main(): Promise<void> {
   });
 
   console.info(
-    `Seed completed: ${users.length} users, ${items.length} items, ${tasks.length} tasks created.`,
+    `Seed completed for "${SEED_ENV}": ${users.length} users, ${items.length} items, ${tasks.length} tasks created.`,
   );
 }
 

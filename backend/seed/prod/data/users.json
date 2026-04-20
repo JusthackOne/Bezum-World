@@ -1,0 +1,98 @@
+[
+  {
+    "id": "aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+    "username": "Михаил",
+    "avatar": "users/mikhail.jpg",
+    "balance": 0,
+    "gameScore": 0,
+    "strength": 0,
+    "charisma": 0,
+    "endurance": 0,
+    "intelligence": 0,
+    "lastTimeLoggedIn": null
+  },
+  {
+    "id": "aaaaaaa2-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
+    "username": "Юра",
+    "avatar": "users/yura.jpg",
+    "balance": 0,
+    "gameScore": 0,
+    "strength": 0,
+    "charisma": 0,
+    "endurance": 0,
+    "intelligence": 0,
+    "lastTimeLoggedIn": null
+  },
+  {
+    "id": "aaaaaaa3-aaaa-4aaa-8aaa-aaaaaaaaaaa3",
+    "username": "Глеб",
+    "avatar": "users/gleb.jpg",
+    "balance": 0,
+    "gameScore": 0,
+    "strength": 0,
+    "charisma": 0,
+    "endurance": 0,
+    "intelligence": 0,
+    "lastTimeLoggedIn": null
+  },
+  {
+    "id": "aaaaaaa4-aaaa-4aaa-8aaa-aaaaaaaaaaa4",
+    "username": "Алексей",
+    "avatar": "users/aleksey.jpg",
+    "balance": 0,
+    "gameScore": 0,
+    "strength": 0,
+    "charisma": 0,
+    "endurance": 0,
+    "intelligence": 0,
+    "lastTimeLoggedIn": null
+  },
+  {
+    "id": "aaaaaaa5-aaaa-4aaa-8aaa-aaaaaaaaaaa5",
+    "username": "Даня",
+    "avatar": "users/danya.jpg",
+    "balance": 0,
+    "gameScore": 0,
+    "strength": 0,
+    "charisma": 0,
+    "endurance": 0,
+    "intelligence": 0,
+    "lastTimeLoggedIn": null
+  },
+  {
+    "id": "aaaaaaa6-aaaa-4aaa-8aaa-aaaaaaaaaaa6",
+    "username": "Максим",
+    "avatar": "users/maksim.jpg",
+    "balance": 0,
+    "gameScore": 0,
+    "strength": 0,
+    "charisma": 0,
+    "endurance": 0,
+    "intelligence": 0,
+    "lastTimeLoggedIn": null
+  },
+  {
+    "id": "aaaaaaa7-aaaa-4aaa-8aaa-aaaaaaaaaaa7",
+    "username": "Рахим",
+    "avatar": "users/rakhim.jpg",
+    "balance": 0,
+    "gameScore": 0,
+    "strength": 0,
+    "charisma": 0,
+    "endurance": 0,
+    "intelligence": 0,
+    "lastTimeLoggedIn": null
+  },
+  {
+    "id": "aaaaaaa8-aaaa-4aaa-8aaa-aaaaaaaaaaa8",
+    "username": "Саша",
+    "avatar": "users/sasha.jpg",
+    "balance": 0,
+    "gameScore": 0,
+    "strength": 0,
+    "charisma": 0,
+    "endurance": 0,
+    "intelligence": 0,
+    "lastTimeLoggedIn": null
+  }
+]
