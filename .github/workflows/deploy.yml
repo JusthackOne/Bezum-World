@@ -37,7 +37,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           APP_DIR: ${{ secrets.APP_DIR }}
           REPO_URL_SECRET: ${{ secrets.REPO_URL }}
-          RUN_SEED: ${{ secrets.RUN_SEED }}
+          BACKEND_ENV_PRODUCTION: ${{ secrets.BACKEND_ENV_PRODUCTION }}
+          FRONTEND_ENV_PRODUCTION: ${{ secrets.FRONTEND_ENV_PRODUCTION }}
         run: |
           set -Eeuo pipefail
 
@@ -45,7 +46,8 @@ jobs:
           TARGET_APP_DIR="${APP_DIR:-/opt/bezum-world}"
           REPO_URL_FALLBACK="https://github.com/${GITHUB_REPOSITORY}.git"
           REPO_URL_TO_USE="${REPO_URL_SECRET:-$REPO_URL_FALLBACK}"
-          RUN_SEED_FLAG="${RUN_SEED:-false}"
+          BACKEND_ENV_B64="$(printf '%s' "$BACKEND_ENV_PRODUCTION" | base64 -w 0)"
+          FRONTEND_ENV_B64="$(printf '%s' "$FRONTEND_ENV_PRODUCTION" | base64 -w 0)"
 
           ssh -p "$PORT" "$SSH_USER@$SSH_HOST" "set -Eeuo pipefail; \
             APP_DIR='$TARGET_APP_DIR'; \
@@ -54,7 +56,7 @@ jobs:
               git clone --branch main '$REPO_URL_TO_USE' \"\$APP_DIR\"; \
             fi; \
             cd \"\$APP_DIR\"; \
-            REPO_URL='$REPO_URL_TO_USE' BRANCH='main' RUN_SEED='$RUN_SEED_FLAG' bash deploy.sh"
+            REPO_URL='$REPO_URL_TO_USE' BRANCH='main' BACKEND_ENV_B64='$BACKEND_ENV_B64' FRONTEND_ENV_B64='$FRONTEND_ENV_B64' bash deploy.sh"
 
       - name: Post-deploy backend health check
         env:

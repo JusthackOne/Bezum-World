@@ -6,7 +6,8 @@ REPO_URL="${REPO_URL:-}"
 APP_DIR="${APP_DIR:-/opt/bezum-world}"
 BRANCH="${BRANCH:-main}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
-RUN_SEED="${RUN_SEED:-false}"
+BACKEND_ENV_B64="${BACKEND_ENV_B64:-}"
+FRONTEND_ENV_B64="${FRONTEND_ENV_B64:-}"
 
 if [[ -z "$REPO_URL" ]]; then
   echo "ERROR: REPO_URL is required."
@@ -72,10 +73,10 @@ start_stack() {
   docker compose -f "$COMPOSE_FILE" ps
 }
 
-run_seed() {
-  log "Running backend seed"
+run_migrations() {
+  log "Running backend database migrations"
   cd "$APP_DIR"
-  docker compose -f "$COMPOSE_FILE" exec -T backend bun run prisma:seed
+  docker compose -f "$COMPOSE_FILE" exec -T backend bunx --bun prisma migrate deploy
 }
 
 ensure_env_file() {
@@ -98,6 +99,19 @@ ensure_env_file() {
   log "Created ${target_file} from ${example_file}"
 }
 
+write_env_file_from_b64() {
+  local target_file="$1"
+  local env_b64="$2"
+
+  if [[ -z "$env_b64" ]]; then
+    return
+  fi
+
+  printf '%s' "$env_b64" | base64 -d > "$target_file"
+  chmod 600 "$target_file"
+  log "Wrote ${target_file} from deployment secrets"
+}
+
 validate_env_placeholders() {
   local env_file="$1"
   local errors=0
@@ -118,8 +132,17 @@ prepare_env_files() {
   log "Preparing production env files"
   cd "$APP_DIR"
 
-  ensure_env_file "backend/.env.production" "backend/.env.production.example"
-  ensure_env_file "frontend/.env.production" "frontend/.env.production.example"
+  if [[ -n "$BACKEND_ENV_B64" ]]; then
+    write_env_file_from_b64 "backend/.env.production" "$BACKEND_ENV_B64"
+  else
+    ensure_env_file "backend/.env.production" "backend/.env.production.example"
+  fi
+
+  if [[ -n "$FRONTEND_ENV_B64" ]]; then
+    write_env_file_from_b64 "frontend/.env.production" "$FRONTEND_ENV_B64"
+  else
+    ensure_env_file "frontend/.env.production" "frontend/.env.production.example"
+  fi
 
   validate_env_placeholders "backend/.env.production"
   validate_env_placeholders "frontend/.env.production"
@@ -138,11 +161,7 @@ main() {
   prepare_repo
   prepare_env_files
   start_stack
-  if [[ "$RUN_SEED" == "true" ]]; then
-    run_seed
-  else
-    log "Skipping backend seed (RUN_SEED=${RUN_SEED})"
-  fi
+  run_migrations
   print_result
 }
 

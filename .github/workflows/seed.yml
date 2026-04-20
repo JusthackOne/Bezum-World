@@ -1,0 +1,41 @@
+name: Run Prod Seed
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: seed-main
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Run backend seed via SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          APP_DIR: ${{ secrets.APP_DIR }}
+        run: |
+          set -Eeuo pipefail
+
+          PORT="${SSH_PORT:-22}"
+          TARGET_APP_DIR="${APP_DIR:-/opt/bezum-world}"
+
+          ssh -p "$PORT" "$SSH_USER@$SSH_HOST" "set -Eeuo pipefail; \
+            cd '$TARGET_APP_DIR'; \
+            docker compose -f docker-compose.prod.yml exec -T backend bun run prisma:seed"
