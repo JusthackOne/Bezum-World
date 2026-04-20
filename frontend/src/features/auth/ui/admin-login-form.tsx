@@ -57,7 +57,7 @@ export function AdminLoginForm() {
     loginMutation.error instanceof Error ? loginMutation.error.message : "Unable to login";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/20 p-4">
+    <div className="flex min-h-screen w-full items-center justify-center bg-muted/20 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Admin Login</CardTitle>

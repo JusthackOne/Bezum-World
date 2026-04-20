@@ -59,11 +59,13 @@ function TopLeaderCard({
   place,
   period,
   emphasized,
+  className,
 }: {
   leader: LeaderboardLeader;
   place: 1 | 2 | 3;
   period: LeaderboardPeriod;
   emphasized: boolean;
+  className?: string;
 }) {
   const visuals = podiumVisuals[place];
   const scoreLabel = getScoreLabel(period);
@@ -74,6 +76,7 @@ function TopLeaderCard({
       className={cn(
         "group relative block rounded-2xl border p-5 transition-transform duration-150 hover:-translate-y-1",
         visuals.cardClassName,
+        className,
       )}
     >
       <span
@@ -91,7 +94,12 @@ function TopLeaderCard({
           username={leader.username}
           sizeClassName={emphasized ? "h-24 w-24" : "h-20 w-20"}
         />
-        <p className={cn("font-semibold break-all", emphasized ? "text-lg" : "text-base")}>
+        <p
+          className={cn(
+            "w-full max-w-full min-w-0 font-semibold break-words [overflow-wrap:anywhere]",
+            emphasized ? "text-lg" : "text-base",
+          )}
+        >
           {leader.username}
         </p>
         <div className="inline-flex items-center gap-1.5 rounded-full border bg-background/85 px-3 py-1.5 text-sm font-semibold">
@@ -106,26 +114,28 @@ function TopLeaderCard({
 
 function LeaderListRow({
   leader,
-  period,
 }: {
   leader: LeaderboardLeader;
-  period: LeaderboardPeriod;
 }) {
-  const scoreLabel = getScoreLabel(period);
-
   return (
     <Link
       href={publicUserRoutes.profile(leader.username)}
-      className="group grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border bg-card px-3 py-2 transition-colors hover:bg-muted/30"
+      className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border bg-card px-3 py-2 transition-colors hover:bg-muted/30"
     >
       <span className="text-muted-foreground w-8 text-right text-sm font-semibold tabular-nums">
         #{leader.rank}
       </span>
-      <LeaderAvatar avatar={leader.avatar} username={leader.username} sizeClassName="h-10 w-10" />
-      <p className="text-sm font-medium break-all">{leader.username}</p>
-      <div className="text-right">
-        <p className="text-sm font-semibold tabular-nums">{formatBalance(leader.score)}</p>
-        <p className="text-muted-foreground text-[11px]">{scoreLabel}</p>
+      <div className="min-w-0 flex flex-col items-start gap-1">
+        <LeaderAvatar avatar={leader.avatar} username={leader.username} sizeClassName="h-10 w-10" />
+        <p className="min-w-0 text-xs font-medium break-words [overflow-wrap:anywhere]">
+          {leader.username}
+        </p>
+      </div>
+      <div className="min-w-[66px] text-right">
+        <div className="inline-flex items-center gap-1.5 rounded-full border bg-background/85 px-2.5 py-1 text-sm font-semibold">
+          <GameScoreIcon className="size-4" />
+          {formatBalance(leader.score)}
+        </div>
       </div>
     </Link>
   );
@@ -196,20 +206,38 @@ export function LeaderBoardPage() {
             </CardHeader>
             <CardContent>
               <div className="grid items-end gap-3 md:grid-cols-3">
-                {second ? (
-                  <TopLeaderCard leader={second} place={2} period="all" emphasized={false} />
-                ) : (
-                  <div />
-                )}
                 {first ? (
-                  <TopLeaderCard leader={first} place={1} period="all" emphasized={true} />
+                  <TopLeaderCard
+                    leader={first}
+                    place={1}
+                    period="all"
+                    emphasized={true}
+                    className="md:order-2"
+                  />
                 ) : (
-                  <div />
+                  <div className="md:order-2" />
+                )}
+                {second ? (
+                  <TopLeaderCard
+                    leader={second}
+                    place={2}
+                    period="all"
+                    emphasized={false}
+                    className="md:order-1"
+                  />
+                ) : (
+                  <div className="md:order-1" />
                 )}
                 {third ? (
-                  <TopLeaderCard leader={third} place={3} period="all" emphasized={false} />
+                  <TopLeaderCard
+                    leader={third}
+                    place={3}
+                    period="all"
+                    emphasized={false}
+                    className="md:order-3"
+                  />
                 ) : (
-                  <div />
+                  <div className="md:order-3" />
                 )}
               </div>
             </CardContent>
@@ -229,7 +257,7 @@ export function LeaderBoardPage() {
               ) : (
                 <div className="space-y-2">
                   {remaining.map((leader) => (
-                    <LeaderListRow key={leader.userId} leader={leader} period="all" />
+                    <LeaderListRow key={leader.userId} leader={leader} />
                   ))}
                 </div>
               )}

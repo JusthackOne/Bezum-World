@@ -39,6 +39,8 @@ interface PublicUserPageProps {
   username: string;
 }
 
+type MobileProfileSection = "profile" | "inventory";
+
 const hiddenScrollbarClass =
   "overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
@@ -309,6 +311,7 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
 
   const profileQuery = usePublicUserProfileQuery(username);
   const itemsQuery = usePublicUserItemsQuery(username);
+  const [activeMobileSection, setActiveMobileSection] = useState<MobileProfileSection>("profile");
   const equipmentQuery = useUserEquipmentQuery(
     profileQuery.data?.id ?? "",
     Boolean(profileQuery.data?.id),
@@ -359,64 +362,97 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
   return (
     <section className="min-h-screen overflow-x-hidden p-4 sm:p-6 lg:h-[100dvh] lg:overflow-hidden lg:p-8">
       <div className="mx-auto grid w-full max-w-[110rem] gap-6 lg:h-full lg:grid-cols-[320px_minmax(0,1fr)]">
-        <UserInfoCard
-          profile={profileQuery.data}
-          equipment={equipmentQuery.data ?? {}}
-          isEquipmentPending={equipmentQuery.isPending}
-          isEquipmentError={equipmentQuery.isError}
-          onRetryEquipment={() => equipmentQuery.refetch()}
-          isEquipmentRefetching={equipmentQuery.isRefetching}
-          onRetry={() => profileQuery.refetch()}
-          isRetrying={profileQuery.isRefetching}
-        />
+        <div className="lg:hidden">
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={activeMobileSection === "profile" ? "default" : "outline"}
+              onClick={() => setActiveMobileSection("profile")}
+            >
+              Profile
+            </Button>
+            <Button
+              type="button"
+              variant={activeMobileSection === "inventory" ? "default" : "outline"}
+              onClick={() => setActiveMobileSection("inventory")}
+            >
+              Inventory
+            </Button>
+          </div>
+        </div>
 
-        {itemsQuery.isError ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Failed to load items</CardTitle>
-              <CardDescription>
-                {itemsQuery.error instanceof Error
-                  ? itemsQuery.error.message
-                  : "Unable to fetch user items."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button type="button" onClick={() => itemsQuery.refetch()}>
-                Retry
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <UserItemsCard
-            profileUsername={profileQuery.data.username}
-            items={itemsQuery.data?.items ?? []}
+        <div
+          className={cn(
+            activeMobileSection === "profile" ? "block" : "hidden",
+            "min-h-0 lg:block lg:h-full",
+          )}
+        >
+          <UserInfoCard
+            profile={profileQuery.data}
             equipment={equipmentQuery.data ?? {}}
-            canEquip={isOwnProfile}
-            isEquipping={equipMutation.isPending}
-            onEquip={(itemId) => {
-              if (!profileQuery.data?.id) {
-                return;
-              }
-
-              equipMutation.mutate(itemId, {
-                onSuccess: (response) => {
-                  queryClient.setQueryData(
-                    queryKeys.userEquipment(profileQuery.data.id),
-                    response.equipped,
-                  );
-
-                  void queryClient.invalidateQueries({
-                    queryKey: queryKeys.userEquipment(profileQuery.data.id),
-                  });
-                  void queryClient.invalidateQueries({
-                    queryKey: queryKeys.publicUserItems(profileQuery.data.username),
-                  });
-                },
-              });
-            }}
-            isPending={itemsQuery.isPending}
+            isEquipmentPending={equipmentQuery.isPending}
+            isEquipmentError={equipmentQuery.isError}
+            onRetryEquipment={() => equipmentQuery.refetch()}
+            isEquipmentRefetching={equipmentQuery.isRefetching}
+            onRetry={() => profileQuery.refetch()}
+            isRetrying={profileQuery.isRefetching}
           />
-        )}
+        </div>
+
+        <div
+          className={cn(
+            activeMobileSection === "inventory" ? "block" : "hidden",
+            "min-h-0 lg:block lg:h-full",
+          )}
+        >
+          {itemsQuery.isError ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Failed to load items</CardTitle>
+                <CardDescription>
+                  {itemsQuery.error instanceof Error
+                    ? itemsQuery.error.message
+                    : "Unable to fetch user items."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button type="button" onClick={() => itemsQuery.refetch()}>
+                  Retry
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <UserItemsCard
+              profileUsername={profileQuery.data.username}
+              items={itemsQuery.data?.items ?? []}
+              equipment={equipmentQuery.data ?? {}}
+              canEquip={isOwnProfile}
+              isEquipping={equipMutation.isPending}
+              onEquip={(itemId) => {
+                if (!profileQuery.data?.id) {
+                  return;
+                }
+
+                equipMutation.mutate(itemId, {
+                  onSuccess: (response) => {
+                    queryClient.setQueryData(
+                      queryKeys.userEquipment(profileQuery.data.id),
+                      response.equipped,
+                    );
+
+                    void queryClient.invalidateQueries({
+                      queryKey: queryKeys.userEquipment(profileQuery.data.id),
+                    });
+                    void queryClient.invalidateQueries({
+                      queryKey: queryKeys.publicUserItems(profileQuery.data.username),
+                    });
+                  },
+                });
+              }}
+              isPending={itemsQuery.isPending}
+            />
+          )}
+        </div>
       </div>
     </section>
   );

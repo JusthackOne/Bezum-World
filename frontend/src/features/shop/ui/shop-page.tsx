@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Checkbox } from "@/shared/ui/checkbox";
 import { ItemDetailsModal } from "@/shared/ui";
 import { ItemDisplayCard } from "@/shared/ui";
+import { Toast, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/shared/ui/8bit/toast";
 
 type RarityFilterValue = "unterlyanskiy" | "basic_minimum" | "sigma" | "bezumnyy";
 type RarityFilterOptionValue = RarityFilterValue | "all";
@@ -22,6 +23,16 @@ interface RarityFilterOption {
   value: RarityFilterOptionValue;
   label: string;
   textClassName: string;
+}
+
+type ToastVariant = "default" | "destructive";
+
+interface ToastState {
+  key: number;
+  open: boolean;
+  title: string;
+  description: string;
+  variant: ToastVariant;
 }
 
 const rarityFilterOptions: ReadonlyArray<RarityFilterOption> = [
@@ -66,6 +77,13 @@ export function ShopPage() {
   const [selectedSort, setSelectedSort] = useState<SortOptionValue>("quality_desc");
   const [isRarityDropdownOpen, setIsRarityDropdownOpen] = useState(false);
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [toastState, setToastState] = useState<ToastState>({
+    key: 0,
+    open: false,
+    title: "",
+    description: "",
+    variant: "default",
+  });
 
   const rarityDropdownRef = useRef<HTMLDivElement | null>(null);
   const sortDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -142,6 +160,16 @@ export function ShopPage() {
     [selectedSort],
   );
 
+  function showToast(title: string, description: string, variant: ToastVariant = "default") {
+    setToastState((previousState) => ({
+      key: previousState.key + 1,
+      open: true,
+      title,
+      description,
+      variant,
+    }));
+  }
+
   const handleRarityToggle = (value: RarityFilterOptionValue) => {
     if (value === "all") {
       setSelectedRarities(["all"]);
@@ -167,6 +195,7 @@ export function ShopPage() {
     try {
       await purchaseMutation.mutateAsync(itemId);
       await queryClient.invalidateQueries({ queryKey: queryKeys.shopItems });
+      showToast("Purchase successful", "Item was added to your inventory.");
 
       if (selectedItem?.id === itemId) {
         setSelectedItem(null);
@@ -218,7 +247,7 @@ export function ShopPage() {
   }
 
   return (
-    <>
+    <ToastProvider duration={3500} swipeDirection="right">
       <Card>
         <CardHeader>
           <CardTitle>Shop</CardTitle>
@@ -366,6 +395,18 @@ export function ShopPage() {
         open={selectedItem !== null}
         onOpenChange={(open) => !open && setSelectedItem(null)}
       />
-    </>
+      <Toast
+        key={toastState.key}
+        open={toastState.open}
+        onOpenChange={(open) => setToastState((previousState) => ({ ...previousState, open }))}
+        variant={toastState.variant}
+      >
+        <div className="grid gap-1">
+          <ToastTitle>{toastState.title}</ToastTitle>
+          <ToastDescription>{toastState.description}</ToastDescription>
+        </div>
+      </Toast>
+      <ToastViewport />
+    </ToastProvider>
   );
 }
