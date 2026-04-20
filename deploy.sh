@@ -6,6 +6,7 @@ REPO_URL="${REPO_URL:-}"
 APP_DIR="${APP_DIR:-/opt/bezum-world}"
 BRANCH="${BRANCH:-main}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
+RUN_SEED="${RUN_SEED:-false}"
 
 if [[ -z "$REPO_URL" ]]; then
   echo "ERROR: REPO_URL is required."
@@ -71,6 +72,12 @@ start_stack() {
   docker compose -f "$COMPOSE_FILE" ps
 }
 
+run_seed() {
+  log "Running backend seed"
+  cd "$APP_DIR"
+  docker compose -f "$COMPOSE_FILE" exec -T backend bun run prisma:seed
+}
+
 ensure_env_file() {
   local target_file="$1"
   local example_file="$2"
@@ -131,6 +138,11 @@ main() {
   prepare_repo
   prepare_env_files
   start_stack
+  if [[ "$RUN_SEED" == "true" ]]; then
+    run_seed
+  else
+    log "Skipping backend seed (RUN_SEED=${RUN_SEED})"
+  fi
   print_result
 }
 

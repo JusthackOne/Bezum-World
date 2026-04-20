@@ -1,0 +1,85 @@
+name: Deploy VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          APP_DIR: ${{ secrets.APP_DIR }}
+          REPO_URL_SECRET: ${{ secrets.REPO_URL }}
+          RUN_SEED: ${{ secrets.RUN_SEED }}
+        run: |
+          set -Eeuo pipefail
+
+          PORT="${SSH_PORT:-22}"
+          TARGET_APP_DIR="${APP_DIR:-/opt/bezum-world}"
+          REPO_URL_FALLBACK="https://github.com/${GITHUB_REPOSITORY}.git"
+          REPO_URL_TO_USE="${REPO_URL_SECRET:-$REPO_URL_FALLBACK}"
+          RUN_SEED_FLAG="${RUN_SEED:-false}"
+
+          ssh -p "$PORT" "$SSH_USER@$SSH_HOST" "set -Eeuo pipefail; \
+            APP_DIR='$TARGET_APP_DIR'; \
+            if [ ! -d \"\$APP_DIR/.git\" ]; then \
+              mkdir -p \"\$APP_DIR\"; \
+              git clone --branch main '$REPO_URL_TO_USE' \"\$APP_DIR\"; \
+            fi; \
+            cd \"\$APP_DIR\"; \
+            REPO_URL='$REPO_URL_TO_USE' BRANCH='main' RUN_SEED='$RUN_SEED_FLAG' bash deploy.sh"
+
+      - name: Post-deploy backend health check
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
+          HEALTHCHECK_PATH: ${{ secrets.HEALTHCHECK_PATH }}
+        run: |
+          set -Eeuo pipefail
+
+          PORT="${SSH_PORT:-22}"
+          TARGET_BACKEND_PORT="${BACKEND_PORT:-3001}"
+          TARGET_HEALTH_PATH="${HEALTHCHECK_PATH:-/api/health}"
+
+          ssh -p "$PORT" "$SSH_USER@$SSH_HOST" "set -Eeuo pipefail; \
+            HEALTH_URL='http://127.0.0.1:${TARGET_BACKEND_PORT}${TARGET_HEALTH_PATH}'; \
+            echo \"Checking \$HEALTH_URL\"; \
+            for i in \$(seq 1 20); do \
+              if RESPONSE=\$(curl -fsS --max-time 5 \"\$HEALTH_URL\"); then \
+                echo \"Health response: \$RESPONSE\"; \
+                echo \"\$RESPONSE\" | grep -q 'ok' && exit 0; \
+              fi; \
+              echo \"Health check attempt \$i failed, retrying in 3s...\"; \
+              sleep 3; \
+            done; \
+            echo 'Health check failed after 20 attempts'; \
+            exit 1"
