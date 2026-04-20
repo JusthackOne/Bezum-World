@@ -10,6 +10,7 @@ concurrency:
 jobs:
   seed:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Setup SSH agent
@@ -29,7 +30,7 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
-          APP_DIR: ${{ secrets.APP_DIR }}
+          APP_DIR: ${{ vars.APP_DIR }}
         run: |
           set -Eeuo pipefail
 

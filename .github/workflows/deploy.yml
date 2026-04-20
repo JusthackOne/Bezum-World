@@ -13,6 +13,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout
@@ -35,7 +36,7 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
-          APP_DIR: ${{ secrets.APP_DIR }}
+          APP_DIR: ${{ vars.APP_DIR }}
           REPO_URL_SECRET: ${{ secrets.REPO_URL }}
           BACKEND_ENV_PRODUCTION: ${{ secrets.BACKEND_ENV_PRODUCTION }}
           FRONTEND_ENV_PRODUCTION: ${{ secrets.FRONTEND_ENV_PRODUCTION }}
@@ -63,8 +64,8 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
-          BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
-          HEALTHCHECK_PATH: ${{ secrets.HEALTHCHECK_PATH }}
+          BACKEND_PORT: ${{ vars.BACKEND_PORT }}
+          HEALTHCHECK_PATH: ${{ vars.HEALTHCHECK_PATH }}
         run: |
           set -Eeuo pipefail
 
