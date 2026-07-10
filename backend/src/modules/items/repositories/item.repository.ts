@@ -19,6 +19,20 @@ export interface CreateItemInput {
   durability: number | null;
 }
 
+export interface UpdateItemInput {
+  name: string;
+  description: string | null;
+  imageUrl?: string | null;
+  strength: number | null;
+  charisma: number | null;
+  agility: number | null;
+  intelligence: number | null;
+  price: number;
+  rarity: ItemRarity;
+  slotType: EquipmentSlotType;
+  durability: number | null;
+}
+
 @Injectable()
 export class ItemRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -56,6 +70,33 @@ export class ItemRepository {
     });
 
     return result.count > 0;
+  }
+
+  async updateById(id: string, input: UpdateItemInput): Promise<Item | null> {
+    const result = await this.prisma.item.updateMany({
+      where: {
+        id,
+      },
+      data: {
+        name: input.name,
+        description: input.description,
+        ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
+        strength: input.strength,
+        charisma: input.charisma,
+        agility: input.agility,
+        intelligence: input.intelligence,
+        price: input.price,
+        rarity: input.rarity,
+        slotType: input.slotType,
+        durability: input.durability,
+      },
+    });
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    return this.findById(id);
   }
 
   async findAll(location?: ItemLocation): Promise<Item[]> {

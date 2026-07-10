@@ -46,8 +46,8 @@ function Table({
   variant?: VariantProps<typeof tableVariants>["variant"];
 }) {
   return (
-    <div className={cn("relative flex justify-center w-fit", tableVariants({ font, variant }))}>
-      <ShadcnTable className={className} {...props} />
+    <div className={cn("relative w-full min-w-0", tableVariants({ font, variant }))}>
+      <ShadcnTable className={cn("min-w-max", className)} {...props} />
 
       {variant !== "borderless" && (
         <div

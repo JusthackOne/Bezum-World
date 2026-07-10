@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { resolveAssetUrl } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
 import { Input } from "@/shared/ui/8bit/input";
@@ -38,11 +39,26 @@ const itemFormSchema = z.object({
 type AdminItemFormInputValues = z.input<typeof itemFormSchema>;
 export type AdminItemFormValues = z.output<typeof itemFormSchema>;
 
+export interface AdminItemFormInitialValues {
+  name: string;
+  description: string;
+  price: number;
+  rarity: AdminItemFormInputValues["rarity"];
+  slotType: AdminItemFormInputValues["slotType"];
+  strength?: number;
+  charisma?: number;
+  agility?: number;
+  intelligence?: number;
+  durability?: number;
+  imageUrl?: string | null;
+}
+
 interface AdminItemFormProps {
   submitLabel: string;
   submitPendingLabel: string;
   isSubmitting: boolean;
   errorMessage?: string | null;
+  initialValues?: AdminItemFormInitialValues;
   onSubmit: (values: AdminItemFormValues, imageFile: File | null) => Promise<void>;
 }
 
@@ -64,6 +80,7 @@ export function AdminItemForm({
   submitPendingLabel,
   isSubmitting,
   errorMessage,
+  initialValues,
   onSubmit,
 }: AdminItemFormProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -71,8 +88,40 @@ export function AdminItemForm({
 
   const form = useForm<AdminItemFormInputValues, unknown, AdminItemFormValues>({
     resolver: zodResolver(itemFormSchema),
-    defaultValues: defaultFormValues,
+    defaultValues: initialValues
+      ? {
+          name: initialValues.name,
+          description: initialValues.description,
+          price: initialValues.price,
+          rarity: initialValues.rarity,
+          slotType: initialValues.slotType,
+          strength: initialValues.strength ?? "",
+          charisma: initialValues.charisma ?? "",
+          agility: initialValues.agility ?? "",
+          intelligence: initialValues.intelligence ?? "",
+          durability: initialValues.durability ?? "",
+        }
+      : defaultFormValues,
   });
+
+  useEffect(() => {
+    if (!initialValues) {
+      return;
+    }
+
+    form.reset({
+      name: initialValues.name,
+      description: initialValues.description,
+      price: initialValues.price,
+      rarity: initialValues.rarity,
+      slotType: initialValues.slotType,
+      strength: initialValues.strength ?? "",
+      charisma: initialValues.charisma ?? "",
+      agility: initialValues.agility ?? "",
+      intelligence: initialValues.intelligence ?? "",
+      durability: initialValues.durability ?? "",
+    });
+  }, [form, initialValues]);
 
   const imagePreviewUrl = useMemo(
     () => (imageFile ? URL.createObjectURL(imageFile) : null),
@@ -89,7 +138,8 @@ export function AdminItemForm({
     };
   }, [imagePreviewUrl]);
 
-  const displayImageUrl = imagePreviewUrl;
+  const displayImageUrl =
+    imagePreviewUrl ?? (initialValues?.imageUrl ? resolveAssetUrl(initialValues.imageUrl) : null);
 
   const submitForm = form.handleSubmit(async (values) => {
     await onSubmit(values, imageFile);

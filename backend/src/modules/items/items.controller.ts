@@ -6,6 +6,7 @@ import {
   ForbiddenException,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -140,6 +141,61 @@ export class ItemsController {
     };
 
     return this.itemsService.createByAdmin(payload);
+  }
+
+  @Patch('admin/items/:itemId')
+  @UseGuards(AccessTokenGuard, AdminOnlyGuard)
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: {
+        fileSize: MAX_ITEM_IMAGE_SIZE_BYTES,
+      },
+    }),
+  )
+  @ApiOperation({
+    summary: 'Update item by id (admin only)',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiConsumes('multipart/form-data')
+  @ApiParam({
+    name: 'itemId',
+    description: 'Unique item identifier',
+    example: '2df8c39f-3255-4b40-9cb2-7f236c0b62e3',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        description: { type: 'string' },
+        image: { type: 'string', format: 'binary' },
+        strength: { type: 'integer', minimum: 0, maximum: 100 },
+        charisma: { type: 'integer', minimum: 0, maximum: 100 },
+        agility: { type: 'integer', minimum: 0, maximum: 100 },
+        intelligence: { type: 'integer', minimum: 0, maximum: 100 },
+        price: { type: 'integer', minimum: 0, maximum: 1000 },
+        rarity: { type: 'string', enum: Object.values(ItemRarity) },
+        slotType: {
+          type: 'string',
+          enum: Object.values(EquipmentSlotType),
+        },
+        durability: { type: 'integer', minimum: 0, maximum: 100 },
+      },
+      required: ['name', 'description', 'price', 'rarity', 'slotType'],
+    },
+  })
+  @ApiOkResponse({ type: CreateItemResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Admin access is required' })
+  @ApiNotFoundResponse({ description: 'Item is not found' })
+  async updateItemByAdmin(
+    @Param() params: PurchaseItemParamsDto,
+    @Body() body: CreateItemDto,
+    @UploadedFile() imageFile?: UploadedItemImageFile,
+  ): Promise<CreateItemResponseDto> {
+    const uploadedImageUrl = imageFile ? await this.storeItemImage(imageFile) : undefined;
+
+    return this.itemsService.updateByAdmin(params.itemId, body, uploadedImageUrl);
   }
 
   @Delete('admin/items/:itemId')

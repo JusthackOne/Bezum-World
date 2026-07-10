@@ -51,6 +51,32 @@ export class ItemsService {
     return items.map((item) => this.toItemResponse(item));
   }
 
+  async updateByAdmin(
+    itemId: string,
+    payload: CreateItemDto,
+    imageUrl?: string,
+  ): Promise<CreateItemResponseDto> {
+    const item = await this.itemRepository.updateById(itemId, {
+      name: payload.name,
+      description: payload.description ?? null,
+      ...(imageUrl !== undefined ? { imageUrl } : {}),
+      strength: payload.strength ?? null,
+      charisma: payload.charisma ?? null,
+      agility: payload.agility ?? null,
+      intelligence: payload.intelligence ?? null,
+      price: payload.price,
+      rarity: payload.rarity,
+      slotType: payload.slotType,
+      durability: payload.durability ?? null,
+    });
+
+    if (!item) {
+      throw new NotFoundException('Item is not found');
+    }
+
+    return this.toItemResponse(item);
+  }
+
   async purchaseByUser(itemId: string, accountId: string): Promise<PurchaseItemResponseDto> {
     return this.prisma.$transaction(async (tx) => {
       const account = await this.accountRepository.findByIdInTransaction(accountId, tx);

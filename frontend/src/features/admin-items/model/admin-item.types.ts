@@ -38,6 +38,10 @@ export interface AdminCreateItemInput {
   durability?: number;
 }
 
+export interface AdminUpdateItemInput extends AdminCreateItemInput {
+  itemId: string;
+}
+
 export interface AdminDeleteItemResponse {
   message: string;
   itemId: string;
