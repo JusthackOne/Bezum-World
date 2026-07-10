@@ -11,11 +11,22 @@ import type {
 export async function submitClientTask(
   payload: SubmitClientTaskInput,
 ): Promise<SubmitClientTaskResponse> {
+  const requestBody =
+    payload.proofImageFile instanceof File
+      ? (() => {
+          const formData = new FormData();
+          formData.append("proofImage", payload.proofImageFile, payload.proofImageFile.name);
+          return formData;
+        })()
+      : payload.proofImage
+        ? { proofImage: payload.proofImage }
+        : {};
+
   return requestApiData(
     () =>
       clientHttpClient.post<ApiSuccessResponse<SubmitClientTaskResponse>>(
         clientTasksEndpoints.submit(payload.taskId),
-        payload.proofImage ? { proofImage: payload.proofImage } : {},
+        requestBody,
       ),
     "Failed to complete task",
   );

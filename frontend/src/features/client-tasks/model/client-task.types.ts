@@ -33,6 +33,7 @@ export interface GetClientTasksInput {
 export interface SubmitClientTaskInput {
   taskId: string;
   proofImage?: string;
+  proofImageFile?: File;
 }
 
 export interface SubmitClientTaskResponse {

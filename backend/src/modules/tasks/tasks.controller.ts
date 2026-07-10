@@ -57,6 +57,7 @@ import {
 import { TasksService } from './tasks.service';
 
 const TASK_IMAGES_UPLOAD_DIR = join(process.cwd(), 'uploads', 'tasks');
+const TASK_PROOF_IMAGES_UPLOAD_DIR = join(process.cwd(), 'uploads', 'task-proofs');
 const MAX_TASK_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const TASK_IMAGE_MIME_TO_EXTENSION: Record<string, string> = {
   'image/jpeg': '.jpg',
@@ -243,10 +244,18 @@ export class TasksController {
 
   @Post('tasks/:taskId/submit')
   @UseGuards(AccessTokenGuard)
+  @UseInterceptors(
+    FileInterceptor('proofImage', {
+      limits: {
+        fileSize: MAX_TASK_IMAGE_SIZE_BYTES,
+      },
+    }),
+  )
   @ApiOperation({
     summary: 'Submit task by id',
   })
   @ApiBearerAuth('access-token')
+  @ApiConsumes('application/json', 'multipart/form-data')
   @ApiParam({
     name: 'taskId',
     description: 'Task identifier',
@@ -261,13 +270,21 @@ export class TasksController {
   async submitTask(
     @Param() params: TaskIdParamsDto,
     @Body() body: SubmitTaskDto,
+    @UploadedFile() proofImageFile: UploadedTaskImageFile | undefined,
     @Req() request: RequestWithAuthUser,
   ): Promise<SubmitTaskResponseDto> {
     if (!request.user?.sub || request.user.actorType !== 'user') {
       throw new ForbiddenException('Only user accounts can submit tasks');
     }
 
-    return this.tasksService.submitTask(params.taskId, request.user.sub, body);
+    const uploadedProofImageUrl = proofImageFile
+      ? await this.storeProofImage(proofImageFile)
+      : undefined;
+
+    return this.tasksService.submitTask(params.taskId, request.user.sub, {
+      ...body,
+      ...(uploadedProofImageUrl ? { proofImage: uploadedProofImageUrl } : {}),
+    });
   }
 
   @Get('users/:userId/task-submissions')
@@ -313,5 +330,24 @@ export class TasksController {
     await writeFile(join(TASK_IMAGES_UPLOAD_DIR, fileName), file.buffer);
 
     return `/uploads/tasks/${fileName}`;
+  }
+
+  private async storeProofImage(file: UploadedTaskImageFile): Promise<string> {
+    const imageExtension =
+      TASK_IMAGE_MIME_TO_EXTENSION[file.mimetype] ?? extname(file.originalname).toLowerCase();
+
+    if (!imageExtension || !Object.values(TASK_IMAGE_MIME_TO_EXTENSION).includes(imageExtension)) {
+      throw new BadRequestException('Proof image must be jpeg, png, webp, or gif');
+    }
+
+    if (file.size > MAX_TASK_IMAGE_SIZE_BYTES) {
+      throw new BadRequestException('Proof image file is too large');
+    }
+
+    await mkdir(TASK_PROOF_IMAGES_UPLOAD_DIR, { recursive: true });
+    const fileName = `${randomUUID()}${imageExtension}`;
+    await writeFile(join(TASK_PROOF_IMAGES_UPLOAD_DIR, fileName), file.buffer);
+
+    return `/uploads/task-proofs/${fileName}`;
   }
 }

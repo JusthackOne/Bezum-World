@@ -162,7 +162,7 @@ export function TasksPage() {
     }));
   }
 
-  async function completeTask(task: ClientTask, proofImage?: string) {
+  async function completeTask(task: ClientTask, proofImageFile?: File) {
     if (submittingTaskId) {
       return;
     }
@@ -172,7 +172,7 @@ export function TasksPage() {
     try {
       const response = await submitTaskMutation.mutateAsync({
         taskId: task.id,
-        ...(proofImage ? { proofImage } : {}),
+        ...(proofImageFile ? { proofImageFile } : {}),
       });
 
       if (session) {
@@ -527,10 +527,7 @@ export function TasksPage() {
                   return;
                 }
 
-                void completeTask(
-                  proofTask,
-                  `proof:${proofFile.name}:${proofFile.size}:${proofFile.lastModified}`,
-                );
+                void completeTask(proofTask, proofFile);
                 setProofTask(null);
                 setProofFile(null);
                 setProofValidationMessage(null);

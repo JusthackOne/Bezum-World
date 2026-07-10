@@ -131,7 +131,36 @@ export class UsersService {
   }
 
   async deleteUserByAdmin(userId: string): Promise<AdminDeleteUserResponseDto> {
-    const isDeleted = await this.accountRepository.deleteById(userId);
+    const isDeleted = await this.prisma.$transaction(async (tx) => {
+      const existingAccount = await this.accountRepository.findByIdInTransaction(userId, tx);
+
+      if (!existingAccount) {
+        return false;
+      }
+
+      await tx.userEquipmentSlot.deleteMany({
+        where: {
+          userId,
+        },
+      });
+
+      await tx.item.updateMany({
+        where: {
+          ownerUserId: userId,
+        },
+        data: {
+          ownerUserId: null,
+        },
+      });
+
+      await tx.account.delete({
+        where: {
+          id: userId,
+        },
+      });
+
+      return true;
+    });
 
     if (!isDeleted) {
       throw new NotFoundException('User is not found');
