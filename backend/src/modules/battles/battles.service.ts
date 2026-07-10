@@ -4,7 +4,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { EquipmentSlotType, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
@@ -34,7 +33,6 @@ export class BattlesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly battleRepository: BattleRepository,
-    private readonly configService: ConfigService,
   ) {}
 
   async getBattlePlayers(currentUserId: string): Promise<BattlePlayersResponseDto> {
@@ -65,7 +63,7 @@ export class BattlesService {
           gameScore: opponent.gameScore,
           userId: opponent.id,
           username: opponent.username,
-          avatar: this.toPublicImageUrl(opponent.avatarUrl),
+          avatar: opponent.avatarUrl,
           equipment: this.toBattleEquipment(opponent),
           stats: this.toBattleStatsDto(opponentStats),
           winChancePercent: this.estimateWinChancePercent(currentUserPower, opponentPower),
@@ -301,7 +299,7 @@ export class BattlesService {
         name: equipmentSlot.item.name,
         slot_type: equipmentSlot.item.slotType,
         description: equipmentSlot.item.description,
-        image_url: this.toPublicImageUrl(equipmentSlot.item.imageUrl),
+        image_url: equipmentSlot.item.imageUrl,
         strength: equipmentSlot.item.strength,
         charisma: equipmentSlot.item.charisma,
         agility: equipmentSlot.item.agility,
@@ -335,13 +333,4 @@ export class BattlesService {
     }
   }
 
-  private toPublicImageUrl(imageUrl: string | null): string | null {
-    if (!imageUrl) {
-      return null;
-    }
-
-    const appDomain = this.configService.get('APP_DOMAIN', { infer: true });
-    const appPort = this.configService.get('PORT', { infer: true });
-    return `${appDomain}:${appPort}${imageUrl}`;
-  }
 }
