@@ -69,7 +69,7 @@ prepare_repo() {
 start_stack() {
   log "Starting docker stack"
   cd "$APP_DIR"
-  docker compose -f "$COMPOSE_FILE" up -d --build
+  COMPOSE_PARALLEL_LIMIT=1 docker compose -f "$COMPOSE_FILE" up -d --build
   docker compose -f "$COMPOSE_FILE" ps
 }
 

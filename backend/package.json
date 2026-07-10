@@ -11,8 +11,8 @@
   "scripts": {
     "build": "bunx --bun tsc -p tsconfig.build.json",
     "start": "bun dist/main.js",
-    "start:dev": "bunx --bun nest start --watch",
-    "start:prod": "bun dist/main.js",
+    "dev": "bunx --bun nest start --watch",
+    "prod": "bun dist/main.js",
     "lint": "bunx --bun eslint .",
     "lint:fix": "bunx --bun eslint . --fix",
     "format": "bunx --bun prettier --write .",
