@@ -5,6 +5,15 @@ export type ItemDisplayRarity =
   | "bezumnyy"
   | (string & {});
 
+export type ItemDisplaySlotType =
+  | "HELMET"
+  | "ARMOR"
+  | "PANTS"
+  | "BOOTS"
+  | "LEFT_HAND"
+  | "RIGHT_HAND"
+  | (string & {});
+
 export interface ItemDisplay {
   id: string;
   name: string;
@@ -17,5 +26,7 @@ export interface ItemDisplay {
   intelligence: number | null;
   price: number;
   rarity: ItemDisplayRarity;
+  slotType?: ItemDisplaySlotType;
+  slot_type?: ItemDisplaySlotType;
   durability: number | null;
 }

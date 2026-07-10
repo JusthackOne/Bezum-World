@@ -79,6 +79,15 @@ const modalRarityStyles: Record<
   },
 };
 
+const itemSlotLabels: Record<string, string> = {
+  HELMET: "Helmet",
+  ARMOR: "Armor",
+  PANTS: "Pants",
+  BOOTS: "Boots",
+  LEFT_HAND: "Left hand",
+  RIGHT_HAND: "Right hand",
+};
+
 const hiddenScrollbarClass =
   "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
@@ -94,6 +103,8 @@ export function ItemDetailsModal({ item, open, onOpenChange }: ItemDetailsModalP
   };
   const itemAttributes = getItemAttributeRows(item);
   const imageUrl = item.image_url ? resolveAssetUrl(item.image_url) : null;
+  const slotType = item.slotType ?? item.slot_type;
+  const bodyPartLabel = slotType ? (itemSlotLabels[slotType] ?? slotType) : "N/A";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,6 +138,11 @@ export function ItemDetailsModal({ item, open, onOpenChange }: ItemDetailsModalP
             <span className={cn("text-xs font-semibold capitalize", rarityStyle.textClassName)}>
               {item.rarity.replaceAll("_", " ")}
             </span>
+          </div>
+
+          <div className="flex items-center justify-between rounded-md border bg-muted/10 px-3 py-2">
+            <span className="text-muted-foreground text-xs">Body part</span>
+            <span className="text-xs font-semibold">{bodyPartLabel}</span>
           </div>
 
           {itemAttributes.length > 0 ? (
