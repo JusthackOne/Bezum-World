@@ -17,7 +17,6 @@ import {
 } from './dto';
 import { ItemRepository } from './repositories';
 import type { ItemLocation } from './types/item-location.type';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ItemsService {
@@ -25,7 +24,6 @@ export class ItemsService {
     private readonly prisma: PrismaService,
     private readonly itemRepository: ItemRepository,
     private readonly accountRepository: AccountRepository,
-    private readonly configService: ConfigService,
   ) {}
 
   async createByAdmin(payload: CreateItemDto): Promise<CreateItemResponseDto> {
@@ -126,8 +124,7 @@ export class ItemsService {
       owner_user_id: item.ownerUserId,
       name: item.name,
       description: item.description,
-      image_url:
-        this.configService.get('APP_DOMAIN') + ':' + this.configService.get('PORT') + item.imageUrl,
+      image_url: item.imageUrl,
       strength: item.strength,
       charisma: item.charisma,
       agility: item.agility,
