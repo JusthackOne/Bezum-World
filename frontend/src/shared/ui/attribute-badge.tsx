@@ -2,6 +2,7 @@
 
 import { BrainIcon, DumbbellIcon, ShieldIcon, SparklesIcon, type LucideIcon } from "lucide-react";
 
+import { useTemporaryTooltip } from "@/shared/lib/use-temporary-tooltip";
 import { cn } from "@/shared/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
 
@@ -55,20 +56,35 @@ interface AttributeBadgeProps {
 export function AttributeBadge({ attribute, value, tooltipLabel, className }: AttributeBadgeProps) {
   const visual = attributeVisuals[attribute];
   const Icon = visual.icon;
+  const tooltip = useTemporaryTooltip();
 
   return (
-    <Tooltip>
+    <Tooltip open={tooltip.isOpen} onOpenChange={tooltip.setIsOpen}>
       <TooltipTrigger asChild>
-        <div
+        <button
+          type="button"
           className={cn(
-            "flex items-center justify-between rounded-lg border px-3 py-2",
+            "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             visual.accentClassName,
             className,
           )}
+          aria-label={tooltipLabel ?? `${visual.label}: ${value}`}
+          onPointerUp={(event) => {
+            if (event.pointerType !== "mouse") {
+              tooltip.showTemporarily();
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              tooltip.showTemporarily();
+            }
+          }}
         >
           <Icon className={cn("size-4", visual.iconClassName)} />
           <span className="text-sm font-semibold tabular-nums">{value}</span>
-        </div>
+        </button>
       </TooltipTrigger>
       <TooltipContent side="top" sideOffset={6}>
         {tooltipLabel ?? `${visual.label}: ${value}`}

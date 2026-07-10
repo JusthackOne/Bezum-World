@@ -27,6 +27,7 @@ import type {
 } from "@/features/public-user/model/public-user.types";
 import { queryKeys } from "@/shared/config/query-keys";
 import { formatBalance } from "@/shared/lib/item-display";
+import { useTemporaryTooltip } from "@/shared/lib/use-temporary-tooltip";
 import type { ItemDisplay } from "@/shared/model/item-display.types";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
@@ -116,6 +117,60 @@ function UserEquipmentSection({
   );
 }
 
+function TappableProfileMetric({
+  label,
+  value,
+  icon,
+  className,
+  valueClassName,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  className: string;
+  valueClassName: string;
+}) {
+  const tooltip = useTemporaryTooltip();
+
+  return (
+    <Tooltip open={tooltip.isOpen} onOpenChange={tooltip.setIsOpen}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            className,
+          )}
+          aria-label={label}
+          onPointerUp={(event) => {
+            if (event.pointerType !== "mouse") {
+              tooltip.showTemporarily();
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              tooltip.showTemporarily();
+            }
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-2">
+              {icon}
+              <span className="sr-only">{label}</span>
+            </span>
+            <span className={valueClassName}>{formatBalance(value)}</span>
+          </div>
+        </button>
+      </TooltipTrigger>
+
+      <TooltipContent side="top" sideOffset={6}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function UserInfoCard({
   profile,
   equipment,
@@ -183,43 +238,20 @@ function UserInfoCard({
               })}
             </div>
             <Separator className="mt-4" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="rounded-lg border mt-4 border-fuchsia-400/60 bg-[linear-gradient(120deg,rgba(244,114,182,0.12),rgba(96,165,250,0.12),rgba(52,211,153,0.12),rgba(250,204,21,0.12))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(217,70,239,0.25),0_0_20px_rgba(59,130,246,0.18)]">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-2">
-                      <GameScoreIcon className="size-4 text-fuchsia-300" />
-                      <span className="sr-only">GameScore</span>
-                    </span>
-                    <span className="bg-gradient-to-r from-fuchsia-300 via-sky-300 to-emerald-300 bg-clip-text text-base font-semibold tabular-nums text-transparent">
-                      {formatBalance(profile.gameScore)}
-                    </span>
-                  </div>
-                </div>
-              </TooltipTrigger>
-
-              <TooltipContent side="top" sideOffset={6}>
-                GameScore
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="rounded-lg border mt-2.5 border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.13),rgba(251,191,36,0.08))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(245,158,11,0.26),0_0_18px_rgba(245,158,11,0.18)]">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-2">
-                      <CoinsIcon className="size-4 text-amber-300" />
-                      <span className="sr-only">Balance</span>
-                    </span>
-                    <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-base font-semibold tabular-nums text-transparent">
-                      {formatBalance(profile.balance)}
-                    </span>
-                  </div>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={6}>
-                Balance
-              </TooltipContent>
-            </Tooltip>
+            <TappableProfileMetric
+              label="GameScore"
+              value={profile.gameScore}
+              icon={<GameScoreIcon className="size-4 text-fuchsia-300" />}
+              className="rounded-lg border mt-4 border-fuchsia-400/60 bg-[linear-gradient(120deg,rgba(244,114,182,0.12),rgba(96,165,250,0.12),rgba(52,211,153,0.12),rgba(250,204,21,0.12))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(217,70,239,0.25),0_0_20px_rgba(59,130,246,0.18)]"
+              valueClassName="bg-gradient-to-r from-fuchsia-300 via-sky-300 to-emerald-300 bg-clip-text text-base font-semibold tabular-nums text-transparent"
+            />
+            <TappableProfileMetric
+              label="Balance"
+              value={profile.balance}
+              icon={<CoinsIcon className="size-4 text-amber-300" />}
+              className="rounded-lg border mt-2.5 border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.13),rgba(251,191,36,0.08))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(245,158,11,0.26),0_0_18px_rgba(245,158,11,0.18)]"
+              valueClassName="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-base font-semibold tabular-nums text-transparent"
+            />
           </TooltipProvider>
         </div>
       </CardContent>

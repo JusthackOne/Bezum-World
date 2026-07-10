@@ -3,6 +3,7 @@
 import { type ComponentType, useState } from "react";
 
 import { getItemAttributeRows, resolveAssetUrl } from "@/shared/lib/item-display";
+import { useTemporaryTooltip } from "@/shared/lib/use-temporary-tooltip";
 import { type ItemDisplay } from "@/shared/model/item-display.types";
 import { cn } from "@/shared/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
@@ -140,6 +141,7 @@ interface ProfileItemSlotProps {
 export function ProfileItemSlot({ label, item, icon: Icon, className }: ProfileItemSlotProps) {
   const imageUrl = item?.image_url ? resolveAssetUrl(item.image_url) : null;
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const tooltip = useTemporaryTooltip();
   const hasImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
   const rarityStyle = item
     ? (equipmentRarityStyles[item.rarity] ?? {
@@ -149,15 +151,15 @@ export function ProfileItemSlot({ label, item, icon: Icon, className }: ProfileI
       })
     : null;
 
-  const trigger = (
-    <div
-      className={cn(
-        "bg-muted/20 relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 transition-colors",
-        rarityStyle?.slotBorderClassName ?? "border-border/70",
-        rarityStyle?.slotGlowClassName,
-        className,
-      )}
-    >
+  const triggerClassName = cn(
+    "bg-muted/20 relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 transition-colors",
+    rarityStyle?.slotBorderClassName ?? "border-border/70",
+    rarityStyle?.slotGlowClassName,
+    className,
+  );
+
+  const triggerContent = (
+    <>
       {hasImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -174,18 +176,51 @@ export function ProfileItemSlot({ label, item, icon: Icon, className }: ProfileI
           </span>
         </>
       )}
+    </>
+  );
+
+  const emptyTrigger = (
+    <div
+      className={cn(
+        triggerClassName,
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      )}
+    >
+      {triggerContent}
     </div>
   );
 
   if (!item) {
-    return trigger;
+    return emptyTrigger;
   }
 
   const tooltipBorderClassName = rarityStyle?.tooltipBorderClassName ?? "border-border shadow-sm";
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+    <Tooltip open={tooltip.isOpen} onOpenChange={tooltip.setIsOpen}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            triggerClassName,
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          )}
+          aria-label={item.name}
+          onPointerUp={(event) => {
+            if (event.pointerType !== "mouse") {
+              tooltip.showTemporarily();
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              tooltip.showTemporarily();
+            }
+          }}
+        >
+          {triggerContent}
+        </button>
+      </TooltipTrigger>
       <TooltipContent
         className={cn(
           "border-2 bg-card text-foreground w-64 p-3",
