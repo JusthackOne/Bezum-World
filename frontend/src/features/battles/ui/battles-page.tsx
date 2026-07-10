@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   FootprintsIcon,
   HardHatIcon,
@@ -15,6 +16,7 @@ import { useMemo, useState, type ComponentType } from "react";
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { useBattlePlayersQuery, useStartBattleMutation } from "@/features/battles/api";
 import type { BattlePlayer, BattlePlayerEquipment } from "@/features/battles/model/battles.types";
+import { publicUserRoutes } from "@/features/public-user/routes";
 import { queryKeys } from "@/shared/config/query-keys";
 import { resolveAssetUrl } from "@/shared/lib/item-display";
 import {
@@ -63,17 +65,23 @@ function PlayerRow({
   player,
   isBattling,
   onBattle,
+  onOpenProfile,
 }: {
   player: BattlePlayer;
   isBattling: boolean;
   onBattle: () => void;
+  onOpenProfile: () => void;
 }) {
   const avatarUrl = player.avatar ? resolveAssetUrl(player.avatar) : null;
 
   return (
     <article className="grid gap-4 rounded-xl border bg-card p-4 xl:grid-cols-[220px_minmax(0,1fr)_180px_120px_170px] xl:items-center">
-      <div className="flex items-center gap-3">
-        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border bg-muted/30">
+      <button
+        type="button"
+        className="flex min-w-0 items-center gap-3 rounded-lg text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={onOpenProfile}
+      >
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted/30">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -84,11 +92,13 @@ function PlayerRow({
           ) : (
             <UserCircle2Icon className="size-10 text-muted-foreground/70" />
           )}
-        </div>
-        <div>
-          <p className="text-base font-semibold break-all">{player.username}</p>
-        </div>
-      </div>
+        </span>
+        <span className="min-w-0">
+          <span className="block text-base font-semibold break-all hover:underline">
+            {player.username}
+          </span>
+        </span>
+      </button>
 
       <TooltipProvider>
         <div className="grid grid-cols-3 gap-2">
@@ -130,6 +140,7 @@ function PlayerRow({
 }
 
 export function BattlesPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const session = useClientAuthStore((state) => state.session);
   const setSession = useClientAuthStore((state) => state.setSession);
@@ -284,6 +295,7 @@ export function BattlesPage() {
                 player={player}
                 isBattling={battlingUserId === player.userId}
                 onBattle={() => void handleBattle(player)}
+                onOpenProfile={() => router.push(publicUserRoutes.profile(player.username))}
               />
             ))}
           </div>
