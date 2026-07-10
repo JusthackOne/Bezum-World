@@ -18,6 +18,10 @@ export async function createAdminUser(
     formData.append("balance", String(payload.balance));
   }
 
+  if (payload.gameScore !== undefined) {
+    formData.append("gameScore", String(payload.gameScore));
+  }
+
   if (payload.avatarFile instanceof File) {
     formData.append("avatar", payload.avatarFile, payload.avatarFile.name);
   }

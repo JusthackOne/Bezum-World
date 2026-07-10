@@ -22,6 +22,7 @@ export interface AdminCreateUserInput {
   username: string;
   avatarFile?: File | null;
   balance?: number;
+  gameScore?: number;
   strength: number;
   charisma: number;
   endurance: number;
@@ -51,6 +52,7 @@ export interface AdminUpdateUserInput {
   avatarUrl?: string | null;
   avatarFile?: File | null;
   balance?: number;
+  gameScore?: number;
   strength?: number;
   charisma?: number;
   endurance?: number;

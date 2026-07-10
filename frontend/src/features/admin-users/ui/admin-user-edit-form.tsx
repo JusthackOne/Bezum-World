@@ -28,6 +28,7 @@ function toFormValues(user: AdminUser): AdminUserFormValues {
   return {
     username: user.username,
     balance: user.balance,
+    gameScore: user.gameScore,
     strength: user.strength,
     charisma: user.charisma,
     endurance: user.endurance,
@@ -39,6 +40,7 @@ function toFormValuesFromProfile(user: UserProfileByUsername): AdminUserFormValu
   return {
     username: user.username,
     balance: user.balance,
+    gameScore: user.gameScore,
     strength: user.attributes.strength,
     charisma: user.attributes.charisma,
     endurance: user.attributes.endurance,
@@ -187,6 +189,7 @@ export function AdminUserEditForm({ userId }: AdminUserEditFormProps) {
               userId,
               username: values.username.trim(),
               balance: values.balance,
+              gameScore: values.gameScore,
               strength: values.strength,
               charisma: values.charisma,
               endurance: values.endurance,

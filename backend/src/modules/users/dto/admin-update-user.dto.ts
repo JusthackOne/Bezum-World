@@ -45,6 +45,17 @@ export class AdminUpdateUserDto {
   balance?: number;
 
   @ApiPropertyOptional({
+    description: 'User game score',
+    example: 100,
+    minimum: 0,
+  })
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  gameScore?: number;
+
+  @ApiPropertyOptional({
     description: 'Strength attribute value in range 0..100',
     example: 10,
     minimum: 0,

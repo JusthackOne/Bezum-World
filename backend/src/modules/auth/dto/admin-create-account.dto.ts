@@ -32,6 +32,17 @@ export class AdminCreateAccountDto {
   @Min(0)
   balance?: number;
 
+  @ApiPropertyOptional({
+    description: 'Initial user game score',
+    example: 0,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  gameScore?: number;
+
   @ApiProperty({
     description: 'Strength attribute value in range 0..100',
     example: 10,

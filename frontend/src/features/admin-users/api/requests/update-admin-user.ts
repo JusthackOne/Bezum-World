@@ -9,6 +9,7 @@ function buildJsonPayload(payload: AdminUpdateUserInput): Record<string, unknown
     ...(payload.username !== undefined ? { username: payload.username } : {}),
     ...(payload.avatarUrl !== undefined ? { avatarUrl: payload.avatarUrl } : {}),
     ...(payload.balance !== undefined ? { balance: payload.balance } : {}),
+    ...(payload.gameScore !== undefined ? { gameScore: payload.gameScore } : {}),
     ...(payload.strength !== undefined ? { strength: payload.strength } : {}),
     ...(payload.charisma !== undefined ? { charisma: payload.charisma } : {}),
     ...(payload.endurance !== undefined ? { endurance: payload.endurance } : {}),
@@ -29,6 +30,10 @@ function buildMultipartPayload(payload: AdminUpdateUserInput): FormData {
 
   if (payload.balance !== undefined) {
     formData.append("balance", String(payload.balance));
+  }
+
+  if (payload.gameScore !== undefined) {
+    formData.append("gameScore", String(payload.gameScore));
   }
 
   if (payload.strength !== undefined) {

@@ -105,6 +105,7 @@ export class UsersService {
           ? { avatarUrl: payload.avatarUrl }
           : {}),
       ...(payload.balance !== undefined ? { balance: payload.balance } : {}),
+      ...(payload.gameScore !== undefined ? { gameScore: payload.gameScore } : {}),
       ...(payload.strength !== undefined ? { strength: payload.strength } : {}),
       ...(payload.charisma !== undefined ? { charisma: payload.charisma } : {}),
       ...(payload.endurance !== undefined ? { endurance: payload.endurance } : {}),

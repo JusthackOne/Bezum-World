@@ -96,6 +96,7 @@ export class AdminUsersController {
       properties: {
         username: { type: 'string' },
         balance: { type: 'integer', minimum: 0 },
+        gameScore: { type: 'integer', minimum: 0 },
         strength: { type: 'integer', minimum: 0, maximum: 100 },
         charisma: { type: 'integer', minimum: 0, maximum: 100 },
         endurance: { type: 'integer', minimum: 0, maximum: 100 },

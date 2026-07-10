@@ -261,6 +261,7 @@ export function AdminUsersDataTable() {
                   <TableHead>Auth Code</TableHead>
                   <TableHead>Avatar URL</TableHead>
                   <TableHead>Balance</TableHead>
+                  <TableHead>Game Score</TableHead>
                   <TableHead>Strength</TableHead>
                   <TableHead>Charisma</TableHead>
                   <TableHead>Endurance</TableHead>
@@ -272,13 +273,13 @@ export function AdminUsersDataTable() {
               <TableBody>
                 {usersQuery.isPending ? (
                   <TableRow>
-                    <TableCell className="text-muted-foreground text-center" colSpan={12}>
+                    <TableCell className="text-muted-foreground text-center" colSpan={13}>
                       Loading users...
                     </TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell className="text-muted-foreground text-center" colSpan={12}>
+                    <TableCell className="text-muted-foreground text-center" colSpan={13}>
                       No users found.
                     </TableCell>
                   </TableRow>
@@ -311,6 +312,7 @@ export function AdminUsersDataTable() {
                           {user.avatarUrl ?? "N/A"}
                         </TableCell>
                         <TableCell>{user.balance}</TableCell>
+                        <TableCell>{user.gameScore}</TableCell>
                         <TableCell>{user.strength}</TableCell>
                         <TableCell>{user.charisma}</TableCell>
                         <TableCell>{user.endurance}</TableCell>

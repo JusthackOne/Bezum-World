@@ -59,6 +59,7 @@ export function AdminUserCreateForm() {
             const payload = {
               username: values.username.trim(),
               balance: values.balance,
+              gameScore: values.gameScore,
               strength: values.strength,
               charisma: values.charisma,
               endurance: values.endurance,

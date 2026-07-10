@@ -13,6 +13,7 @@ import { Input } from "@/shared/ui/8bit/input";
 const userFormSchema = z.object({
   username: z.string().trim().min(1, "Username is required").max(64),
   balance: z.number().int().min(0),
+  gameScore: z.number().int().min(0),
   strength: z.number().int().min(0).max(100),
   charisma: z.number().int().min(0).max(100),
   endurance: z.number().int().min(0).max(100),
@@ -34,6 +35,7 @@ interface AdminUserFormProps {
 const defaultFormValues: AdminUserFormValues = {
   username: "",
   balance: 0,
+  gameScore: 0,
   strength: 0,
   charisma: 0,
   endurance: 0,
@@ -170,6 +172,21 @@ export function AdminUserForm({
           />
           {form.formState.errors.balance ? (
             <p className="text-xs text-destructive">{form.formState.errors.balance.message}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="gameScore" className="text-sm font-medium">
+            Game Score
+          </label>
+          <Input
+            id="gameScore"
+            type="number"
+            min={0}
+            {...form.register("gameScore", { valueAsNumber: true })}
+          />
+          {form.formState.errors.gameScore ? (
+            <p className="text-xs text-destructive">{form.formState.errors.gameScore.message}</p>
           ) : null}
         </div>
 
