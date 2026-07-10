@@ -16,10 +16,10 @@ const equipmentRarityStyles: Record<
   }
 > = {
   unterlyanskiy: {
-    slotBorderClassName: "border-amber-900/95",
-    slotGlowClassName: "shadow-[0_0_0_1px_rgba(120,53,15,0.42),0_0_18px_rgba(69,26,3,0.28)]",
+    slotBorderClassName: "border-blue-400/95",
+    slotGlowClassName: "shadow-[0_0_0_1px_rgba(96,165,250,0.42),0_0_18px_rgba(37,99,235,0.28)]",
     tooltipBorderClassName:
-      "border-amber-900/95 shadow-[0_0_0_1px_rgba(120,53,15,0.38),0_10px_24px_rgba(69,26,3,0.25)]",
+      "border-blue-400/95 shadow-[0_0_0_1px_rgba(96,165,250,0.38),0_10px_24px_rgba(37,99,235,0.25)]",
   },
   basic_minimum: {
     slotBorderClassName: "border-emerald-400/95",
@@ -76,7 +76,7 @@ const itemAttributeVisuals: Record<
 };
 
 const itemRarityTextStyles: Record<string, string> = {
-  unterlyanskiy: "text-amber-700 dark:text-amber-300",
+  unterlyanskiy: "text-blue-600 dark:text-blue-300",
   basic_minimum: "text-emerald-600 dark:text-emerald-300",
   sigma: "text-violet-600 dark:text-violet-300",
   bezumnyy: "text-amber-500 dark:text-amber-300",

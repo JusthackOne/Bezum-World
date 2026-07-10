@@ -22,8 +22,8 @@ const attributeVisuals: ReadonlyArray<{
 export const itemRarityStyles: Record<string, { borderClassName: string; glowClassName: string }> =
   {
     unterlyanskiy: {
-      borderClassName: "border-slate-300",
-      glowClassName: "shadow-[0_0_0_1px_rgba(148,163,184,0.25),0_8px_24px_rgba(15,23,42,0.08)]",
+      borderClassName: "border-blue-300",
+      glowClassName: "shadow-[0_0_0_1px_rgba(96,165,250,0.3),0_8px_24px_rgba(37,99,235,0.16)]",
     },
     basic_minimum: {
       borderClassName: "border-emerald-300",

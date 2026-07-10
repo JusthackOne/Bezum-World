@@ -39,8 +39,8 @@ const itemAttributeVisuals: Record<
 
 const inventoryRarityStyles: Record<string, { borderClassName: string; glowClassName: string }> = {
   unterlyanskiy: {
-    borderClassName: "border-amber-900/85",
-    glowClassName: "shadow-[0_0_0_1px_rgba(120,53,15,0.35),0_12px_30px_rgba(69,26,3,0.28)]",
+    borderClassName: "border-blue-400/90",
+    glowClassName: "shadow-[0_0_0_1px_rgba(96,165,250,0.38),0_12px_30px_rgba(37,99,235,0.28)]",
   },
   basic_minimum: {
     borderClassName: "border-emerald-400/90",

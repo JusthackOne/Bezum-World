@@ -46,7 +46,7 @@ const rarityFilterOptions: ReadonlyArray<RarityFilterOption> = [
   {
     value: "unterlyanskiy",
     label: "Unterlyanskiy",
-    textClassName: "text-amber-700 dark:text-amber-300",
+    textClassName: "text-blue-600 dark:text-blue-300",
   },
   {
     value: "basic_minimum",

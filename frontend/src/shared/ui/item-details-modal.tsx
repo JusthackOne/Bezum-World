@@ -58,9 +58,9 @@ const modalRarityStyles: Record<
   { borderClassName: string; glowClassName: string; textClassName: string }
 > = {
   unterlyanskiy: {
-    borderClassName: "border-amber-900/95",
-    glowClassName: "shadow-[0_0_0_1px_rgba(120,53,15,0.42),0_16px_38px_rgba(69,26,3,0.3)]",
-    textClassName: "text-amber-700 dark:text-amber-300",
+    borderClassName: "border-blue-400/95",
+    glowClassName: "shadow-[0_0_0_1px_rgba(96,165,250,0.42),0_16px_38px_rgba(37,99,235,0.3)]",
+    textClassName: "text-blue-600 dark:text-blue-300",
   },
   basic_minimum: {
     borderClassName: "border-emerald-400/95",
