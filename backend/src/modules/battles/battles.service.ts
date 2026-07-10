@@ -216,12 +216,16 @@ export class BattlesService {
       (sum, slot) => sum + (slot.item?.intelligence ?? 0),
       0,
     );
+    const bonusEndurance = player.equipment.reduce(
+      (sum, slot) => sum + (slot.item?.agility ?? 0),
+      0,
+    );
 
     return {
       strength: player.strength + bonusStrength,
       intelligence: player.intelligence + bonusIntelligence,
       charisma: player.charisma + bonusCharisma,
-      endurance: player.endurance,
+      endurance: player.endurance + bonusEndurance,
     };
   }
 

@@ -1,4 +1,13 @@
-import { Controller, ForbiddenException, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -51,6 +60,33 @@ export class UserEquipmentController {
     }
 
     return this.usersService.equipItemByUser(params.itemId, request.user.sub);
+  }
+
+  @Delete('equipment/:itemId')
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Unequip owned item for authenticated user',
+    description: 'Removes an owned equipped item from its corresponding slot.',
+  })
+  @ApiParam({
+    name: 'itemId',
+    description: 'Item identifier to unequip',
+    example: '2df8c39f-3255-4b40-9cb2-7f236c0b62e3',
+  })
+  @ApiOkResponse({ type: EquipItemByUserResponse })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Only user accounts can unequip items' })
+  @ApiNotFoundResponse({ description: 'Item is not found' })
+  async unequipItem(
+    @Param() params: EquipItemByUserParamsDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<EquipItemByUserResponse> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can unequip items');
+    }
+
+    return this.usersService.unequipItemByUser(params.itemId, request.user.sub);
   }
 
   @Public()

@@ -55,6 +55,26 @@ export class UserEquipmentRepository {
     });
   }
 
+  async clearEquipmentByItemIdForUser(
+    itemId: string,
+    slotType: EquipmentSlotType,
+    userId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const result = await this.getClient(tx).userEquipmentSlot.updateMany({
+      where: {
+        userId,
+        slotType,
+        itemId,
+      },
+      data: {
+        itemId: null,
+      },
+    });
+
+    return result.count > 0;
+  }
+
   async getEquipmentByUserId(
     userId: string,
     tx?: Prisma.TransactionClient,

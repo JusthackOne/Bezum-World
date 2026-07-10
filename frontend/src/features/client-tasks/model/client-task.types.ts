@@ -12,6 +12,7 @@ export interface ClientTask {
   id: string;
   type: ClientTaskType;
   title: string;
+  description: string | null;
   image?: string | null;
   rewardMoney?: number | null;
   rewardGameScore?: number | null;

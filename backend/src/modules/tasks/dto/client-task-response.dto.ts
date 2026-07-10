@@ -24,6 +24,13 @@ export class ClientTaskResponseDto {
   title!: string;
 
   @ApiPropertyOptional({
+    description: 'Task description',
+    nullable: true,
+    example: 'Run at least 3km and attach screenshot from fitness app.',
+  })
+  description!: string | null;
+
+  @ApiPropertyOptional({
     description: 'Task image URL',
     nullable: true,
     example: '/uploads/tasks/01-task-image.jpg',

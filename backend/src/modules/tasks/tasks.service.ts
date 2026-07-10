@@ -522,6 +522,7 @@ export class TasksService {
       id: task.id,
       type: task.type,
       title: task.title,
+      description: task.description,
       image: task.image,
       rewardMoney: task.rewardMoney,
       rewardGameScore: task.rewardGameScore,

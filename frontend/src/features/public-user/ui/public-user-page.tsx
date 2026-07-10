@@ -17,6 +17,7 @@ import {
   useEquipUserItemMutation,
   usePublicUserItemsQuery,
   usePublicUserProfileQuery,
+  useUnequipUserItemMutation,
   useUserEquipmentQuery,
 } from "@/features/public-user/api";
 import type {
@@ -231,16 +232,16 @@ function UserItemsCard({
   items,
   equipment,
   canEquip,
-  isEquipping,
-  onEquip,
+  isEquipmentActionPending,
+  onEquipmentAction,
   isPending,
 }: {
   profileUsername: string;
   items: PublicUserItem[];
   equipment: PublicUserEquipment;
   canEquip: boolean;
-  isEquipping: boolean;
-  onEquip: (itemId: string) => void;
+  isEquipmentActionPending: boolean;
+  onEquipmentAction: (itemId: string, isEquipped: boolean) => void;
   isPending: boolean;
 }) {
   const [selectedItem, setSelectedItem] = useState<ItemDisplay | null>(null);
@@ -287,8 +288,12 @@ function UserItemsCard({
                     item={item}
                     onOpenDetails={setSelectedItem}
                     actionLabel={canEquip ? actionLabel : undefined}
-                    onAction={canEquip ? (clickedItem) => onEquip(clickedItem.id) : undefined}
-                    actionDisabled={isEquipping}
+                    onAction={
+                      canEquip
+                        ? (clickedItem) => onEquipmentAction(clickedItem.id, isEquipped)
+                        : undefined
+                    }
+                    actionDisabled={isEquipmentActionPending}
                     actionAriaLabel={`${actionLabel} ${item.name}`}
                   />
                 );
@@ -305,6 +310,24 @@ function UserItemsCard({
       />
     </>
   );
+}
+
+function updateEquipmentCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  profile: PublicUserProfile,
+  response: { equipped: PublicUserEquipment },
+) {
+  queryClient.setQueryData(queryKeys.userEquipment(profile.id), response.equipped);
+
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.userEquipment(profile.id),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.publicUserProfile(profile.username),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.publicUserItems(profile.username),
+  });
 }
 
 export function PublicUserPage({ username }: PublicUserPageProps) {
@@ -326,6 +349,7 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
     Boolean(profileQuery.data?.id),
   );
   const equipMutation = useEquipUserItemMutation();
+  const unequipMutation = useUnequipUserItemMutation();
 
   const isOwnProfile =
     isSessionInitialized &&
@@ -436,26 +460,18 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
               items={itemsQuery.data?.items ?? []}
               equipment={equipmentQuery.data ?? {}}
               canEquip={isOwnProfile}
-              isEquipping={equipMutation.isPending}
-              onEquip={(itemId) => {
-                if (!profileQuery.data?.id) {
+              isEquipmentActionPending={equipMutation.isPending || unequipMutation.isPending}
+              onEquipmentAction={(itemId, isEquipped) => {
+                if (!profileQuery.data) {
                   return;
                 }
 
-                equipMutation.mutate(itemId, {
-                  onSuccess: (response) => {
-                    queryClient.setQueryData(
-                      queryKeys.userEquipment(profileQuery.data.id),
-                      response.equipped,
-                    );
-
-                    void queryClient.invalidateQueries({
-                      queryKey: queryKeys.userEquipment(profileQuery.data.id),
-                    });
-                    void queryClient.invalidateQueries({
-                      queryKey: queryKeys.publicUserItems(profileQuery.data.username),
-                    });
-                  },
+                const mutation = isEquipped ? unequipMutation : equipMutation;
+                mutation.mutate(itemId, {
+                  onSuccess: (response) =>
+                    profileQuery.data
+                      ? updateEquipmentCache(queryClient, profileQuery.data, response)
+                      : undefined,
                 });
               }}
               isPending={itemsQuery.isPending}

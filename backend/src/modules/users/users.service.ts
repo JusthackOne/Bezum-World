@@ -21,6 +21,7 @@ import {
 } from './dto';
 import {
   UserEquipmentRepository,
+  type UserEquipment,
   UserItemsRepository,
   UserProfileRepository,
 } from './repositories';
@@ -48,6 +49,9 @@ export class UsersService {
       throw new NotFoundException('User is not found');
     }
 
+    const equipment = await this.userEquipmentRepository.getEquipmentByUserId(account.id);
+    const finalAttributes = this.getFinalAttributes(account, equipment);
+
     return {
       id: account.id,
       username: account.username,
@@ -55,12 +59,7 @@ export class UsersService {
       profilePhoto: account.avatarUrl,
       balance: account.balance,
       gameScore: account.gameScore,
-      attributes: {
-        strength: account.strength,
-        charisma: account.charisma,
-        endurance: account.endurance,
-        intelligence: account.intelligence,
-      },
+      attributes: finalAttributes,
     };
   }
 
@@ -179,6 +178,41 @@ export class UsersService {
     });
   }
 
+  async unequipItemByUser(itemId: string, accountId: string): Promise<EquipItemByUserResponse> {
+    return this.prisma.$transaction(async (tx) => {
+      const account = await this.accountRepository.findByIdInTransaction(accountId, tx);
+
+      if (!account) {
+        throw new UnauthorizedException('Account is not found');
+      }
+
+      const item = await this.itemRepository.findById(itemId, tx);
+
+      if (!item) {
+        throw new NotFoundException('Item is not found');
+      }
+
+      if (item.ownerUserId !== accountId) {
+        throw new ForbiddenException('Item does not belong to user');
+      }
+
+      if (!this.isSupportedEquipmentSlot(item.slotType)) {
+        throw new BadRequestException('Item slot type is not supported for equipment');
+      }
+
+      await this.userEquipmentRepository.clearEquipmentByItemIdForUser(
+        itemId,
+        item.slotType,
+        accountId,
+        tx,
+      );
+
+      return {
+        equipped: await this.getUserEquipmentByUserId(accountId, tx),
+      };
+    });
+  }
+
   async getUserEquipmentByUserId(
     userId: string,
     tx?: Prisma.TransactionClient,
@@ -218,6 +252,41 @@ export class UsersService {
       intelligence: account.intelligence,
       lastTimeLoggedIn: account.lastTimeLoggedIn?.toISOString() ?? null,
       createdAt: account.createdAt.toISOString(),
+    };
+  }
+
+  private getFinalAttributes(
+    account: Pick<Account, 'strength' | 'charisma' | 'endurance' | 'intelligence'>,
+    equipment: UserEquipment[],
+  ): PublicUserProfileDto['attributes'] {
+    const bonuses = equipment.reduce(
+      (accumulator, equipmentSlot) => {
+        const item = equipmentSlot.item;
+
+        if (!item) {
+          return accumulator;
+        }
+
+        return {
+          strength: accumulator.strength + (item.strength ?? 0),
+          charisma: accumulator.charisma + (item.charisma ?? 0),
+          endurance: accumulator.endurance + (item.agility ?? 0),
+          intelligence: accumulator.intelligence + (item.intelligence ?? 0),
+        };
+      },
+      {
+        strength: 0,
+        charisma: 0,
+        endurance: 0,
+        intelligence: 0,
+      },
+    );
+
+    return {
+      strength: account.strength + bonuses.strength,
+      charisma: account.charisma + bonuses.charisma,
+      endurance: account.endurance + bonuses.endurance,
+      intelligence: account.intelligence + bonuses.intelligence,
     };
   }
 

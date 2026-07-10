@@ -109,6 +109,7 @@ export function TasksPage() {
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientTaskTypeFilter>("all");
+  const [selectedTask, setSelectedTask] = useState<ClientTask | null>(null);
   const [proofTask, setProofTask] = useState<ClientTask | null>(null);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofValidationMessage, setProofValidationMessage] = useState<string | null>(null);
@@ -314,11 +315,27 @@ export function TasksPage() {
               const isSubmitting = submittingTaskId === task.id;
               const isLockedEventTask = task.type === "event" && !task.isAvailable;
               const actionDisabled = !task.isAvailable || isSubmitting;
+              const isEventTask = task.type === "event";
 
               return (
                 <article
                   key={task.id}
-                  className="overflow-hidden rounded-xl border bg-card shadow-sm"
+                  className={[
+                    "overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md",
+                    "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    isEventTask
+                      ? "border-red-500/80 shadow-[0_0_0_1px_rgba(239,68,68,0.2),0_10px_28px_rgba(127,29,29,0.16)]"
+                      : "border-border",
+                  ].join(" ")}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedTask(task)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedTask(task);
+                    }
+                  }}
                 >
                   <div className="h-56 w-full overflow-hidden bg-muted/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -326,7 +343,14 @@ export function TasksPage() {
                   </div>
 
                   <div className="space-y-4 p-4">
-                    <h2 className="line-clamp-2 text-base font-semibold">{task.title}</h2>
+                    <h2 className="line-clamp-2 text-base font-semibold">
+                      {isEventTask ? (
+                        <span className="mr-2 inline-flex rounded border border-red-500/70 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-300">
+                          Event
+                        </span>
+                      ) : null}
+                      {task.title}
+                    </h2>
 
                     <RewardBadgesList rewards={rewardVisuals} emptyLabel="No rewards" />
 
@@ -334,7 +358,8 @@ export function TasksPage() {
                       type="button"
                       className="h-11 w-full text-base font-semibold"
                       disabled={actionDisabled}
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         if (task.requiresProofImage) {
                           setProofTask(task);
                           setProofFile(null);
@@ -360,6 +385,65 @@ export function TasksPage() {
           </div>
         )}
       </section>
+
+      <Dialog open={selectedTask !== null} onOpenChange={(open) => !open && setSelectedTask(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          {selectedTask ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex flex-wrap items-center gap-2">
+                  {selectedTask.type === "event" ? (
+                    <span className="inline-flex rounded border border-red-500/70 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-300">
+                      Event
+                    </span>
+                  ) : null}
+                  {selectedTask.title}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedTask.description ?? "No description available."}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div
+                  className={[
+                    "h-56 overflow-hidden rounded-lg border bg-muted/30",
+                    selectedTask.type === "event" ? "border-red-500/80" : "border-border",
+                  ].join(" ")}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedTask.image ? resolveAssetUrl(selectedTask.image) : fallbackTaskImage}
+                    alt={selectedTask.title}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-md border bg-muted/10 px-3 py-2">
+                    <p className="text-muted-foreground text-xs">Type</p>
+                    <p className="font-semibold capitalize">{selectedTask.type}</p>
+                  </div>
+                  <div className="rounded-md border bg-muted/10 px-3 py-2">
+                    <p className="text-muted-foreground text-xs">Status</p>
+                    <p className="font-semibold">
+                      {selectedTask.isAvailable ? "Available" : "Unavailable"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Rewards</p>
+                  <RewardBadgesList
+                    rewards={getTaskRewardVisuals(selectedTask)}
+                    emptyLabel="No rewards"
+                  />
+                </div>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={proofTask !== null}
