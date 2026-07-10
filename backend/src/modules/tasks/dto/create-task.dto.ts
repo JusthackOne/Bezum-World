@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { Transform, Type, plainToInstance } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -14,6 +14,33 @@ import {
 import { TaskType } from '@prisma/client';
 
 import { TaskRewardAttributesDto } from './task-reward-attributes.dto';
+
+function transformRewardAttributes(value: unknown): unknown {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const parsedValue =
+    typeof value === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(value) as unknown;
+          } catch {
+            return value;
+          }
+        })()
+      : value;
+
+  if (
+    typeof parsedValue !== 'object' ||
+    parsedValue === null ||
+    Array.isArray(parsedValue)
+  ) {
+    return parsedValue;
+  }
+
+  return plainToInstance(TaskRewardAttributesDto, parsedValue);
+}
 
 export class CreateTaskDto {
   @ApiProperty({
@@ -77,17 +104,7 @@ export class CreateTaskDto {
     type: TaskRewardAttributesDto,
   })
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) => {
-    if (typeof value !== 'string') {
-      return value;
-    }
-
-    try {
-      return JSON.parse(value) as unknown;
-    } catch {
-      return value;
-    }
-  })
+  @Transform(({ value }: { value: unknown }) => transformRewardAttributes(value))
   @ValidateNested()
   @Type(() => TaskRewardAttributesDto)
   rewardAttributes?: TaskRewardAttributesDto;
