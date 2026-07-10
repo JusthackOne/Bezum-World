@@ -8,6 +8,16 @@ import { usePurchaseShopItemMutation, useShopItemsQuery } from "@/features/shop/
 import type { ShopItem } from "@/features/shop/model/shop-item.types";
 import { queryKeys } from "@/shared/config/query-keys";
 import { cn } from "@/shared/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/8bit/alert-dialog";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { Checkbox } from "@/shared/ui/checkbox";
@@ -77,6 +87,7 @@ export function ShopPage() {
   const purchaseMutation = usePurchaseShopItemMutation();
 
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
+  const [pendingPurchaseItem, setPendingPurchaseItem] = useState<ShopItem | null>(null);
   const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [selectedRarities, setSelectedRarities] = useState<RarityFilterOptionValue[]>(["all"]);
@@ -385,7 +396,7 @@ export function ShopPage() {
                     isActionLoading={isBuying}
                     actionDisabled={isBuying}
                     onAction={(clickedItem) => {
-                      void handleBuy(clickedItem.id);
+                      setPendingPurchaseItem(clickedItem);
                     }}
                     actionAriaLabel={`Buy ${item.name}`}
                   />
@@ -401,6 +412,42 @@ export function ShopPage() {
         open={selectedItem !== null}
         onOpenChange={(open) => !open && setSelectedItem(null)}
       />
+      <AlertDialog
+        open={pendingPurchaseItem !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingPurchaseItem(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm purchase</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingPurchaseItem
+                ? `Buy "${pendingPurchaseItem.name}" for ${pendingPurchaseItem.price} coins?`
+                : "Buy this item?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(buyingItemId)}>No</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={Boolean(buyingItemId)}
+              onClick={() => {
+                if (!pendingPurchaseItem) {
+                  return;
+                }
+
+                const itemId = pendingPurchaseItem.id;
+                setPendingPurchaseItem(null);
+                void handleBuy(itemId);
+              }}
+            >
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Toast
         key={toastState.key}
         open={toastState.open}

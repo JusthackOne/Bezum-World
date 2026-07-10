@@ -12,6 +12,16 @@ import type {
 } from "@/features/client-tasks/model/client-task.types";
 import { queryKeys } from "@/shared/config/query-keys";
 import { resolveAssetUrl } from "@/shared/lib/item-display";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/8bit/alert-dialog";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import {
@@ -41,6 +51,11 @@ interface ToastState {
   description: string;
   rewards: RewardBadgeItem[];
   variant: ToastVariant;
+}
+
+interface PendingTaskCompletion {
+  task: ClientTask;
+  proofImageFile?: File;
 }
 
 const taskTypeFilterOptions: Array<{ label: string; value: ClientTaskTypeFilter }> = [
@@ -113,6 +128,7 @@ export function TasksPage() {
   const [proofTask, setProofTask] = useState<ClientTask | null>(null);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofValidationMessage, setProofValidationMessage] = useState<string | null>(null);
+  const [pendingCompletion, setPendingCompletion] = useState<PendingTaskCompletion | null>(null);
   const [submittingTaskId, setSubmittingTaskId] = useState<string | null>(null);
   const [toastState, setToastState] = useState<ToastState>({
     key: 0,
@@ -367,7 +383,7 @@ export function TasksPage() {
                           return;
                         }
 
-                        void completeTask(task);
+                        setPendingCompletion({ task });
                       }}
                     >
                       {isSubmitting
@@ -413,7 +429,9 @@ export function TasksPage() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={selectedTask.image ? resolveAssetUrl(selectedTask.image) : fallbackTaskImage}
+                    src={
+                      selectedTask.image ? resolveAssetUrl(selectedTask.image) : fallbackTaskImage
+                    }
                     alt={selectedTask.title}
                     className="h-full w-full object-cover"
                   />
@@ -527,7 +545,7 @@ export function TasksPage() {
                   return;
                 }
 
-                void completeTask(proofTask, proofFile);
+                setPendingCompletion({ task: proofTask, proofImageFile: proofFile });
                 setProofTask(null);
                 setProofFile(null);
                 setProofValidationMessage(null);
@@ -538,6 +556,43 @@ export function TasksPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={pendingCompletion !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingCompletion(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm task completion</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingCompletion
+                ? `Complete "${pendingCompletion.task.title}"?`
+                : "Complete this task?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(submittingTaskId)}>No</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={Boolean(submittingTaskId)}
+              onClick={() => {
+                if (!pendingCompletion) {
+                  return;
+                }
+
+                const completion = pendingCompletion;
+                setPendingCompletion(null);
+                void completeTask(completion.task, completion.proofImageFile);
+              }}
+            >
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Toast
         key={toastState.key}

@@ -16,10 +16,11 @@ import type {
 } from './dto';
 import { BattleRepository, type BattlePlayerRecord } from './repositories';
 
-const BASE_GAME_SCORE_REWARD = 100;
 const BASE_COIN_REWARD = 100;
 const MIN_COIN_REWARD = 10;
-const MAX_COIN_REWARD = 300;
+const MAX_COIN_REWARD = 100;
+const MIN_GAME_SCORE_REWARD = 0;
+const MAX_GAME_SCORE_REWARD = 100;
 
 interface FinalBattleStats {
   strength: number;
@@ -142,15 +143,18 @@ export class BattlesService {
       const noisyCurrentUserPower = this.applyPowerNoise(currentUserPower);
       const noisyOpponentPower = this.applyPowerNoise(opponentPower);
       const delta = noisyCurrentUserPower - noisyOpponentPower;
-      const attackerWinProbability = 1 / (1 + Math.exp(-delta / 10));
+      const attackerWinProbability = 1 / (1 + Math.exp(-delta / 20));
       const attackerWon = Math.random() < attackerWinProbability;
 
       const winner = attackerWon ? currentUser : opponentUser;
       const loser = attackerWon ? opponentUser : currentUser;
       const winnerPower = attackerWon ? currentUserPower : opponentPower;
       const loserPower = attackerWon ? opponentPower : currentUserPower;
+      const winnerWinProbability = attackerWon
+        ? attackerWinProbability
+        : 1 - attackerWinProbability;
       const transferAmount = this.calculateCoinReward(winnerPower, loserPower, loser.balance);
-      const gameScoreReward = BASE_GAME_SCORE_REWARD;
+      const gameScoreReward = this.calculateGameScoreReward(winnerWinProbability);
 
       await this.battleRepository.transferCoinsAndApplyGameScore(
         winner.id,
@@ -253,7 +257,7 @@ export class BattlesService {
 
   private calculateWinProbability(attackerPower: number, defenderPower: number): number {
     const delta = attackerPower - defenderPower;
-    return 1 / (1 + Math.exp(-delta / 10));
+    return 1 / (1 + Math.exp(-delta / 20));
   }
 
   private estimateWinChancePercent(currentUserPower: number, opponentPower: number): number {
@@ -275,6 +279,12 @@ export class BattlesService {
     const clampedReward = this.clamp(scaledReward, MIN_COIN_REWARD, MAX_COIN_REWARD);
 
     return Math.min(clampedReward, loserBalance);
+  }
+
+  private calculateGameScoreReward(winnerWinProbability: number): number {
+    const underdogScore = Math.round((1 - winnerWinProbability) * MAX_GAME_SCORE_REWARD);
+
+    return this.clamp(underdogScore, MIN_GAME_SCORE_REWARD, MAX_GAME_SCORE_REWARD);
   }
 
   private clamp(value: number, min: number, max: number): number {
