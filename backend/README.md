@@ -20,6 +20,7 @@ Requirements:
 
 - Bun `>=1.3`
 - PostgreSQL and Redis. From the repository root, run `docker compose up -d postgres redis`.
+- Docker Compose files are kept at the repository root. There is no backend-local Compose file.
 
 Setup:
 
@@ -30,6 +31,8 @@ bun run prisma:generate
 bun run prisma:migrate:dev
 bun run dev
 ```
+
+If you are working from the `backend/` directory and want to use Make targets, they call the root Compose file through `../docker-compose.yml`.
 
 The backend runs on `http://localhost:3001` with the default local `.env.example`. In production Docker it listens on port `3000` inside the container and is exposed on host port `3001` by the root Compose file.
 

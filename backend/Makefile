@@ -20,10 +20,10 @@ prisma-migrate:
 	bun run prisma:migrate:dev
 
 docker-up:
-	docker compose up -d postgres redis
+	docker compose -f ../docker-compose.yml up -d postgres redis
 
 docker-down:
-	docker compose down
+	docker compose -f ../docker-compose.yml down
 
 docker-up-full:
-	docker compose up -d --build
+	docker compose -f ../docker-compose.yml up -d --build
