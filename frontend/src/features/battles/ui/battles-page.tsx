@@ -2,29 +2,16 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import {
-  FootprintsIcon,
-  HardHatIcon,
-  PersonStandingIcon,
-  ShieldIcon,
-  ShirtIcon,
-  SwordIcon,
-  UserCircle2Icon,
-} from "lucide-react";
-import { useMemo, useState, type ComponentType } from "react";
+import { UserCircle2Icon } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { useBattlePlayersQuery, useStartBattleMutation } from "@/features/battles/api";
-import type { BattlePlayer, BattlePlayerEquipment } from "@/features/battles/model/battles.types";
+import type { BattlePlayer } from "@/features/battles/model/battles.types";
 import { publicUserRoutes } from "@/features/public-user/routes";
 import { queryKeys } from "@/shared/config/query-keys";
 import { resolveAssetUrl } from "@/shared/lib/item-display";
-import {
-  AttributeBadge,
-  ProfileItemSlot,
-  RewardBadgesList,
-  type RewardBadgeItem,
-} from "@/shared/ui";
+import { AttributeBadge, RewardBadgesList, type RewardBadgeItem } from "@/shared/ui";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import {
@@ -48,19 +35,6 @@ interface ToastState {
   variant: ToastVariant;
 }
 
-const equipmentSlots: Array<{
-  key: keyof BattlePlayerEquipment;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-}> = [
-  { key: "helmet", label: "Helmet", icon: HardHatIcon },
-  { key: "leftWeapon", label: "Left", icon: ShieldIcon },
-  { key: "chest", label: "Chest", icon: ShirtIcon },
-  { key: "rightWeapon", label: "Right", icon: SwordIcon },
-  { key: "pants", label: "Pants", icon: PersonStandingIcon },
-  { key: "boots", label: "Boots", icon: FootprintsIcon },
-];
-
 function PlayerRow({
   player,
   isBattling,
@@ -75,7 +49,7 @@ function PlayerRow({
   const avatarUrl = player.avatar ? resolveAssetUrl(player.avatar) : null;
 
   return (
-    <article className="grid gap-4 rounded-xl border bg-card p-4 xl:grid-cols-[220px_minmax(0,1fr)_180px_120px_170px] xl:items-center">
+    <article className="grid gap-4 rounded-xl border bg-card p-4 xl:grid-cols-5 xl:items-center">
       <button
         type="button"
         className="flex min-w-0 items-center gap-3 rounded-lg text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -100,19 +74,16 @@ function PlayerRow({
         </span>
       </button>
 
-      <TooltipProvider>
-        <div className="grid grid-cols-3 gap-2">
-          {equipmentSlots.map((slot) => (
-            <ProfileItemSlot
-              key={slot.key}
-              label={slot.label}
-              icon={slot.icon}
-              item={player.equipment[slot.key]}
-              className="h-16 w-16"
-            />
-          ))}
-        </div>
-      </TooltipProvider>
+      <div className="rounded-lg border border-green-500/40 bg-green-500/10 px-3 py-2 text-center">
+        <p className="text-sm font-semibold text-green-700 dark:text-green-300">Win</p>
+        <RewardBadgesList
+          rewards={[
+            { kind: "gameScore", value: player.winGameScoreReward },
+            { kind: "balance", value: player.winGoldReward },
+          ]}
+          className="mt-2 justify-center"
+        />
+      </div>
 
       <TooltipProvider>
         <div className="grid grid-cols-2 gap-2">

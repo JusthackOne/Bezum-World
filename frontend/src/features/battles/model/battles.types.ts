@@ -37,6 +37,8 @@ export interface BattlePlayer {
   equipment: BattlePlayerEquipment;
   stats: BattlePlayerStats;
   winChancePercent: number;
+  winGameScoreReward: number;
+  winGoldReward: number;
   isBattleAvailableToday: boolean;
 }
 

@@ -42,6 +42,22 @@ export class BattlePlayerDto {
   winChancePercent!: number;
 
   @ApiProperty({
+    description: 'GameScore reward current user receives if they win this battle',
+    minimum: 0,
+    maximum: 100,
+    example: 41,
+  })
+  winGameScoreReward!: number;
+
+  @ApiProperty({
+    description: 'Gold reward current user receives if they win this battle',
+    minimum: 0,
+    maximum: 10,
+    example: 4,
+  })
+  winGoldReward!: number;
+
+  @ApiProperty({
     description: 'Whether current user can battle this opponent right now',
     example: true,
   })

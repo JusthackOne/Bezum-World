@@ -58,6 +58,7 @@ export class BattlesService {
       .map((opponent) => {
         const opponentStats = this.getFinalStats(opponent);
         const opponentPower = this.calculatePower(opponentStats);
+        const winProbability = this.calculateWinProbability(currentUserPower, opponentPower);
 
         return {
           gameScore: opponent.gameScore,
@@ -66,7 +67,9 @@ export class BattlesService {
           avatar: opponent.avatarUrl,
           equipment: this.toBattleEquipment(opponent),
           stats: this.toBattleStatsDto(opponentStats),
-          winChancePercent: this.estimateWinChancePercent(currentUserPower, opponentPower),
+          winChancePercent: this.toWinChancePercent(winProbability),
+          winGameScoreReward: this.calculateGameScoreReward(winProbability),
+          winGoldReward: this.calculateCoinReward(winProbability),
           isBattleAvailableToday: !battledDefenderIds.has(opponent.id),
         };
       })
@@ -91,6 +94,8 @@ export class BattlesService {
         equipment: entry.equipment,
         stats: entry.stats,
         winChancePercent: entry.winChancePercent,
+        winGameScoreReward: entry.winGameScoreReward,
+        winGoldReward: entry.winGoldReward,
         isBattleAvailableToday: entry.isBattleAvailableToday,
       }));
 
@@ -139,6 +144,7 @@ export class BattlesService {
 
       const currentUserPower = this.calculatePower(currentUserStats);
       const opponentPower = this.calculatePower(opponentStats);
+      const currentUserWinProbability = this.calculateWinProbability(currentUserPower, opponentPower);
       const noisyCurrentUserPower = this.applyPowerNoise(currentUserPower);
       const noisyOpponentPower = this.applyPowerNoise(opponentPower);
       const delta = noisyCurrentUserPower - noisyOpponentPower;
@@ -148,8 +154,8 @@ export class BattlesService {
       const winner = attackerWon ? currentUser : opponentUser;
       const loser = attackerWon ? opponentUser : currentUser;
       const winnerWinProbability = attackerWon
-        ? attackerWinProbability
-        : 1 - attackerWinProbability;
+        ? currentUserWinProbability
+        : 1 - currentUserWinProbability;
       const coinReward = this.calculateCoinReward(winnerWinProbability);
       const gameScoreReward = this.calculateGameScoreReward(winnerWinProbability);
 
@@ -256,8 +262,7 @@ export class BattlesService {
     return 1 / (1 + Math.exp(-delta / 20));
   }
 
-  private estimateWinChancePercent(currentUserPower: number, opponentPower: number): number {
-    const probability = this.calculateWinProbability(currentUserPower, opponentPower);
+  private toWinChancePercent(probability: number): number {
     return Number((probability * 100).toFixed(2));
   }
 
