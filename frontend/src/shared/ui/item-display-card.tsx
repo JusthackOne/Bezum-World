@@ -4,8 +4,10 @@ import { CoinsIcon } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
 import { formatBalance, getItemAttributeRows, resolveAssetUrl } from "@/shared/lib/item-display";
+import { isCreatedWithinLastDay } from "@/shared/lib/newness";
 import type { ItemDisplay } from "@/shared/model/item-display.types";
 import { Button } from "@/shared/ui/8bit/button";
+import { NewBadge } from "@/shared/ui/new-badge";
 import clsx from "clsx";
 
 const itemAttributeVisuals: Record<
@@ -90,6 +92,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
   const itemAttributes = getItemAttributeRows(item);
   const imageUrl = item.image_url ? resolveAssetUrl(item.image_url) : null;
   const hasAction = Boolean(actionLabel) && Boolean(onAction);
+  const isNew = isCreatedWithinLastDay(item.created_at);
 
   return (
     <article
@@ -130,6 +133,8 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
 
       <div className="absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_center,rgba(2,6,23,0.1)_0%,rgba(2,6,23,0.46)_72%,rgba(2,6,23,0.74)_100%)]" />
       <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(2,6,23,0.16)_0%,rgba(2,6,23,0.04)_38%,rgba(2,6,23,0.74)_100%)]" />
+
+      {isNew ? <NewBadge className="absolute top-3 right-3 z-30" /> : null}
 
       {showPrice ? (
         <div className="absolute top-3 left-1/2 z-20 -translate-x-1/2">

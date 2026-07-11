@@ -19,6 +19,7 @@ export interface ClientTask {
   rewardAttributes?: ClientTaskRewardAttributes | null;
   requiresProofImage: boolean;
   isAvailable: boolean;
+  createdAt: string;
 }
 
 export interface ClientTasksListResponse {

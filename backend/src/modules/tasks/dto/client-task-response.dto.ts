@@ -71,6 +71,12 @@ export class ClientTaskResponseDto {
     example: true,
   })
   isAvailable!: boolean;
+
+  @ApiProperty({
+    description: 'Task creation time',
+    example: '2026-07-11T11:10:00.000Z',
+  })
+  createdAt!: string;
 }
 
 export class ClientTasksListResponseDto {

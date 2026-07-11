@@ -569,6 +569,7 @@ export class TasksService {
         dailySubmissionCounts,
         weeklySubmissionCounts,
       ),
+      createdAt: task.createdAt.toISOString(),
     };
   }
 

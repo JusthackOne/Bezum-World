@@ -29,4 +29,5 @@ export interface ItemDisplay {
   slotType?: ItemDisplaySlotType;
   slot_type?: ItemDisplaySlotType;
   durability: number | null;
+  created_at?: string;
 }

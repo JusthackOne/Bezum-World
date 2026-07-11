@@ -12,6 +12,7 @@ import type {
 } from "@/features/client-tasks/model/client-task.types";
 import { getTaskImageUrl } from "@/features/client-tasks/ui/compact-task-card";
 import { queryKeys } from "@/shared/config/query-keys";
+import { isCreatedWithinLastDay } from "@/shared/lib/newness";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/shared/ui/8bit/toast";
+import { NewBadge } from "@/shared/ui";
 
 type ToastVariant = "default" | "destructive";
 
@@ -329,12 +331,13 @@ export function TasksPage() {
               const isCompletedEventTask = task.type === "event" && !task.isAvailable;
               const actionDisabled = !task.isAvailable || isSubmitting;
               const isEventTask = task.type === "event";
+              const isNewTask = isCreatedWithinLastDay(task.createdAt);
 
               return (
                 <article
                   key={task.id}
                   className={[
-                    "overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md",
+                    "relative overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md",
                     "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     isEventTask
                       ? "border-red-500/80 shadow-[0_0_0_1px_rgba(239,68,68,0.2),0_10px_28px_rgba(127,29,29,0.16)]"
@@ -350,6 +353,11 @@ export function TasksPage() {
                     }
                   }}
                 >
+                  {isNewTask ? (
+                    <div className="pointer-events-none absolute right-3 top-3 z-20">
+                      <NewBadge />
+                    </div>
+                  ) : null}
                   <div className="h-56 w-full overflow-hidden bg-muted/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imageUrl} alt={task.title} className="h-full w-full object-cover" />
