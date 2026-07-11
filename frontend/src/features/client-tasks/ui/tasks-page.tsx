@@ -329,7 +329,7 @@ export function TasksPage() {
               const rewardVisuals = getTaskRewardVisuals(task);
               const imageUrl = task.image ? resolveAssetUrl(task.image) : fallbackTaskImage;
               const isSubmitting = submittingTaskId === task.id;
-              const isLockedEventTask = task.type === "event" && !task.isAvailable;
+              const isCompletedEventTask = task.type === "event" && !task.isAvailable;
               const actionDisabled = !task.isAvailable || isSubmitting;
               const isEventTask = task.type === "event";
 
@@ -388,8 +388,8 @@ export function TasksPage() {
                     >
                       {isSubmitting
                         ? "Completing..."
-                        : isLockedEventTask
-                          ? "Event Locked"
+                        : isCompletedEventTask
+                          ? "Event Completed"
                           : !task.isAvailable
                             ? "Unavailable"
                             : "Complete Task"}
@@ -445,7 +445,11 @@ export function TasksPage() {
                   <div className="rounded-md border bg-muted/10 px-3 py-2">
                     <p className="text-muted-foreground text-xs">Status</p>
                     <p className="font-semibold">
-                      {selectedTask.isAvailable ? "Available" : "Unavailable"}
+                      {selectedTask.type === "event" && !selectedTask.isAvailable
+                        ? "Completed"
+                        : selectedTask.isAvailable
+                          ? "Available"
+                          : "Unavailable"}
                     </p>
                   </div>
                 </div>

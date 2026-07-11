@@ -25,13 +25,19 @@ import type {
   UpdateTaskDto,
   UserTaskSubmissionsResponseDto,
 } from './dto';
-import { TaskRepository, TaskSubmissionRepository, type UpdateTaskInput } from './repositories';
+import {
+  TaskRepository,
+  TaskSubmissionRepository,
+  type CompletedEventTaskSubmission,
+  type UpdateTaskInput,
+} from './repositories';
 import type { TaskRewardAttributes } from './types/task-reward-attributes.type';
 import { PrismaService } from '../../database/prisma/prisma.service';
 
 const DEFAULT_ADMIN_TASKS_PAGE = 1;
 const DEFAULT_ADMIN_TASKS_LIMIT = 20;
 const DEFAULT_DAILY_SUBMISSION_LIMIT = 1;
+const EVENT_COMPLETION_FEED_VISIBILITY_MS = 3 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class TasksService {
@@ -178,13 +184,17 @@ export class TasksService {
     const dailyRange = this.getUtcDayRange(now);
     const weeklyRange = this.getUtcIsoWeekRange(now);
 
-    const [tasks, completedEventTaskIds, dailySubmissionCounts, weeklySubmissionCounts] =
+    const completedEventVisibleAfter = new Date(
+      now.getTime() - EVENT_COMPLETION_FEED_VISIBILITY_MS,
+    );
+
+    const [tasks, completedEventSubmissions, dailySubmissionCounts, weeklySubmissionCounts] =
       await Promise.all([
         this.taskRepository.findManyForClient({
           ...(query.search !== undefined ? { search: query.search } : {}),
           ...(query.type !== undefined ? { type: query.type } : {}),
         }),
-        this.taskSubmissionRepository.findCompletedEventTaskIds(),
+        this.taskSubmissionRepository.findCompletedEventSubmissions(),
         this.taskSubmissionRepository.countByTaskGroupedForUserInRange(
           userId,
           dailyRange.start,
@@ -196,12 +206,22 @@ export class TasksService {
           weeklyRange.end,
         ),
       ]);
+    const completedEventSubmissionsByTaskId = this.toCompletedEventSubmissionsByTaskId(
+      completedEventSubmissions,
+    );
+    const visibleTasks = tasks.filter((task) =>
+      this.shouldShowClientTask(
+        task,
+        completedEventSubmissionsByTaskId,
+        completedEventVisibleAfter,
+      ),
+    );
 
     return {
-      items: tasks.map((task) =>
+      items: visibleTasks.map((task) =>
         this.toClientTaskResponse(
           task,
-          completedEventTaskIds,
+          completedEventSubmissionsByTaskId,
           dailySubmissionCounts,
           weeklySubmissionCounts,
         ),
@@ -514,23 +534,26 @@ export class TasksService {
 
   private toClientTaskResponse(
     task: Task,
-    completedEventTaskIds: Set<string>,
+    completedEventSubmissionsByTaskId: Map<string, CompletedEventTaskSubmission>,
     dailySubmissionCounts: Map<string, number>,
     weeklySubmissionCounts: Map<string, number>,
   ): ClientTaskResponseDto {
+    const completedEventSubmission =
+      task.type === TaskType.event ? completedEventSubmissionsByTaskId.get(task.id) : undefined;
+
     return {
       id: task.id,
       type: task.type,
       title: task.title,
       description: task.description,
-      image: task.image,
+      image: completedEventSubmission?.proofImage ?? task.image,
       rewardMoney: task.rewardMoney,
       rewardGameScore: task.rewardGameScore,
       rewardAttributes: this.toRewardAttributesDto(task.rewardAttributes),
       requiresProofImage: task.requiresProofImage,
       isAvailable: this.getClientTaskAvailability(
         task,
-        completedEventTaskIds,
+        completedEventSubmissionsByTaskId,
         dailySubmissionCounts,
         weeklySubmissionCounts,
       ),
@@ -539,12 +562,12 @@ export class TasksService {
 
   private getClientTaskAvailability(
     task: Task,
-    completedEventTaskIds: Set<string>,
+    completedEventSubmissionsByTaskId: Map<string, CompletedEventTaskSubmission>,
     dailySubmissionCounts: Map<string, number>,
     weeklySubmissionCounts: Map<string, number>,
   ): boolean {
     if (task.type === TaskType.event) {
-      return !completedEventTaskIds.has(task.id);
+      return !completedEventSubmissionsByTaskId.has(task.id);
     }
 
     if (task.type === TaskType.weekly) {
@@ -553,5 +576,32 @@ export class TasksService {
 
     const dailyLimit = task.submissionLimit ?? DEFAULT_DAILY_SUBMISSION_LIMIT;
     return (dailySubmissionCounts.get(task.id) ?? 0) < dailyLimit;
+  }
+
+  private toCompletedEventSubmissionsByTaskId(
+    submissions: CompletedEventTaskSubmission[],
+  ): Map<string, CompletedEventTaskSubmission> {
+    return new Map(submissions.map((submission) => [submission.taskId, submission]));
+  }
+
+  private shouldShowClientTask(
+    task: Task,
+    completedEventSubmissionsByTaskId: Map<string, CompletedEventTaskSubmission>,
+    completedEventVisibleAfter: Date,
+  ): boolean {
+    if (task.type !== TaskType.event) {
+      return true;
+    }
+
+    const completedEventSubmission = completedEventSubmissionsByTaskId.get(task.id);
+
+    if (!completedEventSubmission) {
+      return true;
+    }
+
+    return (
+      completedEventSubmission.proofImage !== null &&
+      completedEventSubmission.createdAt >= completedEventVisibleAfter
+    );
   }
 }

@@ -10,6 +10,12 @@ export interface CreateTaskSubmissionInput {
   grantedGameScore: number;
 }
 
+export interface CompletedEventTaskSubmission {
+  taskId: string;
+  proofImage: string | null;
+  createdAt: Date;
+}
+
 @Injectable()
 export class TaskSubmissionRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -96,7 +102,9 @@ export class TaskSubmissionRepository {
     );
   }
 
-  async findCompletedEventTaskIds(tx?: Prisma.TransactionClient): Promise<Set<string>> {
+  async findCompletedEventSubmissions(
+    tx?: Prisma.TransactionClient,
+  ): Promise<CompletedEventTaskSubmission[]> {
     const completedEventSubmissions = await this.getClient(tx).taskSubmission.findMany({
       where: {
         task: {
@@ -105,11 +113,16 @@ export class TaskSubmissionRepository {
       },
       select: {
         taskId: true,
+        proofImage: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
       distinct: ['taskId'],
     });
 
-    return new Set(completedEventSubmissions.map((submission) => submission.taskId));
+    return completedEventSubmissions;
   }
 
   private getClient(tx?: Prisma.TransactionClient): PrismaService | Prisma.TransactionClient {
