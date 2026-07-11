@@ -10,8 +10,8 @@ import type {
   ClientTask,
   ClientTaskTypeFilter,
 } from "@/features/client-tasks/model/client-task.types";
+import { getTaskImageUrl } from "@/features/client-tasks/ui/compact-task-card";
 import { queryKeys } from "@/shared/config/query-keys";
-import { resolveAssetUrl } from "@/shared/lib/item-display";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,9 +64,6 @@ const taskTypeFilterOptions: Array<{ label: string; value: ClientTaskTypeFilter 
   { label: "Weekly", value: "weekly" },
   { label: "Event", value: "event" },
 ];
-
-const fallbackTaskImage =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'%3E%3Crect width='1200' height='800' fill='%23181e2b'/%3E%3Cpath d='M0 540 L260 360 L500 520 L760 300 L1200 560 L1200 800 L0 800 Z' fill='%23273245'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23d8dee9' font-size='58' font-family='Segoe UI, Arial, sans-serif'%3ETask%3C/text%3E%3C/svg%3E";
 
 function getTaskRewardVisuals(task: ClientTask): RewardBadgeItem[] {
   const rewards: RewardBadgeItem[] = [];
@@ -327,7 +324,7 @@ export function TasksPage() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {tasks.map((task) => {
               const rewardVisuals = getTaskRewardVisuals(task);
-              const imageUrl = task.image ? resolveAssetUrl(task.image) : fallbackTaskImage;
+              const imageUrl = getTaskImageUrl(task.image);
               const isSubmitting = submittingTaskId === task.id;
               const isCompletedEventTask = task.type === "event" && !task.isAvailable;
               const actionDisabled = !task.isAvailable || isSubmitting;
@@ -430,7 +427,7 @@ export function TasksPage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={
-                      selectedTask.image ? resolveAssetUrl(selectedTask.image) : fallbackTaskImage
+                      getTaskImageUrl(selectedTask.image)
                     }
                     alt={selectedTask.title}
                     className="h-full w-full object-cover"

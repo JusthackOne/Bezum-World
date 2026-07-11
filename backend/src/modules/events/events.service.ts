@@ -3,11 +3,13 @@ import { BattleEventResult, GameEventType, type Prisma } from '@prisma/client';
 
 import type {
   BattleGameEventDto,
+  CompletedTaskDto,
   EventItemDto,
   EventUserDto,
   EventsResponseDto,
   GameEventDto,
   PurchaseGameEventDto,
+  TaskCompletedGameEventDto,
 } from './dto';
 import { EventRepository, type GameEventRecord } from './repositories';
 import { EventFilter } from './types/event-filter.type';
@@ -69,12 +71,26 @@ export class EventsService {
     );
   }
 
+  async createTaskCompletedEvent(
+    input: {
+      userId: string;
+      taskId: string;
+      taskSubmissionId: string;
+      proofImage: string | null;
+    },
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await this.eventRepository.createTaskCompletedEvent(input, tx);
+  }
+
   private toGameEventType(filter: EventFilter): GameEventType | undefined {
     switch (filter) {
       case EventFilter.battles:
         return GameEventType.BATTLE;
       case EventFilter.purchases:
         return GameEventType.PURCHASE;
+      case EventFilter.tasks:
+        return GameEventType.TASK_COMPLETED;
       case EventFilter.all:
         return undefined;
       default:
@@ -95,6 +111,22 @@ export class EventsService {
         user: this.toUserDto(event.purchaseUser),
         item: this.toItemDto(event.item),
       } satisfies PurchaseGameEventDto;
+    }
+
+    if (event.type === GameEventType.TASK_COMPLETED) {
+      if (!event.taskCompletedUser || !event.task || !event.taskSubmissionId) {
+        throw new InternalServerErrorException('Task completed event references are incomplete');
+      }
+
+      return {
+        id: event.id,
+        type: 'TASK_COMPLETED',
+        created_at: event.createdAt.toISOString(),
+        user: this.toUserDto(event.taskCompletedUser),
+        task: this.toCompletedTaskDto(event.task),
+        submissionId: event.taskSubmissionId,
+        proofImage: event.proofImage,
+      } satisfies TaskCompletedGameEventDto;
     }
 
     if (!event.challenger || !event.opponent || !event.winner || !event.battleResult) {
@@ -141,6 +173,19 @@ export class EventsService {
       slotType: item.slotType,
       durability: item.durability,
       created_at: item.createdAt.toISOString(),
+    };
+  }
+
+  private toCompletedTaskDto(task: GameEventRecord['task']): CompletedTaskDto {
+    if (!task) {
+      throw new InternalServerErrorException('Completed task is missing');
+    }
+
+    return {
+      id: task.id,
+      type: task.type,
+      title: task.title,
+      image: task.image,
     };
   }
 }

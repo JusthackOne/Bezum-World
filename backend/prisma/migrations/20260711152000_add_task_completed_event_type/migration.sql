@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "GameEventType" ADD VALUE 'TASK_COMPLETED';

@@ -49,4 +49,41 @@ export class BattleGameEventDto {
   goldReward!: number;
 }
 
-export type GameEventDto = PurchaseGameEventDto | BattleGameEventDto;
+export class CompletedTaskDto {
+  @ApiProperty({ example: 'b8ea8912-990a-462c-88f6-bdcd880f623e' })
+  id!: string;
+
+  @ApiProperty({ example: 'event' })
+  type!: string;
+
+  @ApiProperty({ example: 'Finish the launch quest' })
+  title!: string;
+
+  @ApiProperty({ example: '/uploads/tasks/launch-quest.jpg', nullable: true })
+  image!: string | null;
+}
+
+export class TaskCompletedGameEventDto {
+  @ApiProperty({ example: 'b4d77f96-74bd-46d1-b5de-a3f0f4e5e1d5' })
+  id!: string;
+
+  @ApiProperty({ example: 'TASK_COMPLETED' })
+  type!: 'TASK_COMPLETED';
+
+  @ApiProperty({ example: '2026-07-11T11:10:00.000Z' })
+  created_at!: string;
+
+  @ApiProperty({ type: EventUserDto })
+  user!: EventUserDto;
+
+  @ApiProperty({ type: CompletedTaskDto })
+  task!: CompletedTaskDto;
+
+  @ApiProperty({ example: 'bb912f16-4d88-422d-ad57-929ee6f04ef4' })
+  submissionId!: string;
+
+  @ApiProperty({ example: '/uploads/task-proofs/proof.jpg', nullable: true })
+  proofImage!: string | null;
+}
+
+export type GameEventDto = PurchaseGameEventDto | BattleGameEventDto | TaskCompletedGameEventDto;

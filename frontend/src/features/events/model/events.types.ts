@@ -1,6 +1,6 @@
 import type { ItemDisplay } from "@/shared/model/item-display.types";
 
-export type EventFilter = "all" | "battles" | "purchases";
+export type EventFilter = "all" | "battles" | "purchases" | "tasks";
 
 export interface EventUser {
   id: string;
@@ -28,7 +28,24 @@ export interface BattleGameEvent {
   goldReward: number;
 }
 
-export type GameEvent = PurchaseGameEvent | BattleGameEvent;
+export interface CompletedTask {
+  id: string;
+  type: string;
+  title: string;
+  image: string | null;
+}
+
+export interface TaskCompletedGameEvent {
+  id: string;
+  type: "TASK_COMPLETED";
+  created_at: string;
+  user: EventUser;
+  task: CompletedTask;
+  submissionId: string;
+  proofImage: string | null;
+}
+
+export type GameEvent = PurchaseGameEvent | BattleGameEvent | TaskCompletedGameEvent;
 
 export interface EventsPagination {
   page: number;

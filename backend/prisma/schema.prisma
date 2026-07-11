@@ -18,6 +18,7 @@ enum EquipmentSlotType {
 enum GameEventType {
   PURCHASE
   BATTLE
+  TASK_COMPLETED
 }
 
 enum BattleEventResult {
@@ -49,6 +50,7 @@ model Account {
   challengedEvents GameEvent[] @relation("GameEventChallenger")
   opponentEvents   GameEvent[] @relation("GameEventOpponent")
   wonEvents        GameEvent[] @relation("GameEventWinner")
+  taskCompletedEvents GameEvent[] @relation("GameEventTaskCompletedUser")
 }
 
 model AuthCode {
@@ -134,6 +136,7 @@ model Task {
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
   submissions        TaskSubmission[]
+  completedEvents    GameEvent[] @relation("GameEventCompletedTask")
 
   @@index([type])
   @@index([createdAt])
@@ -150,6 +153,7 @@ model TaskSubmission {
 
   task Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user Account @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completedEvent GameEvent? @relation("GameEventTaskSubmission")
 
   @@index([taskId])
   @@index([userId])
@@ -189,6 +193,10 @@ model GameEvent {
   challengerId    String?            @map("challenger_id")
   opponentId      String?            @map("opponent_id")
   winnerId        String?            @map("winner_id")
+  taskCompletedUserId String?         @map("task_completed_user_id")
+  taskId          String?             @map("task_id")
+  taskSubmissionId String?            @unique @map("task_submission_id")
+  proofImage      String?             @map("proof_image")
   battleResult    BattleEventResult? @map("battle_result")
   gameScoreReward Int?               @map("game_score_reward")
   goldReward      Int?               @map("gold_reward")
@@ -199,6 +207,9 @@ model GameEvent {
   challenger   Account? @relation("GameEventChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
   opponent     Account? @relation("GameEventOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
   winner       Account? @relation("GameEventWinner", fields: [winnerId], references: [id], onDelete: Cascade)
+  taskCompletedUser Account? @relation("GameEventTaskCompletedUser", fields: [taskCompletedUserId], references: [id], onDelete: Cascade)
+  task         Task?   @relation("GameEventCompletedTask", fields: [taskId], references: [id], onDelete: Cascade)
+  taskSubmission TaskSubmission? @relation("GameEventTaskSubmission", fields: [taskSubmissionId], references: [id], onDelete: Cascade)
 
   @@index([type, createdAt])
   @@index([createdAt])
@@ -207,5 +218,7 @@ model GameEvent {
   @@index([challengerId])
   @@index([opponentId])
   @@index([winnerId])
+  @@index([taskCompletedUserId])
+  @@index([taskId])
   @@map("game_events")
 }

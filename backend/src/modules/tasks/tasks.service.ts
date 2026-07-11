@@ -9,6 +9,7 @@ import { Prisma, TaskType, type Task, type TaskSubmission } from '@prisma/client
 
 import type { AccessTokenPayload } from '../auth/types/access-token-payload.type';
 import { AccountRepository } from '../auth/repositories';
+import { EventsService } from '../events/events.service';
 import type {
   AdminDeleteTaskResponseDto,
   AdminTasksListResponseDto,
@@ -46,6 +47,7 @@ export class TasksService {
     private readonly taskRepository: TaskRepository,
     private readonly taskSubmissionRepository: TaskSubmissionRepository,
     private readonly accountRepository: AccountRepository,
+    private readonly eventsService: EventsService,
   ) {}
 
   async createTaskByAdmin(payload: CreateTaskDto): Promise<TaskResponseDto> {
@@ -279,6 +281,18 @@ export class TasksService {
         },
         tx,
       );
+
+      if (task.type === TaskType.event) {
+        await this.eventsService.createTaskCompletedEvent(
+          {
+            userId,
+            taskId: task.id,
+            taskSubmissionId: submission.id,
+            proofImage: submission.proofImage,
+          },
+          tx,
+        );
+      }
 
       return {
         submission: this.toTaskSubmissionResponse(submission),

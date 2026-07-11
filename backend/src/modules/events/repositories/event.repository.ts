@@ -17,6 +17,13 @@ export interface CreateBattleEventInput {
   goldReward: number;
 }
 
+export interface CreateTaskCompletedEventInput {
+  userId: string;
+  taskId: string;
+  taskSubmissionId: string;
+  proofImage: string | null;
+}
+
 export type GameEventRecord = Prisma.GameEventGetPayload<{
   include: {
     purchaseUser: {
@@ -46,6 +53,26 @@ export type GameEventRecord = Prisma.GameEventGetPayload<{
         id: true;
         username: true;
         avatarUrl: true;
+      };
+    };
+    taskCompletedUser: {
+      select: {
+        id: true;
+        username: true;
+        avatarUrl: true;
+      };
+    };
+    task: {
+      select: {
+        id: true;
+        type: true;
+        title: true;
+        image: true;
+      };
+    };
+    taskSubmission: {
+      select: {
+        id: true;
       };
     };
   };
@@ -81,6 +108,21 @@ export class EventRepository {
         battleResult: input.result,
         gameScoreReward: input.gameScoreReward,
         goldReward: input.goldReward,
+      },
+    });
+  }
+
+  async createTaskCompletedEvent(
+    input: CreateTaskCompletedEventInput,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await this.getClient(tx).gameEvent.create({
+      data: {
+        type: GameEventType.TASK_COMPLETED,
+        taskCompletedUserId: input.userId,
+        taskId: input.taskId,
+        taskSubmissionId: input.taskSubmissionId,
+        proofImage: input.proofImage,
       },
     });
   }
@@ -127,6 +169,26 @@ export class EventRepository {
               id: true,
               username: true,
               avatarUrl: true,
+            },
+          },
+          taskCompletedUser: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+          task: {
+            select: {
+              id: true,
+              type: true,
+              title: true,
+              image: true,
+            },
+          },
+          taskSubmission: {
+            select: {
+              id: true,
             },
           },
         },

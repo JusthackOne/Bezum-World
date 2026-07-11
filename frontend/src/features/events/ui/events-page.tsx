@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ActivityIcon, ChevronLeftIcon, ChevronRightIcon, CoinsIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { CompactTaskCard } from "@/features/client-tasks/ui/compact-task-card";
 import { useEventsQuery } from "@/features/events/api";
 import type {
   BattleGameEvent,
@@ -23,6 +24,7 @@ const filterOptions: ReadonlyArray<{ value: EventFilter; label: string }> = [
   { value: "all", label: "All" },
   { value: "battles", label: "Battles" },
   { value: "purchases", label: "Purchases" },
+  { value: "tasks", label: "Tasks" },
 ];
 
 function formatEventDate(value: string): string {
@@ -117,9 +119,40 @@ function BattleEventRow({ event }: { event: Extract<GameEvent, { type: "BATTLE" 
   );
 }
 
+function TaskCompletedEventRow({
+  event,
+}: {
+  event: Extract<GameEvent, { type: "TASK_COMPLETED" }>;
+}) {
+  return (
+    <article className="grid gap-3 rounded-lg border bg-card p-3 md:grid-cols-[110px_minmax(0,1fr)]">
+      <time className="font-mono text-sm text-muted-foreground">
+        {formatEventDate(event.created_at)}
+      </time>
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_180px] lg:items-center">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+          <UserLink user={event.user} />
+          <span className="text-muted-foreground">completed</span>
+          <span className="font-semibold">{event.task.title}</span>
+        </div>
+        <CompactTaskCard
+          task={{
+            title: event.task.title,
+            image: event.proofImage ?? event.task.image,
+          }}
+        />
+      </div>
+    </article>
+  );
+}
+
 function EventRow({ event }: { event: GameEvent }) {
   if (event.type === "PURCHASE") {
     return <PurchaseEventRow event={event} />;
+  }
+
+  if (event.type === "TASK_COMPLETED") {
+    return <TaskCompletedEventRow event={event} />;
   }
 
   return <BattleEventRow event={event} />;
