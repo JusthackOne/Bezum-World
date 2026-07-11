@@ -1,71 +1,88 @@
-# Social RPG Backend Blueprint
+# Bezum World Backend
 
-## Quick start
+NestJS API for Bezum World. It handles authentication, users, tasks, task submissions with proof images, items, equipment, battles, rewards, leaderboards, uploads, and admin operations.
 
-1. Copy env and set real secrets:
+## Stack
+
+- NestJS 11
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- Redis
+- BullMQ
+- JWT authentication with refresh-token cookies
+- Swagger/OpenAPI
+- Bun
+
+## Local Development
+
+Requirements:
+
+- Bun `>=1.3`
+- PostgreSQL and Redis. From the repository root, run `docker compose up -d postgres redis`.
+
+Setup:
 
 ```bash
 cp .env.example .env
-```
-
-2. Start dependencies:
-
-```bash
-docker compose up -d postgres redis
-```
-
-3. Install dependencies:
-
-```bash
 bun install
-```
-
-4. Apply migrations and generate Prisma client:
-
-```bash
-bun run prisma:migrate:dev
 bun run prisma:generate
+bun run prisma:migrate:dev
+bun run dev
 ```
 
-5. Start app:
+The backend runs on `http://localhost:3001` with the default local `.env.example`. In production Docker it listens on port `3000` inside the container and is exposed on host port `3001` by the root Compose file.
+
+Useful local URLs:
+
+- API health: `/api/health`
+- Swagger docs: `/docs`
+- Uploaded files: `/uploads/*`
+
+## Production
+
+Production is normally started from the repository root:
 
 ```bash
-bun run start:dev
+docker compose -f docker-compose.prod.yml up -d --build backend
 ```
 
-## Endpoints
+Apply migrations:
 
-- `GET /api/health`
-- `POST /api/auth/login/code`
-- `POST /api/auth/refresh`
-- `POST /api/auth/admin/login`
-- `POST /api/auth/admin/refresh`
-- `POST /api/auth/logout`
-- `POST /api/users`
-- `GET /api/auth/admin/me`
-- `GET /api/auth/me`
-- Swagger UI: `GET /docs`
+```bash
+docker compose -f docker-compose.prod.yml exec backend bunx --bun prisma migrate deploy
+```
 
-## Required env vars
+Optional seed:
 
-- `AUTH_JWT_ACCESS_SECRET`
-- `AUTH_JWT_REFRESH_SECRET`
-- `AUTH_ADMIN_USERNAME`
-- `AUTH_ADMIN_PASSWORD`
+```bash
+docker compose -f docker-compose.prod.yml exec backend bun run prisma:seed
+```
 
-## What is included
+The production container listens on port `3000` internally. The root production Compose file exposes it on host port `3001`.
 
-- NestJS modular blueprint
-- `ConfigModule` with env validation
-- `PrismaModule` with startup connection
-- Redis module with startup ping
-- BullMQ root configuration + default queue
-- `nestjs-pino` logging
-- Global validation, response envelope, and base error filter
-- Swagger / OpenAPI documentation
-- Code-based authentication (6-char unique auth code)
-- Access token + refresh token flow (`httpOnly` cookie for refresh)
-- Single admin bootstrap from `.env` on app startup
-- Admin authentication by username/password from `.env`
-- Admin-only account creation with automatic unique code generation
-- Prisma models for `Account`, `AuthCode`, and `Admin`
+## Environment
+
+Copy `.env.example` to `.env` for local development. Production Compose reads `backend/.env.production`.
+
+Important variables:
+
+- `APP_DOMAIN`: public backend domain used for generated asset URLs
+- `DATABASE_URL`: PostgreSQL connection URL
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, `REDIS_PASSWORD`: Redis connection
+- `AUTH_JWT_ACCESS_SECRET`, `AUTH_JWT_REFRESH_SECRET`: JWT secrets
+- `AUTH_ADMIN_USERNAME`, `AUTH_ADMIN_PASSWORD`: initial admin credentials
+- `AUTH_REFRESH_COOKIE_SECURE`: set to `true` when serving over HTTPS
+- `SEED_ENV`: optional seed mode, for example `prod` or `test`
+
+## Commands
+
+```bash
+bun run dev
+bun run build
+bun run lint
+bun run prisma:generate
+bun run prisma:migrate:dev
+bun run prisma:studio
+bun run prisma:seed
+```
