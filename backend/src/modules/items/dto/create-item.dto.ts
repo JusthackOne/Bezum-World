@@ -41,55 +41,47 @@ export class CreateItemDto {
   image_url?: string;
 
   @ApiPropertyOptional({
-    description: 'Strength modifier in range 0..100',
+    description: 'Strength modifier',
     minimum: 0,
-    maximum: 100,
     example: 80,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(100)
   strength?: number;
 
   @ApiPropertyOptional({
-    description: 'Charisma modifier in range 0..100',
+    description: 'Charisma modifier',
     minimum: 0,
-    maximum: 100,
     example: 10,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(100)
   charisma?: number;
 
   @ApiPropertyOptional({
-    description: 'Agility modifier in range 0..100',
+    description: 'Agility modifier',
     minimum: 0,
-    maximum: 100,
     example: 25,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(100)
   agility?: number;
 
   @ApiPropertyOptional({
-    description: 'Intelligence modifier in range 0..100',
+    description: 'Intelligence modifier',
     minimum: 0,
-    maximum: 100,
     example: 5,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(100)
   intelligence?: number;
 
   @ApiProperty({

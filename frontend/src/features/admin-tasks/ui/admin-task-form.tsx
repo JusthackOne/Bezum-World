@@ -23,6 +23,14 @@ const optionalIntField = (min: number, max: number, label: string) =>
     ])
     .transform<number | undefined>((value) => (value === "" ? undefined : value));
 
+const optionalMinIntField = (min: number, label: string) =>
+  z
+    .union([
+      z.literal(""),
+      z.coerce.number().int().min(min, `${label} must be at least ${min}`),
+    ])
+    .transform<number | undefined>((value) => (value === "" ? undefined : value));
+
 const taskFormSchema = z.object({
   type: z.enum(["daily", "weekly", "event"]),
   title: z.string().trim().min(1, "Title is required").max(256),
@@ -30,10 +38,10 @@ const taskFormSchema = z.object({
   image: z.string().trim().max(2048),
   rewardMoney: z.number().int().min(0),
   rewardGameScore: optionalIntField(0, 1_000_000, "Game score reward"),
-  rewardStrength: optionalIntField(0, 100, "Strength reward"),
-  rewardIntelligence: optionalIntField(0, 100, "Intelligence reward"),
-  rewardCharisma: optionalIntField(0, 100, "Charisma reward"),
-  rewardEndurance: optionalIntField(0, 100, "Endurance reward"),
+  rewardStrength: optionalMinIntField(0, "Strength reward"),
+  rewardIntelligence: optionalMinIntField(0, "Intelligence reward"),
+  rewardCharisma: optionalMinIntField(0, "Charisma reward"),
+  rewardEndurance: optionalMinIntField(0, "Endurance reward"),
   requiresProofImage: z.boolean(),
   submissionLimit: optionalIntField(1, 1000, "Submission limit"),
 });
@@ -271,7 +279,6 @@ export function AdminTaskForm({
             id="rewardStrength"
             type="number"
             min={0}
-            max={100}
             {...form.register("rewardStrength")}
           />
           {form.formState.errors.rewardStrength ? (
@@ -289,7 +296,6 @@ export function AdminTaskForm({
             id="rewardIntelligence"
             type="number"
             min={0}
-            max={100}
             {...form.register("rewardIntelligence")}
           />
           {form.formState.errors.rewardIntelligence ? (
@@ -307,7 +313,6 @@ export function AdminTaskForm({
             id="rewardCharisma"
             type="number"
             min={0}
-            max={100}
             {...form.register("rewardCharisma")}
           />
           {form.formState.errors.rewardCharisma ? (
@@ -325,7 +330,6 @@ export function AdminTaskForm({
             id="rewardEndurance"
             type="number"
             min={0}
-            max={100}
             {...form.register("rewardEndurance")}
           />
           {form.formState.errors.rewardEndurance ? (

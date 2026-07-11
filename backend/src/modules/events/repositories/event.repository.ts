@@ -68,6 +68,9 @@ export type GameEventRecord = Prisma.GameEventGetPayload<{
         type: true;
         title: true;
         image: true;
+        rewardMoney: true;
+        rewardGameScore: true;
+        rewardAttributes: true;
       };
     };
     taskSubmission: {
@@ -184,6 +187,9 @@ export class EventRepository {
               type: true,
               title: true,
               image: true,
+              rewardMoney: true,
+              rewardGameScore: true,
+              rewardAttributes: true,
             },
           },
           taskSubmission: {

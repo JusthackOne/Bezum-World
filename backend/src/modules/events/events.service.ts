@@ -186,6 +186,28 @@ export class EventsService {
       type: task.type,
       title: task.title,
       image: task.image,
+      rewardMoney: task.rewardMoney,
+      rewardGameScore: task.rewardGameScore,
+      rewardAttributes: this.toRewardAttributes(task.rewardAttributes),
     };
+  }
+
+  private toRewardAttributes(value: Prisma.JsonValue | null): Record<string, number> | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+
+    const attributes = value as Record<string, unknown>;
+    const rewards: Record<string, number> = {};
+
+    for (const key of ['strength', 'intelligence', 'charisma', 'endurance']) {
+      const rewardValue = attributes[key];
+
+      if (typeof rewardValue === 'number' && Number.isInteger(rewardValue) && rewardValue > 0) {
+        rewards[key] = rewardValue;
+      }
+    }
+
+    return Object.keys(rewards).length > 0 ? rewards : null;
   }
 }

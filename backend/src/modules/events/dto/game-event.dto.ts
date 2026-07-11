@@ -61,6 +61,18 @@ export class CompletedTaskDto {
 
   @ApiProperty({ example: '/uploads/tasks/launch-quest.jpg', nullable: true })
   image!: string | null;
+
+  @ApiProperty({ example: 30 })
+  rewardMoney!: number;
+
+  @ApiProperty({ example: 15, nullable: true })
+  rewardGameScore!: number | null;
+
+  @ApiProperty({
+    example: { strength: 1, intelligence: 2 },
+    nullable: true,
+  })
+  rewardAttributes!: Record<string, number> | null;
 }
 
 export class TaskCompletedGameEventDto {

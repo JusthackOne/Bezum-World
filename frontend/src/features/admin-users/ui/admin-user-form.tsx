@@ -14,10 +14,10 @@ const userFormSchema = z.object({
   username: z.string().trim().min(1, "Username is required").max(64),
   balance: z.number().int().min(0),
   gameScore: z.number().int().min(0),
-  strength: z.number().int().min(0).max(100),
-  charisma: z.number().int().min(0).max(100),
-  endurance: z.number().int().min(0).max(100),
-  intelligence: z.number().int().min(0).max(100),
+  strength: z.number().int().min(0),
+  charisma: z.number().int().min(0),
+  endurance: z.number().int().min(0),
+  intelligence: z.number().int().min(0),
 });
 
 export type AdminUserFormValues = z.infer<typeof userFormSchema>;
@@ -198,7 +198,6 @@ export function AdminUserForm({
             id="strength"
             type="number"
             min={0}
-            max={100}
             {...form.register("strength", { valueAsNumber: true })}
           />
           {form.formState.errors.strength ? (
@@ -214,7 +213,6 @@ export function AdminUserForm({
             id="charisma"
             type="number"
             min={0}
-            max={100}
             {...form.register("charisma", { valueAsNumber: true })}
           />
           {form.formState.errors.charisma ? (
@@ -230,7 +228,6 @@ export function AdminUserForm({
             id="endurance"
             type="number"
             min={0}
-            max={100}
             {...form.register("endurance", { valueAsNumber: true })}
           />
           {form.formState.errors.endurance ? (
@@ -246,7 +243,6 @@ export function AdminUserForm({
             id="intelligence"
             type="number"
             min={0}
-            max={100}
             {...form.register("intelligence", { valueAsNumber: true })}
           />
           {form.formState.errors.intelligence ? (

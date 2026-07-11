@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ActivityIcon, ChevronLeftIcon, ChevronRightIcon, CoinsIcon } from "lucide-react";
+import { ActivityIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
 import { CompactTaskCard } from "@/features/client-tasks/ui/compact-task-card";
@@ -13,12 +14,11 @@ import type {
   GameEvent,
 } from "@/features/events/model/events.types";
 import { publicUserRoutes } from "@/features/public-user/routes";
-import { formatBalance } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { AvatarImage } from "@/shared/ui/avatar-image";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
-import { GameScoreIcon, ItemDisplayCard } from "@/shared/ui";
+import { ItemDisplayCard, RewardBadgesList, type RewardBadgeItem } from "@/shared/ui";
 
 const filterOptions: ReadonlyArray<{ value: EventFilter; label: string }> = [
   { value: "all", label: "All" },
@@ -37,52 +37,78 @@ function formatEventDate(value: string): string {
   return `${day}-${month} ${hours}:${minutes}`;
 }
 
+const eventRowGridClassName =
+  "grid gap-4 rounded-lg border bg-card p-4 md:grid-cols-[88px_minmax(104px,0.8fr)_104px_minmax(160px,1.2fr)_minmax(160px,1fr)] md:items-center";
+
+function EventDate({ value }: { value: string }) {
+  return (
+    <time className="flex h-full items-center justify-start font-mono text-sm text-muted-foreground md:justify-center">
+      {formatEventDate(value)}
+    </time>
+  );
+}
+
+function ColumnTitle({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
 function UserLink({ user }: { user: EventUser }) {
   return (
     <Link
       href={publicUserRoutes.profile(user.username)}
-      className="inline-flex min-w-0 items-center gap-2 rounded-md px-1 py-0.5 font-semibold transition-colors hover:bg-muted/40"
+      className="mx-auto flex min-w-0 flex-col items-center gap-2 rounded-md px-2 py-1 text-center font-semibold transition-colors hover:bg-muted/40"
     >
       <AvatarImage
         avatarUrl={user.avatar}
         alt={`${user.username} avatar`}
-        sizeClassName="h-9 w-9"
+        sizeClassName="h-14 w-14"
       />
-      <span className="min-w-0 break-words [overflow-wrap:anywhere]">{user.username}</span>
+      <span className="w-full min-w-0 text-sm leading-tight break-words [overflow-wrap:anywhere]">
+        {user.username}
+      </span>
     </Link>
   );
 }
 
 function BattleRewards({ event }: { event: BattleGameEvent }) {
+  const rewards: RewardBadgeItem[] = [];
+
+  if (event.gameScoreReward > 0) {
+    rewards.push({ kind: "gameScore", value: event.gameScoreReward });
+  }
+
+  if (event.goldReward > 0) {
+    rewards.push({ kind: "balance", value: event.goldReward });
+  }
+
   return (
-    <span className="inline-flex flex-wrap items-center gap-2 text-sm">
-      <span className="inline-flex items-center gap-1 rounded-full border bg-background/85 px-2 py-1 font-semibold">
-        <GameScoreIcon className="size-4" />+{formatBalance(event.gameScoreReward)} Game Score
-      </span>
-      <span className="inline-flex items-center gap-1 rounded-full border bg-background/85 px-2 py-1 font-semibold">
-        <CoinsIcon className="size-4 text-amber-500" />+{formatBalance(event.goldReward)} Gold
-      </span>
-    </span>
+    <RewardBadgesList rewards={rewards} emptyLabel="No reward" className="justify-center" />
   );
 }
 
 function PurchaseEventRow({ event }: { event: Extract<GameEvent, { type: "PURCHASE" }> }) {
   return (
-    <article className="grid gap-3 rounded-lg border bg-card p-3 md:grid-cols-[110px_minmax(0,1fr)]">
-      <time className="font-mono text-sm text-muted-foreground">
-        {formatEventDate(event.created_at)}
-      </time>
-      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_180px] lg:items-center">
-        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-          <UserLink user={event.user} />
-          <span className="text-muted-foreground">purchased</span>
-          <span className="font-semibold">{event.item.name}</span>
-        </div>
+    <article className={eventRowGridClassName}>
+      <EventDate value={event.created_at} />
+      <div className="min-w-0">
+        <ColumnTitle>User</ColumnTitle>
+        <UserLink user={event.user} />
+      </div>
+      <div className="flex items-center justify-center">
+        <span className="rounded-full border bg-muted/20 px-3 py-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          purchased
+        </span>
+      </div>
+      <div className="min-w-0 md:col-span-2">
         <ItemDisplayCard
           item={event.item}
           showPrice={false}
           isShopCard={false}
-          className="min-h-52 cursor-default rounded-lg"
+          className="mx-auto min-h-48 w-full max-w-64 cursor-default rounded-lg"
         />
       </div>
     </article>
@@ -96,27 +122,59 @@ function BattleEventRow({ event }: { event: Extract<GameEvent, { type: "BATTLE" 
       : "border-red-400/60 bg-red-500/12 text-red-600";
 
   return (
-    <article className="grid gap-3 rounded-lg border bg-card p-3 md:grid-cols-[110px_minmax(0,1fr)]">
-      <time className="font-mono text-sm text-muted-foreground">
-        {formatEventDate(event.created_at)}
-      </time>
-      <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+    <article className={eventRowGridClassName}>
+      <EventDate value={event.created_at} />
+      <div className="min-w-0">
+        <ColumnTitle>Challenger</ColumnTitle>
         <UserLink user={event.challenger} />
+      </div>
+      <div className="flex items-center justify-center">
         <span className={cn("rounded-full border px-2 py-1 text-xs font-bold", resultClassName)}>
           {event.result}
         </span>
+      </div>
+      <div className="min-w-0">
+        <ColumnTitle>Opponent</ColumnTitle>
         <UserLink user={event.opponent} />
-        {event.result === "WIN" ? (
+      </div>
+      <div className="min-w-0 space-y-2 text-center">
+        <ColumnTitle>Winner Reward</ColumnTitle>
+        <div className="flex justify-center">
           <BattleRewards event={event} />
-        ) : (
-          <span className="inline-flex min-w-0 flex-wrap items-center gap-2 text-muted-foreground">
-            <span>Winner received</span>
-            <BattleRewards event={event} />
-          </span>
-        )}
+        </div>
       </div>
     </article>
   );
+}
+
+function getTaskRewards(event: Extract<GameEvent, { type: "TASK_COMPLETED" }>): RewardBadgeItem[] {
+  const rewards: RewardBadgeItem[] = [];
+
+  if (event.task.rewardMoney > 0) {
+    rewards.push({ kind: "balance", value: event.task.rewardMoney });
+  }
+
+  if ((event.task.rewardGameScore ?? 0) > 0) {
+    rewards.push({ kind: "gameScore", value: event.task.rewardGameScore ?? 0 });
+  }
+
+  if ((event.task.rewardAttributes?.strength ?? 0) > 0) {
+    rewards.push({ kind: "strength", value: event.task.rewardAttributes?.strength ?? 0 });
+  }
+
+  if ((event.task.rewardAttributes?.intelligence ?? 0) > 0) {
+    rewards.push({ kind: "intelligence", value: event.task.rewardAttributes?.intelligence ?? 0 });
+  }
+
+  if ((event.task.rewardAttributes?.charisma ?? 0) > 0) {
+    rewards.push({ kind: "charisma", value: event.task.rewardAttributes?.charisma ?? 0 });
+  }
+
+  if ((event.task.rewardAttributes?.endurance ?? 0) > 0) {
+    rewards.push({ kind: "endurance", value: event.task.rewardAttributes?.endurance ?? 0 });
+  }
+
+  return rewards;
 }
 
 function TaskCompletedEventRow({
@@ -125,21 +183,31 @@ function TaskCompletedEventRow({
   event: Extract<GameEvent, { type: "TASK_COMPLETED" }>;
 }) {
   return (
-    <article className="grid gap-3 rounded-lg border bg-card p-3 md:grid-cols-[110px_minmax(0,1fr)]">
-      <time className="font-mono text-sm text-muted-foreground">
-        {formatEventDate(event.created_at)}
-      </time>
-      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_180px] lg:items-center">
-        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-          <UserLink user={event.user} />
-          <span className="text-muted-foreground">completed</span>
-          <span className="font-semibold">{event.task.title}</span>
-        </div>
+    <article className={eventRowGridClassName}>
+      <EventDate value={event.created_at} />
+      <div className="min-w-0">
+        <ColumnTitle>User</ColumnTitle>
+        <UserLink user={event.user} />
+      </div>
+      <div className="flex items-center justify-center">
+        <span className="rounded-full border bg-muted/20 px-3 py-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          completed
+        </span>
+      </div>
+      <div className="min-w-0">
         <CompactTaskCard
           task={{
             title: event.task.title,
             image: event.proofImage ?? event.task.image,
           }}
+        />
+      </div>
+      <div className="min-w-0 space-y-2 text-center">
+        <ColumnTitle>Reward</ColumnTitle>
+        <RewardBadgesList
+          rewards={getTaskRewards(event)}
+          emptyLabel="No reward"
+          className="justify-center"
         />
       </div>
     </article>

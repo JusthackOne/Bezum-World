@@ -33,6 +33,14 @@ export interface CompletedTask {
   type: string;
   title: string;
   image: string | null;
+  rewardMoney: number;
+  rewardGameScore: number | null;
+  rewardAttributes: {
+    strength?: number;
+    intelligence?: number;
+    charisma?: number;
+    endurance?: number;
+  } | null;
 }
 
 export interface TaskCompletedGameEvent {

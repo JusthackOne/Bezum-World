@@ -23,16 +23,24 @@ const optionalIntField = (min: number, max: number, label: string) =>
     ])
     .transform<number | undefined>((value) => (value === "" ? undefined : value));
 
+const optionalMinIntField = (min: number, label: string) =>
+  z
+    .union([
+      z.literal(""),
+      z.coerce.number().int().min(min, `${label} must be at least ${min}`),
+    ])
+    .transform<number | undefined>((value) => (value === "" ? undefined : value));
+
 const itemFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(128),
   description: z.string().trim().min(1, "Description is required").max(4096),
   price: z.number().int().min(0).max(1000),
   rarity: z.enum(["unterlyanskiy", "basic_minimum", "sigma", "bezumnyy"]),
   slotType: z.enum(["HELMET", "ARMOR", "PANTS", "BOOTS", "LEFT_HAND", "RIGHT_HAND"]),
-  strength: optionalIntField(0, 100, "Strength"),
-  charisma: optionalIntField(0, 100, "Charisma"),
-  agility: optionalIntField(0, 100, "Agility"),
-  intelligence: optionalIntField(0, 100, "Intelligence"),
+  strength: optionalMinIntField(0, "Strength"),
+  charisma: optionalMinIntField(0, "Charisma"),
+  agility: optionalMinIntField(0, "Agility"),
+  intelligence: optionalMinIntField(0, "Intelligence"),
   durability: optionalIntField(0, 100, "Durability"),
 });
 
@@ -284,7 +292,7 @@ export function AdminItemForm({
           <label htmlFor="strength" className="text-sm font-medium">
             Strength (optional)
           </label>
-          <Input id="strength" type="number" min={0} max={100} {...form.register("strength")} />
+          <Input id="strength" type="number" min={0} {...form.register("strength")} />
           {form.formState.errors.strength ? (
             <p className="text-xs text-destructive">{form.formState.errors.strength.message}</p>
           ) : null}
@@ -294,7 +302,7 @@ export function AdminItemForm({
           <label htmlFor="charisma" className="text-sm font-medium">
             Charisma (optional)
           </label>
-          <Input id="charisma" type="number" min={0} max={100} {...form.register("charisma")} />
+          <Input id="charisma" type="number" min={0} {...form.register("charisma")} />
           {form.formState.errors.charisma ? (
             <p className="text-xs text-destructive">{form.formState.errors.charisma.message}</p>
           ) : null}
@@ -304,7 +312,7 @@ export function AdminItemForm({
           <label htmlFor="agility" className="text-sm font-medium">
             Agility (optional)
           </label>
-          <Input id="agility" type="number" min={0} max={100} {...form.register("agility")} />
+          <Input id="agility" type="number" min={0} {...form.register("agility")} />
           {form.formState.errors.agility ? (
             <p className="text-xs text-destructive">{form.formState.errors.agility.message}</p>
           ) : null}
@@ -318,7 +326,6 @@ export function AdminItemForm({
             id="intelligence"
             type="number"
             min={0}
-            max={100}
             {...form.register("intelligence")}
           />
           {form.formState.errors.intelligence ? (

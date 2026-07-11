@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
 
 export class AdminCreateAccountDto {
   @ApiProperty({
@@ -44,50 +44,42 @@ export class AdminCreateAccountDto {
   gameScore?: number;
 
   @ApiProperty({
-    description: 'Strength attribute value in range 0..100',
+    description: 'Strength attribute value',
     example: 10,
     minimum: 0,
-    maximum: 100,
   })
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(100)
   strength!: number;
 
   @ApiProperty({
-    description: 'Charisma attribute value in range 0..100',
+    description: 'Charisma attribute value',
     example: 25,
     minimum: 0,
-    maximum: 100,
   })
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(100)
   charisma!: number;
 
   @ApiProperty({
-    description: 'Endurance attribute value in range 0..100',
+    description: 'Endurance attribute value',
     example: 40,
     minimum: 0,
-    maximum: 100,
   })
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(100)
   endurance!: number;
 
   @ApiProperty({
-    description: 'Intelligence attribute value in range 0..100',
+    description: 'Intelligence attribute value',
     example: 30,
     minimum: 0,
-    maximum: 100,
   })
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(100)
   intelligence!: number;
 }
