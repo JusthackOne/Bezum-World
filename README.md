@@ -2,14 +2,14 @@
 
 Bezum World is a social RPG where real-life tasks, character progression, items, and asynchronous battles are connected into one game loop. Users complete tasks for rewards, grow their stats, collect equipment, battle other players once per day, and compete through score-driven progression.
 
-## Technology Stack
+## 🧰 Technology Stack
 
 - Frontend: Next.js 16 App Router, React 19, TypeScript, Tailwind CSS v4, Radix UI, shadcn-style components, Zustand, TanStack React Query
 - Backend: NestJS 11, TypeScript, REST API, Swagger/OpenAPI, Prisma ORM, BullMQ
 - Data: PostgreSQL 17, Redis 8
 - Runtime and tooling: Bun 1.3, Docker Compose, ESLint, Prettier
 
-## Project Structure
+## 🗂️ Project Structure
 
 ```text
 .
@@ -19,7 +19,7 @@ Bezum World is a social RPG where real-life tasks, character progression, items,
 `-- docker-compose.prod.yml
 ```
 
-## Local Development
+## 💻 Local Development
 
 Requirements:
 
@@ -78,7 +78,7 @@ Remove local Docker volumes as well:
 docker compose down -v
 ```
 
-## Production
+## 🚀 Production
 
 Production is intended to run through `docker-compose.prod.yml` with environment files from:
 
@@ -118,40 +118,7 @@ Production service ports:
 - Backend API health: `/api/health`
 - Swagger docs: `/docs`
 
-## Useful Commands
-
-Install dependencies:
-
-```bash
-make install
-```
-
-Run quality checks:
-
-```bash
-make lint
-make build
-```
-
-Backend commands:
-
-```bash
-cd backend
-bun run lint
-bun run build
-bun run prisma:migrate:dev
-bun run prisma:studio
-```
-
-Frontend commands:
-
-```bash
-cd frontend
-bun run lint
-bun run build
-```
-
-## Environment Files
+## 🔐 Environment Files
 
 Use `.env.example` files as development templates:
 
@@ -165,6 +132,6 @@ Production Compose reads:
 
 Keep production secrets outside version control in real deployments.
 
-## Screenshots
+## 📸 Screenshots
 
 Add screenshots here.

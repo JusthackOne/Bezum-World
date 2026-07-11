@@ -2,7 +2,7 @@
 
 Next.js application for the Bezum World player and admin interfaces. It includes task feeds, task proof uploads, user profiles, shop and equipment views, battles, leaderboard screens, and admin management pages.
 
-## Stack
+## 🧰 Stack
 
 - Next.js 16 App Router
 - React 19
@@ -14,7 +14,7 @@ Next.js application for the Bezum World player and admin interfaces. It includes
 - React Hook Form and Zod
 - Bun
 
-## Local Development
+## 💻 Local Development
 
 Requirements:
 
@@ -31,7 +31,7 @@ bun run dev
 
 The frontend runs on `http://localhost:3000`.
 
-## Production
+## 🚀 Production
 
 Production is normally started from the repository root:
 
@@ -43,7 +43,7 @@ The production container listens on port `3000` internally. The root production 
 
 Before building production, set `NEXT_PUBLIC_API_BASE_URL` in `frontend/.env.production` to the public backend API URL.
 
-## Environment
+## 🔐 Environment
 
 Copy `.env.example` to `.env` for local development. Production Compose reads `frontend/.env.production`.
 
@@ -51,14 +51,3 @@ Variables:
 
 - `NEXT_PUBLIC_APP_NAME`: application name shown in the UI
 - `NEXT_PUBLIC_API_BASE_URL`: backend API base URL, including `/api`
-
-## Commands
-
-```bash
-bun run dev
-bun run build
-bun run start
-bun run lint
-bun run format:check
-```
-
