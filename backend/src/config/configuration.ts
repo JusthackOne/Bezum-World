@@ -3,6 +3,7 @@ export interface AppConfig {
     nodeEnv: 'development' | 'production' | 'test';
     port: number;
     logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
+    timeZone: string;
   };
   database: {
     url: string;
@@ -33,6 +34,7 @@ export const configFactory = (): AppConfig => ({
     nodeEnv: (process.env.NODE_ENV as AppConfig['app']['nodeEnv']) ?? 'development',
     port: Number(process.env.PORT ?? 3000),
     logLevel: (process.env.LOG_LEVEL as AppConfig['app']['logLevel']) ?? 'info',
+    timeZone: process.env.APP_TIME_ZONE ?? 'UTC',
   },
   database: {
     url: process.env.DATABASE_URL ?? '',

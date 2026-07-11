@@ -50,6 +50,10 @@ import {
   SubmitTaskResponseDto,
   TaskIdParamsDto,
   TaskResponseDto,
+  TaskSuggestionIdParamsDto,
+  TaskSuggestionResponseDto,
+  TaskSuggestionsResponseDto,
+  TaskSuggestionVoteResponseDto,
   UserTaskSubmissionsParamsDto,
   UserTaskSubmissionsResponseDto,
   UpdateTaskDto,
@@ -240,6 +244,85 @@ export class TasksController {
     }
 
     return this.tasksService.getClientTasksByUser(request.user.sub, query);
+  }
+
+  @Post('tasks/suggestions')
+  @UseGuards(AccessTokenGuard)
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: {
+        fileSize: MAX_TASK_IMAGE_SIZE_BYTES,
+      },
+    }),
+  )
+  @ApiOperation({
+    summary: 'Suggest a task for community voting',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiConsumes('application/json', 'multipart/form-data')
+  @ApiCreatedResponse({ type: TaskSuggestionResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Only user accounts can suggest tasks' })
+  @ApiConflictResponse({ description: 'Daily suggestion limit has been reached' })
+  @ApiBadRequestResponse({ description: 'Validation failed' })
+  async createTaskSuggestion(
+    @Body() body: CreateTaskDto,
+    @UploadedFile() imageFile: UploadedTaskImageFile | undefined,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<TaskSuggestionResponseDto> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can suggest tasks');
+    }
+
+    const uploadedImageUrl = imageFile ? await this.storeTaskImage(imageFile) : undefined;
+
+    return this.tasksService.createTaskSuggestion(request.user.sub, body, uploadedImageUrl);
+  }
+
+  @Get('tasks/suggestions/today')
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({
+    summary: 'Get current-day task suggestions',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: TaskSuggestionsResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Only user accounts can view task suggestions' })
+  async getCurrentDayTaskSuggestions(
+    @Req() request: RequestWithAuthUser,
+  ): Promise<TaskSuggestionsResponseDto> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can view task suggestions');
+    }
+
+    return this.tasksService.getCurrentDayTaskSuggestions(request.user.sub);
+  }
+
+  @Post('tasks/suggestions/:suggestionId/vote')
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({
+    summary: 'Vote for a current-day task suggestion',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiParam({
+    name: 'suggestionId',
+    description: 'Suggestion identifier',
+    example: '2df8c39f-3255-4b40-9cb2-7f236c0b62e3',
+  })
+  @ApiCreatedResponse({ type: TaskSuggestionVoteResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Own suggestions cannot be voted for' })
+  @ApiNotFoundResponse({ description: 'Task suggestion is not found' })
+  @ApiConflictResponse({ description: 'Duplicate vote or voting is closed' })
+  async voteForTaskSuggestion(
+    @Param() params: TaskSuggestionIdParamsDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<TaskSuggestionVoteResponseDto> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can vote for task suggestions');
+    }
+
+    return this.tasksService.voteForTaskSuggestion(params.suggestionId, request.user.sub);
   }
 
   @Post('tasks/:taskId/submit')

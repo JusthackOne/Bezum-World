@@ -2,6 +2,7 @@ export interface EnvironmentVariables {
   NODE_ENV: 'development' | 'production' | 'test';
   PORT: number;
   LOG_LEVEL: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
+  APP_TIME_ZONE: string;
   DATABASE_URL: string;
   REDIS_HOST: string;
   REDIS_PORT: number;

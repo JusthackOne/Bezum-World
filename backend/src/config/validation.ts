@@ -30,6 +30,15 @@ const postgresUrlSchema = z
     return protocol === 'postgresql:' || protocol === 'postgres:';
   }, 'DATABASE_URL must use postgres:// or postgresql:// protocol');
 
+const isValidTimeZone = (value: string): boolean => {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const envValidationSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -37,6 +46,14 @@ export const envValidationSchema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
+    APP_TIME_ZONE: z
+      .string()
+      .trim()
+      .min(1)
+      .default('UTC')
+      .refine(isValidTimeZone, {
+        message: 'APP_TIME_ZONE must be a valid IANA time zone',
+      }),
     DATABASE_URL: postgresUrlSchema,
     REDIS_HOST: z
       .string()

@@ -54,3 +54,55 @@ export interface SubmitClientTaskResponse {
     endurance: number;
   };
 }
+
+export interface TaskSuggestionCreator {
+  id: string;
+  username: string;
+  avatarUrl: string | null;
+}
+
+export interface TaskSuggestion {
+  id: string;
+  type: ClientTaskType;
+  title: string;
+  description: string | null;
+  image?: string | null;
+  rewardMoney: number;
+  rewardGameScore: number | null;
+  rewardAttributes: ClientTaskRewardAttributes | null;
+  requiresProofImage: boolean;
+  submissionLimit: number | null;
+  creator: TaskSuggestionCreator;
+  voteCount: number;
+  hasVoted: boolean;
+  canVote: boolean;
+  createdAt: string;
+}
+
+export interface TaskSuggestionsResponse {
+  items: TaskSuggestion[];
+  hasSuggestedToday: boolean;
+}
+
+export interface CreateTaskSuggestionInput {
+  type: ClientTaskType;
+  title: string;
+  description?: string;
+  image?: string;
+  imageFile?: File | null;
+  rewardMoney: number;
+  rewardGameScore?: number;
+  rewardAttributes?: ClientTaskRewardAttributes;
+  requiresProofImage: boolean;
+  submissionLimit?: number;
+}
+
+export interface VoteTaskSuggestionInput {
+  suggestionId: string;
+}
+
+export interface VoteTaskSuggestionResponse {
+  suggestionId: string;
+  voteCount: number;
+  hasVoted: boolean;
+}

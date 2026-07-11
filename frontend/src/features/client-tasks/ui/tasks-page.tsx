@@ -1,14 +1,24 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { SearchIcon, UploadIcon } from "lucide-react";
+import { LightbulbIcon, SearchIcon, ThumbsUpIcon, UploadIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { AdminTaskForm, type AdminTaskFormValues } from "@/features/admin-tasks/ui";
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
-import { useClientTasksQuery, useSubmitClientTaskMutation } from "@/features/client-tasks/api";
+import {
+  useClientTasksQuery,
+  useCreateTaskSuggestionMutation,
+  useSubmitClientTaskMutation,
+  useTaskSuggestionsQuery,
+  useVoteTaskSuggestionMutation,
+} from "@/features/client-tasks/api";
 import type {
   ClientTask,
   ClientTaskTypeFilter,
+  ClientTaskType,
+  TaskSuggestion,
+  ClientTaskRewardAttributes,
 } from "@/features/client-tasks/model/client-task.types";
 import { getTaskImageUrl } from "@/features/client-tasks/ui/compact-task-card";
 import { queryKeys } from "@/shared/config/query-keys";
@@ -42,7 +52,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/shared/ui/8bit/toast";
-import { NewBadge } from "@/shared/ui";
+import { AvatarImage, NewBadge } from "@/shared/ui";
 
 type ToastVariant = "default" | "destructive";
 
@@ -67,7 +77,53 @@ const taskTypeFilterOptions: Array<{ label: string; value: ClientTaskTypeFilter 
   { label: "Event", value: "event" },
 ];
 
-function getTaskRewardVisuals(task: ClientTask): RewardBadgeItem[] {
+const taskTypeVisuals: Record<
+  ClientTaskType,
+  {
+    labelClassName: string;
+    cardClassName: string;
+  }
+> = {
+  daily: {
+    labelClassName:
+      "border-sky-500 bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-100",
+    cardClassName:
+      "border-sky-500/80 shadow-[0_0_0_1px_rgba(14,165,233,0.16),0_10px_28px_rgba(12,74,110,0.12)]",
+  },
+  weekly: {
+    labelClassName:
+      "border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-100",
+    cardClassName:
+      "border-emerald-500/80 shadow-[0_0_0_1px_rgba(16,185,129,0.16),0_10px_28px_rgba(6,95,70,0.12)]",
+  },
+  event: {
+    labelClassName:
+      "border-red-500 bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-100",
+    cardClassName:
+      "border-red-500/80 shadow-[0_0_0_1px_rgba(239,68,68,0.2),0_10px_28px_rgba(127,29,29,0.16)]",
+  },
+};
+
+function TaskTypeLabel({ type }: { type: ClientTaskType }) {
+  return (
+    <span
+      className={[
+        "inline-flex rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        taskTypeVisuals[type].labelClassName,
+      ].join(" ")}
+    >
+      {type}
+    </span>
+  );
+}
+
+interface TaskRewardSource {
+  rewardMoney?: number | null;
+  rewardGameScore?: number | null;
+  rewardAttributes?: ClientTaskRewardAttributes | null;
+}
+
+function getTaskRewardVisuals(task: TaskRewardSource): RewardBadgeItem[] {
   const rewards: RewardBadgeItem[] = [];
 
   if ((task.rewardMoney ?? 0) > 0) {
@@ -115,6 +171,17 @@ function getTaskRewardVisuals(task: ClientTask): RewardBadgeItem[] {
   return rewards;
 }
 
+function buildRewardAttributes(values: AdminTaskFormValues): ClientTaskRewardAttributes | undefined {
+  const rewardAttributes = {
+    ...(values.rewardStrength !== undefined ? { strength: values.rewardStrength } : {}),
+    ...(values.rewardIntelligence !== undefined ? { intelligence: values.rewardIntelligence } : {}),
+    ...(values.rewardCharisma !== undefined ? { charisma: values.rewardCharisma } : {}),
+    ...(values.rewardEndurance !== undefined ? { endurance: values.rewardEndurance } : {}),
+  };
+
+  return Object.keys(rewardAttributes).length > 0 ? rewardAttributes : undefined;
+}
+
 export function TasksPage() {
   const queryClient = useQueryClient();
   const session = useClientAuthStore((state) => state.session);
@@ -124,6 +191,8 @@ export function TasksPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientTaskTypeFilter>("all");
   const [selectedTask, setSelectedTask] = useState<ClientTask | null>(null);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<TaskSuggestion | null>(null);
+  const [suggestionDialogOpen, setSuggestionDialogOpen] = useState(false);
   const [proofTask, setProofTask] = useState<ClientTask | null>(null);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofValidationMessage, setProofValidationMessage] = useState<string | null>(null);
@@ -142,9 +211,17 @@ export function TasksPage() {
     search,
     type: typeFilter,
   });
+  const suggestionsQuery = useTaskSuggestionsQuery();
   const submitTaskMutation = useSubmitClientTaskMutation();
+  const createSuggestionMutation = useCreateTaskSuggestionMutation();
+  const voteSuggestionMutation = useVoteTaskSuggestionMutation();
 
   const tasks = useMemo(() => tasksQuery.data?.items ?? [], [tasksQuery.data?.items]);
+  const suggestions = useMemo(
+    () => suggestionsQuery.data?.items ?? [],
+    [suggestionsQuery.data?.items],
+  );
+  const hasSuggestedToday = suggestionsQuery.data?.hasSuggestedToday ?? false;
   const isFiltered = search.length > 0 || typeFilter !== "all";
   const proofPreviewUrl = useMemo(
     () => (proofFile ? URL.createObjectURL(proofFile) : null),
@@ -160,6 +237,17 @@ export function TasksPage() {
       URL.revokeObjectURL(proofPreviewUrl);
     };
   }, [proofPreviewUrl]);
+
+  useEffect(() => {
+    if (!selectedSuggestion) {
+      return;
+    }
+
+    const updatedSuggestion = suggestions.find((suggestion) => suggestion.id === selectedSuggestion.id);
+    if (updatedSuggestion) {
+      setSelectedSuggestion(updatedSuggestion);
+    }
+  }, [selectedSuggestion, suggestions]);
 
   function showToast(
     title: string,
@@ -234,6 +322,59 @@ export function TasksPage() {
     }
   }
 
+  async function voteForSuggestion(suggestion: TaskSuggestion) {
+    if (!suggestion.canVote || voteSuggestionMutation.isPending) {
+      return;
+    }
+
+    try {
+      await voteSuggestionMutation.mutateAsync({
+        suggestionId: suggestion.id,
+      });
+      showToast("Vote counted", "Your vote was added to this suggestion.");
+    } catch (error: unknown) {
+      showToast(
+        "Vote failed",
+        error instanceof Error ? error.message : "Unable to vote for this suggestion.",
+        "destructive",
+      );
+    }
+  }
+
+  async function submitSuggestion(values: AdminTaskFormValues, imageFile: File | null) {
+    const rewardAttributes = buildRewardAttributes(values);
+
+    try {
+      await createSuggestionMutation.mutateAsync({
+        type: values.type as ClientTaskType,
+        title: values.title.trim(),
+        ...(values.description ? { description: values.description.trim() } : {}),
+        ...(values.image ? { image: values.image.trim() } : {}),
+        ...(imageFile ? { imageFile } : {}),
+        rewardMoney: values.rewardMoney,
+        ...(values.rewardGameScore !== undefined ? { rewardGameScore: values.rewardGameScore } : {}),
+        ...(rewardAttributes ? { rewardAttributes } : {}),
+        requiresProofImage: values.requiresProofImage,
+        ...(values.type === "daily" && values.submissionLimit !== undefined
+          ? { submissionLimit: values.submissionLimit }
+          : {}),
+      });
+
+      setSuggestionDialogOpen(false);
+      showToast(
+        "Suggestion submitted",
+        "Your task suggestion is available for community voting today.",
+      );
+    } catch (error: unknown) {
+      showToast(
+        "Suggestion failed",
+        error instanceof Error ? error.message : "Unable to suggest task.",
+        "destructive",
+      );
+      throw error;
+    }
+  }
+
   if (tasksQuery.isError) {
     return (
       <Card>
@@ -254,16 +395,127 @@ export function TasksPage() {
 
   return (
     <ToastProvider duration={3500} swipeDirection="right">
-      <section className="space-y-5">
-        <div>
-          <h1 className="text-2xl font-semibold">Tasks</h1>
-          <p className="text-muted-foreground text-sm">
-            Complete tasks, claim rewards, and improve your hero.
-          </p>
+      <section className="min-w-0 max-w-full overflow-x-hidden space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Tasks</h1>
+            <p className="text-muted-foreground text-sm">
+              Complete tasks, claim rewards, and improve your hero.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <Button
+              type="button"
+              className="max-w-full whitespace-normal text-center"
+              disabled={hasSuggestedToday || suggestionsQuery.isPending}
+              onClick={() => setSuggestionDialogOpen(true)}
+            >
+              <LightbulbIcon className="size-4" />
+              Suggest a New Task
+            </Button>
+            {hasSuggestedToday ? (
+              <p className="text-muted-foreground max-w-72 text-xs sm:text-right">
+                You have already suggested a task today.
+              </p>
+            ) : null}
+          </div>
         </div>
 
+        {suggestions.length > 0 ? (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Today&apos;s Suggestions</h2>
+                <p className="text-muted-foreground text-xs">
+                  The highest-voted task becomes active after today ends.
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
+              <div className="flex min-w-full gap-4 pb-2">
+                {suggestions.map((suggestion) => {
+                  const rewardVisuals = getTaskRewardVisuals(suggestion);
+                  const imageUrl = getTaskImageUrl(suggestion.image);
+                  const isVoting = voteSuggestionMutation.isPending;
+
+                  return (
+                    <article
+                      key={suggestion.id}
+                      className={[
+                        "relative w-[calc(100vw-2rem)] max-w-[22rem] min-w-0 shrink-0 overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md sm:w-[21rem] md:w-[22rem]",
+                        taskTypeVisuals[suggestion.type].cardClassName,
+                      ].join(" ")}
+                    >
+                      <div className="pointer-events-none absolute top-3 left-3 z-20">
+                        <TaskTypeLabel type={suggestion.type} />
+                      </div>
+                      <div className="pointer-events-none absolute top-3 right-3 z-20 flex max-w-[58%] items-center gap-2 rounded border border-foreground bg-card px-2 py-1 shadow-sm">
+                        <AvatarImage
+                          avatarUrl={suggestion.creator.avatarUrl}
+                          alt={`${suggestion.creator.username} avatar`}
+                          sizeClassName="size-7"
+                        />
+                        <div className="min-w-0 text-right">
+                          <p className="text-muted-foreground text-[9px]">Suggested by</p>
+                          <p className="truncate text-[10px] font-semibold">
+                            {suggestion.creator.username}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="block w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => setSelectedSuggestion(suggestion)}
+                      >
+                        <div className="h-44 w-full overflow-hidden bg-muted/30 sm:h-48">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imageUrl}
+                            alt={suggestion.title}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+
+                        <div className="space-y-3 p-4">
+                          <h3 className="line-clamp-2 text-sm font-semibold">
+                            {suggestion.title}
+                          </h3>
+                          <RewardBadgesList rewards={rewardVisuals} emptyLabel="No rewards" />
+                        </div>
+                      </button>
+
+                      <div className="border-t p-4">
+                        {suggestion.canVote ? (
+                          <Button
+                            type="button"
+                            className="h-10 w-full"
+                            disabled={isVoting}
+                            onClick={() => void voteForSuggestion(suggestion)}
+                          >
+                            <ThumbsUpIcon className="size-4" />
+                            <span>{suggestion.voteCount}</span>
+                            <span>Vote</span>
+                          </Button>
+                        ) : (
+                          <div className="flex h-10 w-full items-center justify-center gap-2 rounded-md border bg-muted/10 text-sm font-semibold">
+                            <ThumbsUpIcon className="size-4" />
+                            <span>{suggestion.voteCount}</span>
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <form
-          className="flex flex-col gap-2 sm:flex-row"
+          className="min-w-0 max-w-full flex flex-col gap-2 sm:flex-row"
           onSubmit={(event) => {
             event.preventDefault();
             setSearch(draftSearch.trim());
@@ -282,6 +534,7 @@ export function TasksPage() {
           <Button
             type="button"
             variant="outline"
+            className="whitespace-normal text-center"
             onClick={() => {
               setDraftSearch("");
               setSearch("");
@@ -330,7 +583,6 @@ export function TasksPage() {
               const isSubmitting = submittingTaskId === task.id;
               const isCompletedEventTask = task.type === "event" && !task.isAvailable;
               const actionDisabled = !task.isAvailable || isSubmitting;
-              const isEventTask = task.type === "event";
               const isNewTask = isCreatedWithinLastDay(task.createdAt);
 
               return (
@@ -339,9 +591,7 @@ export function TasksPage() {
                   className={[
                     "relative overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md",
                     "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isEventTask
-                      ? "border-red-500/80 shadow-[0_0_0_1px_rgba(239,68,68,0.2),0_10px_28px_rgba(127,29,29,0.16)]"
-                      : "border-border",
+                    taskTypeVisuals[task.type].cardClassName,
                   ].join(" ")}
                   role="button"
                   tabIndex={0}
@@ -354,10 +604,13 @@ export function TasksPage() {
                   }}
                 >
                   {isNewTask ? (
-                    <div className="pointer-events-none absolute right-3 top-3 z-20">
+                    <div className="pointer-events-none absolute top-3 right-3 z-20">
                       <NewBadge />
                     </div>
                   ) : null}
+                  <div className="pointer-events-none absolute top-3 left-3 z-20">
+                    <TaskTypeLabel type={task.type} />
+                  </div>
                   <div className="h-56 w-full overflow-hidden bg-muted/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imageUrl} alt={task.title} className="h-full w-full object-cover" />
@@ -365,11 +618,6 @@ export function TasksPage() {
 
                   <div className="space-y-4 p-4">
                     <h2 className="line-clamp-2 text-base font-semibold">
-                      {isEventTask ? (
-                        <span className="mr-2 inline-flex rounded border border-red-500/70 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-300">
-                          Event
-                        </span>
-                      ) : null}
                       {task.title}
                     </h2>
 
@@ -413,11 +661,7 @@ export function TasksPage() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex flex-wrap items-center gap-2">
-                  {selectedTask.type === "event" ? (
-                    <span className="inline-flex rounded border border-red-500/70 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-300">
-                      Event
-                    </span>
-                  ) : null}
+                  <TaskTypeLabel type={selectedTask.type} />
                   {selectedTask.title}
                 </DialogTitle>
                 <DialogDescription>
@@ -466,6 +710,118 @@ export function TasksPage() {
                     emptyLabel="No rewards"
                   />
                 </div>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={suggestionDialogOpen} onOpenChange={setSuggestionDialogOpen}>
+        <DialogContent className="max-h-[85vh] max-w-[calc(100vw-2rem)] overflow-hidden p-0 sm:max-w-2xl">
+          <div className="max-h-[85vh] min-w-0 space-y-4 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
+            <DialogHeader>
+              <DialogTitle>Suggest a New Task</DialogTitle>
+              <DialogDescription>
+                Suggestions are limited to one per calendar day.
+              </DialogDescription>
+            </DialogHeader>
+
+            {hasSuggestedToday ? (
+              <p className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
+                You have already suggested a task today.
+              </p>
+            ) : (
+              <AdminTaskForm
+                submitLabel="Submit suggestion"
+                submitPendingLabel="Submitting..."
+                isSubmitting={createSuggestionMutation.isPending}
+                errorMessage={
+                  createSuggestionMutation.error instanceof Error
+                    ? createSuggestionMutation.error.message
+                    : null
+                }
+                onSubmit={submitSuggestion}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={selectedSuggestion !== null}
+        onOpenChange={(open) => !open && setSelectedSuggestion(null)}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          {selectedSuggestion ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex flex-wrap items-center gap-2">
+                  <TaskTypeLabel type={selectedSuggestion.type} />
+                  {selectedSuggestion.title}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedSuggestion.description ?? "No description available."}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 rounded-md border bg-muted/10 px-3 py-2">
+                  <AvatarImage
+                    avatarUrl={selectedSuggestion.creator.avatarUrl}
+                    alt={`${selectedSuggestion.creator.username} avatar`}
+                    sizeClassName="size-9"
+                  />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Suggested by</p>
+                    <p className="text-sm font-semibold">{selectedSuggestion.creator.username}</p>
+                  </div>
+                </div>
+
+                <div className="h-56 overflow-hidden rounded-lg border bg-muted/30">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getTaskImageUrl(selectedSuggestion.image)}
+                    alt={selectedSuggestion.title}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-md border bg-muted/10 px-3 py-2">
+                    <p className="text-muted-foreground text-xs">Type</p>
+                    <p className="font-semibold capitalize">{selectedSuggestion.type}</p>
+                  </div>
+                  <div className="rounded-md border bg-muted/10 px-3 py-2">
+                    <p className="text-muted-foreground text-xs">Votes</p>
+                    <p className="font-semibold">{selectedSuggestion.voteCount}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Rewards</p>
+                  <RewardBadgesList
+                    rewards={getTaskRewardVisuals(selectedSuggestion)}
+                    emptyLabel="No rewards"
+                  />
+                </div>
+
+                {selectedSuggestion.canVote ? (
+                  <Button
+                    type="button"
+                    className="h-11 w-full"
+                    disabled={voteSuggestionMutation.isPending}
+                    onClick={() => void voteForSuggestion(selectedSuggestion)}
+                  >
+                    <ThumbsUpIcon className="size-4" />
+                    <span>{selectedSuggestion.voteCount}</span>
+                    <span>Vote</span>
+                  </Button>
+                ) : (
+                  <div className="flex h-11 w-full items-center justify-center gap-2 rounded-md border bg-muted/10 text-sm font-semibold">
+                    <ThumbsUpIcon className="size-4" />
+                    <span>{selectedSuggestion.voteCount}</span>
+                  </div>
+                )}
               </div>
             </>
           ) : null}

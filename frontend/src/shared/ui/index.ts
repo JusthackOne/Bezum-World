@@ -5,4 +5,5 @@ export * from "./game-score-icon";
 export * from "./reward-badges";
 export * from "./new-badge";
 export * from "./attribute-badge";
+export * from "./avatar-image";
 export * from "./profile-item-slot";

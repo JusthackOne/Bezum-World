@@ -4,7 +4,10 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma, TaskType, type Task, type TaskSubmission } from '@prisma/client';
 
 import type { AccessTokenPayload } from '../auth/types/access-token-payload.type';
@@ -20,6 +23,9 @@ import type {
   GetClientTasksQueryDto,
   SubmitTaskDto,
   SubmitTaskResponseDto,
+  TaskSuggestionResponseDto,
+  TaskSuggestionsResponseDto,
+  TaskSuggestionVoteResponseDto,
   TaskResponseDto,
   TaskRewardAttributesDto,
   TaskSubmissionResponseDto,
@@ -28,6 +34,8 @@ import type {
 } from './dto';
 import {
   TaskRepository,
+  TaskSuggestionRepository,
+  type TaskSuggestionWithCreatorAndVotes,
   TaskSubmissionRepository,
   type CompletedEventTaskSubmission,
   type UpdateTaskInput,
@@ -39,16 +47,36 @@ const DEFAULT_ADMIN_TASKS_PAGE = 1;
 const DEFAULT_ADMIN_TASKS_LIMIT = 20;
 const DEFAULT_DAILY_SUBMISSION_LIMIT = 1;
 const EVENT_COMPLETION_FEED_VISIBILITY_MS = 3 * 24 * 60 * 60 * 1000;
+const TASK_SUGGESTION_PROCESS_INTERVAL_MS = 5 * 60 * 1000;
 
 @Injectable()
-export class TasksService {
+export class TasksService implements OnModuleInit, OnModuleDestroy {
+  private suggestionProcessingTimer: NodeJS.Timeout | null = null;
+  private suggestionProcessingInProgress = false;
+
   constructor(
+    private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly taskRepository: TaskRepository,
+    private readonly taskSuggestionRepository: TaskSuggestionRepository,
     private readonly taskSubmissionRepository: TaskSubmissionRepository,
     private readonly accountRepository: AccountRepository,
     private readonly eventsService: EventsService,
   ) {}
+
+  onModuleInit(): void {
+    this.suggestionProcessingTimer = setInterval(() => {
+      void this.processPendingSuggestionDays();
+    }, TASK_SUGGESTION_PROCESS_INTERVAL_MS);
+    void this.processPendingSuggestionDays();
+  }
+
+  onModuleDestroy(): void {
+    if (this.suggestionProcessingTimer) {
+      clearInterval(this.suggestionProcessingTimer);
+      this.suggestionProcessingTimer = null;
+    }
+  }
 
   async createTaskByAdmin(payload: CreateTaskDto): Promise<TaskResponseDto> {
     const createdTask = await this.taskRepository.create({
@@ -74,6 +102,151 @@ export class TasksService {
       ...payload,
       ...(uploadedImageUrl ? { image: uploadedImageUrl } : {}),
     });
+  }
+
+  async createTaskSuggestion(
+    userId: string,
+    payload: CreateTaskDto,
+    uploadedImageUrl?: string,
+  ): Promise<TaskSuggestionResponseDto> {
+    const account = await this.accountRepository.findById(userId);
+
+    if (!account) {
+      throw new NotFoundException('User is not found');
+    }
+
+    const suggestedForDate = this.getConfiguredDateKey(new Date());
+
+    try {
+      const suggestion = await this.taskSuggestionRepository.create({
+        creatorUserId: userId,
+        suggestedForDate,
+        type: payload.type,
+        title: payload.title,
+        description: this.normalizeNullableString(payload.description),
+        image: this.normalizeNullableString(uploadedImageUrl ?? payload.image),
+        rewardMoney: payload.rewardMoney,
+        rewardGameScore: payload.rewardGameScore ?? null,
+        rewardAttributes: this.toRewardAttributesJson(payload.rewardAttributes),
+        requiresProofImage: payload.requiresProofImage,
+        submissionLimit: this.resolveSubmissionLimit(payload.type, payload.submissionLimit, null),
+      });
+
+      return this.toTaskSuggestionResponse(suggestion, userId);
+    } catch (error: unknown) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new ConflictException('You have already suggested a task today');
+      }
+
+      throw error;
+    }
+  }
+
+  async getCurrentDayTaskSuggestions(userId: string): Promise<TaskSuggestionsResponseDto> {
+    const account = await this.accountRepository.findById(userId);
+
+    if (!account) {
+      throw new NotFoundException('User is not found');
+    }
+
+    const suggestions = await this.taskSuggestionRepository.findCurrentDaySuggestions(
+      this.getConfiguredDateKey(new Date()),
+    );
+    const hasVotedToday = suggestions.some((suggestion) =>
+      suggestion.votes.some((vote) => vote.voterUserId === userId),
+    );
+
+    return {
+      items: suggestions.map((suggestion) =>
+        this.toTaskSuggestionResponse(suggestion, userId, hasVotedToday),
+      ),
+      hasSuggestedToday: suggestions.some((suggestion) => suggestion.creatorUserId === userId),
+    };
+  }
+
+  async voteForTaskSuggestion(
+    suggestionId: string,
+    userId: string,
+  ): Promise<TaskSuggestionVoteResponseDto> {
+    const account = await this.accountRepository.findById(userId);
+
+    if (!account) {
+      throw new NotFoundException('User is not found');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const suggestion = await this.taskSuggestionRepository.findByIdWithCreatorAndVotes(
+        suggestionId,
+        tx,
+      );
+
+      if (!suggestion) {
+        throw new NotFoundException('Task suggestion is not found');
+      }
+
+      if (suggestion.status !== 'pending') {
+        throw new ConflictException('Task suggestion voting is closed');
+      }
+
+      const todayDateKey = this.getConfiguredDateKey(new Date());
+      if (suggestion.suggestedForDate.getTime() !== todayDateKey.getTime()) {
+        throw new ConflictException('Task suggestion voting is closed');
+      }
+
+      if (suggestion.creatorUserId === userId) {
+        throw new ForbiddenException('Users cannot vote for their own suggestions');
+      }
+
+      try {
+        await this.taskSuggestionRepository.createVote(
+          suggestion.id,
+          userId,
+          suggestion.suggestedForDate,
+          tx,
+        );
+      } catch (error: unknown) {
+        if (this.isUniqueConstraintError(error)) {
+          throw new ConflictException('You have already voted for a task suggestion today');
+        }
+
+        throw error;
+      }
+
+      const updatedSuggestion = await this.taskSuggestionRepository.findByIdWithCreatorAndVotes(
+        suggestion.id,
+        tx,
+      );
+
+      if (!updatedSuggestion) {
+        throw new NotFoundException('Task suggestion is not found');
+      }
+
+      return {
+        suggestionId: updatedSuggestion.id,
+        voteCount: updatedSuggestion._count.votes,
+        hasVoted: true,
+      };
+    });
+  }
+
+  async processPendingSuggestionDays(): Promise<void> {
+    if (this.suggestionProcessingInProgress) {
+      return;
+    }
+
+    this.suggestionProcessingInProgress = true;
+
+    try {
+      const todayDateKey = this.getConfiguredDateKey(new Date());
+      const pendingDates =
+        await this.taskSuggestionRepository.findPendingSuggestionDatesBefore(todayDateKey);
+
+      for (const suggestedForDate of pendingDates) {
+        await this.processSuggestionDate(suggestedForDate);
+      }
+    } finally {
+      this.suggestionProcessingInProgress = false;
+    }
   }
 
   async updateTaskByAdmin(
@@ -386,6 +559,86 @@ export class TasksService {
     return { start, end };
   }
 
+  private getConfiguredDateKey(value: Date): Date {
+    const parts = this.getDatePartsInConfiguredTimeZone(value);
+
+    return new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0));
+  }
+
+  private getDatePartsInConfiguredTimeZone(value: Date): { year: number; month: number; day: number } {
+    const timeZone = this.configService.get<string>('app.timeZone') ?? 'UTC';
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const formattedParts = formatter.formatToParts(value);
+    const year = Number(formattedParts.find((part) => part.type === 'year')?.value);
+    const month = Number(formattedParts.find((part) => part.type === 'month')?.value);
+    const day = Number(formattedParts.find((part) => part.type === 'day')?.value);
+
+    if (!year || !month || !day) {
+      return {
+        year: value.getUTCFullYear(),
+        month: value.getUTCMonth() + 1,
+        day: value.getUTCDate(),
+      };
+    }
+
+    return { year, month, day };
+  }
+
+  private async processSuggestionDate(suggestedForDate: Date): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "task_suggestions"
+        WHERE "suggested_for_date" = ${suggestedForDate}
+          AND "status" = 'pending'::"TaskSuggestionStatus"
+        ORDER BY "created_at" ASC
+        FOR UPDATE
+      `;
+
+      const winner = await this.taskSuggestionRepository.findWinnerForDate(suggestedForDate, tx);
+
+      if (!winner) {
+        await this.taskSuggestionRepository.markDateProcessed(
+          suggestedForDate,
+          null,
+          null,
+          new Date(),
+          tx,
+        );
+        return;
+      }
+
+      const publishedTask = await this.taskRepository.create(
+        {
+          type: winner.type,
+          title: winner.title,
+          description: winner.description,
+          image: winner.image,
+          rewardMoney: winner.rewardMoney,
+          rewardGameScore: winner.rewardGameScore,
+          rewardAttributes:
+            winner.rewardAttributes === null ? Prisma.DbNull : winner.rewardAttributes,
+          requiresProofImage: winner.requiresProofImage,
+          submissionLimit: winner.submissionLimit,
+        },
+        tx,
+      );
+
+      await this.taskSuggestionRepository.markDateProcessed(
+        suggestedForDate,
+        winner.id,
+        publishedTask.id,
+        new Date(),
+        tx,
+      );
+    });
+  }
+
   private getUtcIsoWeekRange(value: Date): { start: Date; end: Date } {
     const start = new Date(
       Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 0, 0, 0, 0),
@@ -571,6 +824,42 @@ export class TasksService {
       ),
       createdAt: task.createdAt.toISOString(),
     };
+  }
+
+  private toTaskSuggestionResponse(
+    suggestion: TaskSuggestionWithCreatorAndVotes,
+    currentUserId: string,
+    hasVotedToday?: boolean,
+  ): TaskSuggestionResponseDto {
+    const hasVoted = suggestion.votes.some((vote) => vote.voterUserId === currentUserId);
+    const isOwnSuggestion = suggestion.creatorUserId === currentUserId;
+    const cannotVoteBecauseVotedToday = hasVotedToday ?? hasVoted;
+
+    return {
+      id: suggestion.id,
+      type: suggestion.type,
+      title: suggestion.title,
+      description: suggestion.description,
+      image: suggestion.image,
+      rewardMoney: suggestion.rewardMoney,
+      rewardGameScore: suggestion.rewardGameScore,
+      rewardAttributes: this.toRewardAttributesDto(suggestion.rewardAttributes),
+      requiresProofImage: suggestion.requiresProofImage,
+      submissionLimit: suggestion.submissionLimit,
+      creator: {
+        id: suggestion.creator.id,
+        username: suggestion.creator.username,
+        avatarUrl: suggestion.creator.avatarUrl,
+      },
+      voteCount: suggestion._count.votes,
+      hasVoted,
+      canVote: !isOwnSuggestion && !cannotVoteBecauseVotedToday,
+      createdAt: suggestion.createdAt.toISOString(),
+    };
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
   }
 
   private getClientTaskAvailability(

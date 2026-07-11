@@ -21,6 +21,12 @@ enum GameEventType {
   TASK_COMPLETED
 }
 
+enum TaskSuggestionStatus {
+  pending
+  processed
+  winner
+}
+
 enum BattleEventResult {
   WIN
   LOSE
@@ -42,6 +48,8 @@ model Account {
   items            Item[]
   equipment        UserEquipmentSlot[]
   taskSubmissions  TaskSubmission[]
+  taskSuggestions  TaskSuggestion[] @relation("TaskSuggestionCreator")
+  taskSuggestionVotes TaskSuggestionVote[] @relation("TaskSuggestionVoter")
   attackedBattles  BattleLog[] @relation("BattleAttacker")
   defendedBattles  BattleLog[] @relation("BattleDefender")
   wonBattles       BattleLog[] @relation("BattleWinner")
@@ -141,6 +149,49 @@ model Task {
   @@index([type])
   @@index([createdAt])
   @@map("tasks")
+}
+
+model TaskSuggestion {
+  id                 String               @id @default(uuid())
+  creatorUserId      String               @map("creator_user_id")
+  suggestedForDate   DateTime             @map("suggested_for_date") @db.Date
+  status             TaskSuggestionStatus @default(pending)
+  publishedTaskId    String?              @map("published_task_id")
+  type               TaskType
+  title              String
+  description        String?
+  image              String?
+  rewardMoney        Int                  @map("reward_money")
+  rewardGameScore    Int?                 @map("reward_game_score")
+  rewardAttributes   Json?                @map("reward_attributes")
+  requiresProofImage Boolean              @default(false) @map("requires_proof_image")
+  submissionLimit    Int?                 @map("submission_limit")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  processedAt        DateTime?            @map("processed_at")
+
+  creator Account              @relation("TaskSuggestionCreator", fields: [creatorUserId], references: [id], onDelete: Cascade)
+  votes   TaskSuggestionVote[]
+
+  @@unique([creatorUserId, suggestedForDate])
+  @@index([suggestedForDate, status])
+  @@index([creatorUserId])
+  @@map("task_suggestions")
+}
+
+model TaskSuggestionVote {
+  id           String   @id @default(uuid())
+  suggestionId String   @map("suggestion_id")
+  voterUserId  String   @map("voter_user_id")
+  suggestedForDate DateTime @map("suggested_for_date") @db.Date
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  suggestion TaskSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  voter      Account        @relation("TaskSuggestionVoter", fields: [voterUserId], references: [id], onDelete: Cascade)
+
+  @@unique([suggestionId, voterUserId])
+  @@unique([voterUserId, suggestedForDate])
+  @@index([voterUserId])
+  @@map("task_suggestion_votes")
 }
 
 model TaskSubmission {

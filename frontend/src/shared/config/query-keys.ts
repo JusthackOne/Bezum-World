@@ -13,6 +13,7 @@ export const queryKeys = {
   clientTasksPrefix: ["client", "tasks"] as const,
   clientTasks: (filters: { search: string; type: "all" | "daily" | "weekly" | "event" }) =>
     ["client", "tasks", filters.search, filters.type] as const,
+  taskSuggestionsToday: ["client", "tasks", "suggestions", "today"] as const,
   leaderboard: (period: "all" | "weekly" | "daily") => ["leaderboard", period] as const,
   events: (filters: { type: "all" | "battles" | "purchases" | "tasks"; page: number }) =>
     ["events", filters.type, filters.page] as const,
