@@ -15,6 +15,16 @@ enum EquipmentSlotType {
   RIGHT_HAND
 }
 
+enum GameEventType {
+  PURCHASE
+  BATTLE
+}
+
+enum BattleEventResult {
+  WIN
+  LOSE
+}
+
 model Account {
   id               String    @id @default(uuid())
   username         String    @unique
@@ -35,6 +45,10 @@ model Account {
   defendedBattles  BattleLog[] @relation("BattleDefender")
   wonBattles       BattleLog[] @relation("BattleWinner")
   lostBattles      BattleLog[] @relation("BattleLoser")
+  purchaseEvents   GameEvent[] @relation("GameEventPurchaseUser")
+  challengedEvents GameEvent[] @relation("GameEventChallenger")
+  opponentEvents   GameEvent[] @relation("GameEventOpponent")
+  wonEvents        GameEvent[] @relation("GameEventWinner")
 }
 
 model AuthCode {
@@ -79,6 +93,7 @@ model Item {
 
   slotType  EquipmentSlotType
   equippedSlot UserEquipmentSlot?
+  purchaseEvents GameEvent[] @relation("GameEventItem")
   createdAt    DateTime    @default(now()) @map("created_at")
 
   @@index([ownerUserId])
@@ -164,4 +179,33 @@ model BattleLog {
   @@index([winnerUserId])
   @@index([loserUserId])
   @@map("battle_logs")
+}
+
+model GameEvent {
+  id              String             @id @default(uuid())
+  type            GameEventType
+  purchaseUserId  String?            @map("purchase_user_id")
+  itemId          String?            @map("item_id")
+  challengerId    String?            @map("challenger_id")
+  opponentId      String?            @map("opponent_id")
+  winnerId        String?            @map("winner_id")
+  battleResult    BattleEventResult? @map("battle_result")
+  gameScoreReward Int?               @map("game_score_reward")
+  goldReward      Int?               @map("gold_reward")
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  purchaseUser Account? @relation("GameEventPurchaseUser", fields: [purchaseUserId], references: [id], onDelete: Cascade)
+  item         Item?    @relation("GameEventItem", fields: [itemId], references: [id], onDelete: Restrict)
+  challenger   Account? @relation("GameEventChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  opponent     Account? @relation("GameEventOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+  winner       Account? @relation("GameEventWinner", fields: [winnerId], references: [id], onDelete: Cascade)
+
+  @@index([type, createdAt])
+  @@index([createdAt])
+  @@index([purchaseUserId])
+  @@index([itemId])
+  @@index([challengerId])
+  @@index([opponentId])
+  @@index([winnerId])
+  @@map("game_events")
 }

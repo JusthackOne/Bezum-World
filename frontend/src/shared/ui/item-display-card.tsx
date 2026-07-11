@@ -58,6 +58,7 @@ const inventoryRarityStyles: Record<string, { borderClassName: string; glowClass
 
 interface ItemDisplayCardProps<TItem extends ItemDisplay> {
   item: TItem;
+  className?: string;
   onOpenDetails?: (item: TItem) => void;
   actionLabel?: string;
   onAction?: (item: TItem) => void;
@@ -66,10 +67,12 @@ interface ItemDisplayCardProps<TItem extends ItemDisplay> {
   actionLoadingLabel?: string;
   isActionLoading?: boolean;
   isShopCard?: boolean;
+  showPrice?: boolean;
 }
 
 export function ItemDisplayCard<TItem extends ItemDisplay>({
   item,
+  className,
   onOpenDetails,
   actionLabel,
   onAction,
@@ -78,6 +81,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
   actionLoadingLabel,
   isActionLoading = false,
   isShopCard = false,
+  showPrice = true,
 }: ItemDisplayCardProps<TItem>) {
   const rarityStyle = inventoryRarityStyles[item.rarity] ?? {
     borderClassName: "border-border",
@@ -93,6 +97,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
         "group isolate relative flex min-h-84 cursor-pointer overflow-hidden rounded-2xl border transition-shadow",
         rarityStyle.borderClassName,
         rarityStyle.glowClassName,
+        className,
       )}
       role={onOpenDetails ? "button" : undefined}
       tabIndex={onOpenDetails ? 0 : undefined}
@@ -126,14 +131,16 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
       <div className="absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_center,rgba(2,6,23,0.1)_0%,rgba(2,6,23,0.46)_72%,rgba(2,6,23,0.74)_100%)]" />
       <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(2,6,23,0.16)_0%,rgba(2,6,23,0.04)_38%,rgba(2,6,23,0.74)_100%)]" />
 
-      <div className="absolute top-3 left-1/2 z-20 -translate-x-1/2">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.2),rgba(251,191,36,0.12))] px-2.5 py-0.5 shadow-[0_0_0_1px_rgba(245,158,11,0.24),0_0_16px_rgba(245,158,11,0.18)]">
-          <CoinsIcon className="size-3.5 text-amber-300" />
-          <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-[10px] font-semibold tabular-nums text-transparent">
-            {formatBalance(item.price)}
+      {showPrice ? (
+        <div className="absolute top-3 left-1/2 z-20 -translate-x-1/2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.2),rgba(251,191,36,0.12))] px-2.5 py-0.5 shadow-[0_0_0_1px_rgba(245,158,11,0.24),0_0_16px_rgba(245,158,11,0.18)]">
+            <CoinsIcon className="size-3.5 text-amber-300" />
+            <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-[10px] font-semibold tabular-nums text-transparent">
+              {formatBalance(item.price)}
+            </span>
           </span>
-        </span>
-      </div>
+        </div>
+      ) : null}
 
       <div
         className={clsx(

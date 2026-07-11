@@ -9,6 +9,7 @@ import type { Item } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { AccountRepository } from '../auth/repositories';
+import { EventsService } from '../events/events.service';
 import {
   type AdminDeleteItemResponseDto,
   CreateItemDto,
@@ -24,6 +25,7 @@ export class ItemsService {
     private readonly prisma: PrismaService,
     private readonly itemRepository: ItemRepository,
     private readonly accountRepository: AccountRepository,
+    private readonly eventsService: EventsService,
   ) {}
 
   async createByAdmin(payload: CreateItemDto): Promise<CreateItemResponseDto> {
@@ -123,6 +125,14 @@ export class ItemsService {
       if (!purchasedItem || !updatedAccount) {
         throw new NotFoundException('Purchase result is not found');
       }
+
+      await this.eventsService.createPurchaseEvent(
+        {
+          userId: account.id,
+          itemId: purchasedItem.id,
+        },
+        tx,
+      );
 
       return {
         item: this.toItemResponse(purchasedItem),

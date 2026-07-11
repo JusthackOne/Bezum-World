@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  ActivityIcon,
   ListTodoIcon,
   LogOutIcon,
   PanelLeftIcon,
@@ -61,6 +62,7 @@ export function ClientSidebar() {
   const isBattlesActive = pathname.startsWith("/battles");
   const isTasksActive = pathname.startsWith("/tasks");
   const isLeaderboardActive = pathname.startsWith("/leaderboard");
+  const isEventsActive = pathname.startsWith("/events");
   const isSidebarExpanded = isMobile ? openMobile : state === "expanded";
 
   const username = session?.user.username ?? "Unknown user";
@@ -91,6 +93,12 @@ export function ClientSidebar() {
       label: "LeaderBoard",
       Icon: TrophyIcon,
       isActive: isLeaderboardActive,
+    },
+    {
+      href: "/events",
+      label: "Events",
+      Icon: ActivityIcon,
+      isActive: isEventsActive,
     },
   ];
 

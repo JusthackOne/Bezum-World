@@ -7,6 +7,7 @@ import {
 import { EquipmentSlotType, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
+import { EventsService } from '../events/events.service';
 import type {
   BattlePlayerDto,
   BattlePlayerEquipmentDto,
@@ -33,6 +34,7 @@ export class BattlesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly battleRepository: BattleRepository,
+    private readonly eventsService: EventsService,
   ) {}
 
   async getBattlePlayers(currentUserId: string): Promise<BattlePlayersResponseDto> {
@@ -177,6 +179,18 @@ export class BattlesService {
           loserUserId: loser.id,
           transferredCoins: coinReward,
           gameScoreReward,
+        },
+        tx,
+      );
+
+      await this.eventsService.createBattleEvent(
+        {
+          challengerId: currentUserId,
+          opponentId: opponentUserId,
+          winnerId: winner.id,
+          challengerWon: attackerWon,
+          gameScoreReward,
+          goldReward: coinReward,
         },
         tx,
       );
