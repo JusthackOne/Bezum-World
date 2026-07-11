@@ -25,7 +25,6 @@ import {
   UserItemsRepository,
   UserProfileRepository,
 } from './repositories';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { ItemRepository } from '../items/repositories';
 
@@ -38,7 +37,6 @@ export class UsersService {
     private readonly userItemsRepository: UserItemsRepository,
     private readonly userEquipmentRepository: UserEquipmentRepository,
     private readonly accountRepository: AccountRepository,
-    private readonly configService: ConfigService,
   ) {}
 
   async getPublicProfileByUsername(username: string): Promise<PublicUserProfileDto> {
@@ -361,7 +359,7 @@ export class UsersService {
       type: this.toUserItemType(item.slotType),
       slot_type: item.slotType,
       description: item.description,
-      image_url: this.toPublicImageUrl(item.imageUrl),
+      image_url: item.imageUrl,
       strength: item.strength,
       charisma: item.charisma,
       agility: item.agility,
@@ -371,14 +369,6 @@ export class UsersService {
       durability: item.durability,
       created_at: item.createdAt.toISOString(),
     };
-  }
-
-  private toPublicImageUrl(imageUrl: string | null): string | null {
-    if (!imageUrl) {
-      return null;
-    }
-
-    return this.configService.get('APP_DOMAIN') + ':' + this.configService.get('PORT') + imageUrl;
   }
 
   private toUserItemType(slotType: EquipmentSlotType): UserOwnedItemDto['type'] {
