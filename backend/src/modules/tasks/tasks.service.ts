@@ -282,17 +282,15 @@ export class TasksService {
         tx,
       );
 
-      if (task.type === TaskType.event) {
-        await this.eventsService.createTaskCompletedEvent(
-          {
-            userId,
-            taskId: task.id,
-            taskSubmissionId: submission.id,
-            proofImage: submission.proofImage,
-          },
-          tx,
-        );
-      }
+      await this.eventsService.createTaskCompletedEvent(
+        {
+          userId,
+          taskId: task.id,
+          taskSubmissionId: submission.id,
+          proofImage: submission.proofImage,
+        },
+        tx,
+      );
 
       return {
         submission: this.toTaskSubmissionResponse(submission),
