@@ -224,13 +224,11 @@ export function BattlesPage() {
         if (response.gameScoreReward) {
           battleRewards.push({ kind: "gameScore", value: response.gameScoreReward });
         }
-      } else {
-        battleRewards.push({ kind: "balance", value: -response.transferredCoins });
       }
 
       showToast(
         response.result === "win" ? "You won the battle" : "You lost the battle",
-        response.result === "win" ? "Rewards received:" : "Penalty:",
+        response.result === "win" ? "Rewards received:" : "No gold lost.",
         battleRewards,
         response.result === "win",
       );
@@ -271,7 +269,7 @@ export function BattlesPage() {
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Battles</h1>
           <p className="text-muted-foreground text-sm">
-            Challenge other players once per day and transfer coins by winning.
+            Challenge other players once per day and earn gold by winning.
           </p>
         </div>
 

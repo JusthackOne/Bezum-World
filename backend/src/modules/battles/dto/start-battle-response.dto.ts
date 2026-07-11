@@ -9,8 +9,10 @@ export class StartBattleResponseDto {
   result!: 'win' | 'lose';
 
   @ApiProperty({
-    description: 'Coins transferred from loser to winner',
-    example: 84,
+    description: 'Gold reward added to the winner balance',
+    minimum: 0,
+    maximum: 10,
+    example: 4,
   })
   transferredCoins!: number;
 

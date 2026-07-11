@@ -16,9 +16,8 @@ import type {
 } from './dto';
 import { BattleRepository, type BattlePlayerRecord } from './repositories';
 
-const BASE_COIN_REWARD = 100;
-const MIN_COIN_REWARD = 10;
-const MAX_COIN_REWARD = 100;
+const MIN_COIN_REWARD = 0;
+const MAX_COIN_REWARD = 10;
 const MIN_GAME_SCORE_REWARD = 0;
 const MAX_GAME_SCORE_REWARD = 100;
 
@@ -148,18 +147,15 @@ export class BattlesService {
 
       const winner = attackerWon ? currentUser : opponentUser;
       const loser = attackerWon ? opponentUser : currentUser;
-      const winnerPower = attackerWon ? currentUserPower : opponentPower;
-      const loserPower = attackerWon ? opponentPower : currentUserPower;
       const winnerWinProbability = attackerWon
         ? attackerWinProbability
         : 1 - attackerWinProbability;
-      const transferAmount = this.calculateCoinReward(winnerPower, loserPower, loser.balance);
+      const coinReward = this.calculateCoinReward(winnerWinProbability);
       const gameScoreReward = this.calculateGameScoreReward(winnerWinProbability);
 
-      await this.battleRepository.transferCoinsAndApplyGameScore(
+      await this.battleRepository.applyWinnerBattleRewards(
         winner.id,
-        loser.id,
-        transferAmount,
+        coinReward,
         gameScoreReward,
         tx,
       );
@@ -173,7 +169,7 @@ export class BattlesService {
           attackerWinProbability,
           winnerUserId: winner.id,
           loserUserId: loser.id,
-          transferredCoins: transferAmount,
+          transferredCoins: coinReward,
           gameScoreReward,
         },
         tx,
@@ -190,7 +186,7 @@ export class BattlesService {
 
       return {
         result: attackerWon ? 'win' : 'lose',
-        transferredCoins: transferAmount,
+        transferredCoins: coinReward,
         ...(attackerWon ? { gameScoreReward } : {}),
         updatedCurrentUserBalance: updatedCurrentUser.balance,
         updatedCurrentUserGameScore: updatedCurrentUser.gameScore,
@@ -265,20 +261,10 @@ export class BattlesService {
     return Number((probability * 100).toFixed(2));
   }
 
-  private calculateCoinReward(
-    winnerPower: number,
-    loserPower: number,
-    loserBalance: number,
-  ): number {
-    if (loserBalance <= 0) {
-      return 0;
-    }
+  private calculateCoinReward(winnerWinProbability: number): number {
+    const underdogReward = Math.round((1 - winnerWinProbability) * MAX_COIN_REWARD);
 
-    const powerRatio = loserPower <= 0 ? 1 : loserPower / Math.max(winnerPower, 1);
-    const scaledReward = Math.round(BASE_COIN_REWARD * powerRatio);
-    const clampedReward = this.clamp(scaledReward, MIN_COIN_REWARD, MAX_COIN_REWARD);
-
-    return Math.min(clampedReward, loserBalance);
+    return this.clamp(underdogReward, MIN_COIN_REWARD, MAX_COIN_REWARD);
   }
 
   private calculateGameScoreReward(winnerWinProbability: number): number {

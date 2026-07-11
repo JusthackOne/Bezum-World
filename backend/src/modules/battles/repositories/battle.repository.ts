@@ -201,10 +201,9 @@ export class BattleRepository {
     });
   }
 
-  async transferCoinsAndApplyGameScore(
+  async applyWinnerBattleRewards(
     winnerUserId: string,
-    loserUserId: string,
-    transferredCoins: number,
+    coinReward: number,
     gameScoreReward: number,
     tx: Prisma.TransactionClient,
   ): Promise<void> {
@@ -214,7 +213,7 @@ export class BattleRepository {
       },
       data: {
         balance: {
-          increment: transferredCoins,
+          increment: coinReward,
         },
         ...(gameScoreReward > 0
           ? {
@@ -223,17 +222,6 @@ export class BattleRepository {
               },
             }
           : {}),
-      },
-    });
-
-    await this.getClient(tx).account.update({
-      where: {
-        id: loserUserId,
-      },
-      data: {
-        balance: {
-          decrement: transferredCoins,
-        },
       },
     });
   }
