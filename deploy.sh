@@ -66,17 +66,35 @@ prepare_repo() {
   fi
 }
 
-start_stack() {
-  log "Starting docker stack"
+stop_application() {
+  log "Stopping application services before build and migrations"
   cd "$APP_DIR"
-  COMPOSE_PARALLEL_LIMIT=1 docker compose -f "$COMPOSE_FILE" up -d --build
-  docker compose -f "$COMPOSE_FILE" ps
+  docker compose -f "$COMPOSE_FILE" stop backend frontend || true
+}
+
+build_stack() {
+  log "Building docker images"
+  cd "$APP_DIR"
+  COMPOSE_PARALLEL_LIMIT=1 docker compose -f "$COMPOSE_FILE" build
+}
+
+start_infrastructure() {
+  log "Starting database and cache"
+  cd "$APP_DIR"
+  docker compose -f "$COMPOSE_FILE" up -d postgres redis
 }
 
 run_migrations() {
   log "Running backend database migrations"
   cd "$APP_DIR"
-  docker compose -f "$COMPOSE_FILE" exec -T backend bunx --bun prisma migrate deploy
+  docker compose -f "$COMPOSE_FILE" run --rm --no-deps backend bunx --bun prisma migrate deploy
+}
+
+start_stack() {
+  log "Starting application stack"
+  cd "$APP_DIR"
+  COMPOSE_PARALLEL_LIMIT=1 docker compose -f "$COMPOSE_FILE" up -d
+  docker compose -f "$COMPOSE_FILE" ps
 }
 
 ensure_env_file() {
@@ -160,8 +178,11 @@ main() {
   install_docker_if_missing
   prepare_repo
   prepare_env_files
-  start_stack
+  stop_application
+  build_stack
+  start_infrastructure
   run_migrations
+  start_stack
   print_result
 }
 

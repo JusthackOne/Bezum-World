@@ -57,7 +57,7 @@ Local URLs:
 - Frontend: `http://localhost:3000`
 - Backend API health: `http://localhost:3001/api/health`
 - Swagger docs: `http://localhost:3001/docs`
-- PostgreSQL: `localhost:5432`
+- PostgreSQL: `localhost:5433`
 - Redis: `localhost:6379`
 
 To run the full local stack in Docker instead:
