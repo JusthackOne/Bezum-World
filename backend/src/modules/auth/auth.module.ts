@@ -19,6 +19,13 @@ import { AccountRepository, AdminRepository, AuthCodeRepository } from './reposi
     AccessTokenGuard,
     AdminOnlyGuard,
   ],
-  exports: [JwtModule, AuthService, AccessTokenGuard, AdminOnlyGuard, AccountRepository],
+  exports: [
+    JwtModule,
+    AuthService,
+    AccessTokenGuard,
+    AdminOnlyGuard,
+    AccountRepository,
+    AuthCodeRepository,
+  ],
 })
 export class AuthModule {}

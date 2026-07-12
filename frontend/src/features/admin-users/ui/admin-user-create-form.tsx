@@ -58,6 +58,7 @@ export function AdminUserCreateForm() {
           onSubmit={async (values: AdminUserFormValues, nextAvatarFile: File | null) => {
             const payload = {
               username: values.username.trim(),
+              ...(values.code ? { code: values.code.toUpperCase() } : {}),
               balance: values.balance,
               gameScore: values.gameScore,
               strength: values.strength,

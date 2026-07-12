@@ -11,6 +11,12 @@ import { Button } from "@/shared/ui/8bit/button";
 import { Input } from "@/shared/ui/8bit/input";
 
 const userFormSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .refine((value) => value === "" || /^[a-zA-Z0-9]{6}$/.test(value), {
+      message: "Код должен содержать ровно 6 латинских букв или цифр",
+    }),
   username: z.string().trim().min(1, "Username is required").max(64),
   balance: z.number().int().min(0),
   gameScore: z.number().int().min(0),
@@ -29,10 +35,12 @@ interface AdminUserFormProps {
   errorMessage?: string | null;
   initialValues?: AdminUserFormValues;
   initialAvatarUrl?: string | null;
+  requireAuthCode?: boolean;
   onSubmit: (values: AdminUserFormValues, avatarFile: File | null) => Promise<void>;
 }
 
 const defaultFormValues: AdminUserFormValues = {
+  code: "",
   username: "",
   balance: 0,
   gameScore: 0,
@@ -61,6 +69,7 @@ export function AdminUserForm({
   errorMessage,
   initialValues,
   initialAvatarUrl,
+  requireAuthCode = false,
   onSubmit,
 }: AdminUserFormProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -99,6 +108,11 @@ export function AdminUserForm({
   }, [avatarPreviewUrl, initialAvatarUrl]);
 
   const submitForm = form.handleSubmit(async (values) => {
+    if (requireAuthCode && values.code.length === 0) {
+      form.setError("code", { message: "Код для входа обязателен" });
+      return;
+    }
+
     await onSubmit(values, avatarFile);
   });
 
@@ -156,6 +170,33 @@ export function AdminUserForm({
         <Input id="username" placeholder="player_001" {...form.register("username")} />
         {form.formState.errors.username ? (
           <p className="text-xs text-destructive">{form.formState.errors.username.message}</p>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="code" className="text-sm font-medium">
+          Код для входа{requireAuthCode ? " *" : " (необязательно)"}
+        </label>
+        <Input
+          id="code"
+          inputMode="text"
+          autoComplete="off"
+          maxLength={6}
+          placeholder="A1B2C3"
+          className="font-mono uppercase"
+          {...form.register("code", {
+            onChange: (event) => {
+              event.target.value = event.target.value.toUpperCase();
+            },
+          })}
+        />
+        <p className="text-muted-foreground text-xs">
+          {requireAuthCode
+            ? "Обязательный уникальный код из 6 латинских букв или цифр."
+            : "Если оставить поле пустым, система сгенерирует код автоматически."}
+        </p>
+        {form.formState.errors.code ? (
+          <p className="text-xs text-destructive">{form.formState.errors.code.message}</p>
         ) : null}
       </div>
 

@@ -26,6 +26,7 @@ interface AdminUserEditFormProps {
 
 function toFormValues(user: AdminUser): AdminUserFormValues {
   return {
+    code: user.code ?? "",
     username: user.username,
     balance: user.balance,
     gameScore: user.gameScore,
@@ -36,8 +37,9 @@ function toFormValues(user: AdminUser): AdminUserFormValues {
   };
 }
 
-function toFormValuesFromProfile(user: UserProfileByUsername): AdminUserFormValues {
+function toFormValuesFromProfile(user: UserProfileByUsername, code: string): AdminUserFormValues {
   return {
+    code,
     username: user.username,
     balance: user.balance,
     gameScore: user.gameScore,
@@ -62,7 +64,7 @@ export function AdminUserEditForm({ userId }: AdminUserEditFormProps) {
   const initialFormValues = useMemo(
     () =>
       userProfileQuery.data
-        ? toFormValuesFromProfile(userProfileQuery.data)
+        ? toFormValuesFromProfile(userProfileQuery.data, user?.code ?? "")
         : user
           ? toFormValues(user)
           : undefined,
@@ -178,6 +180,7 @@ export function AdminUserEditForm({ userId }: AdminUserEditFormProps) {
         <AdminUserForm
           initialValues={initialFormValues}
           initialAvatarUrl={avatarUrl}
+          requireAuthCode
           submitLabel="Save changes"
           submitPendingLabel="Saving..."
           isSubmitting={updateUserMutation.isPending}
@@ -187,6 +190,7 @@ export function AdminUserEditForm({ userId }: AdminUserEditFormProps) {
 
             const payload: AdminUpdateUserInput = {
               userId,
+              code: values.code.toUpperCase(),
               username: values.username.trim(),
               balance: values.balance,
               gameScore: values.gameScore,

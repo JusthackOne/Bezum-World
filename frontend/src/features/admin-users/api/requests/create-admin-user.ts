@@ -9,6 +9,9 @@ export async function createAdminUser(
 ): Promise<AdminCreateUserResponse> {
   const formData = new FormData();
   formData.append("username", payload.username);
+  if (payload.code !== undefined) {
+    formData.append("code", payload.code);
+  }
   formData.append("strength", String(payload.strength));
   formData.append("charisma", String(payload.charisma));
   formData.append("endurance", String(payload.endurance));

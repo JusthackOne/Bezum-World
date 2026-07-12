@@ -1,9 +1,10 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   Min,
   MinLength,
@@ -11,6 +12,19 @@ import {
 } from 'class-validator';
 
 export class AdminUpdateUserDto {
+  @ApiProperty({
+    description: 'Required unique 6-character login code',
+    example: 'A1B2C3',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsString()
+  @Matches(/^[A-Z0-9]{6}$/, {
+    message: 'code must contain exactly 6 alphanumeric characters',
+  })
+  code!: string;
+
   @ApiPropertyOptional({
     description: 'Public username displayed in the game',
     example: 'player_001',

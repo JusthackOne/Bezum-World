@@ -94,6 +94,7 @@ export class AdminUsersController {
     schema: {
       type: 'object',
       properties: {
+        code: { type: 'string', pattern: '^[A-Za-z0-9]{6}$' },
         username: { type: 'string' },
         balance: { type: 'integer', minimum: 0 },
         gameScore: { type: 'integer', minimum: 0 },
@@ -104,6 +105,7 @@ export class AdminUsersController {
         avatarUrl: { type: 'string', nullable: true },
         avatar: { type: 'string', format: 'binary' },
       },
+      required: ['code'],
     },
   })
   @ApiOkResponse({ type: AuthenticatedUserDto })

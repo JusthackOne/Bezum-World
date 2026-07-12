@@ -20,6 +20,7 @@ export interface AdminDeleteUserResponse {
 
 export interface AdminCreateUserInput {
   username: string;
+  code?: string;
   avatarFile?: File | null;
   balance?: number;
   gameScore?: number;
@@ -48,6 +49,7 @@ export interface AdminCreateUserResponse {
 
 export interface AdminUpdateUserInput {
   userId: string;
+  code: string;
   username?: string;
   avatarUrl?: string | null;
   avatarFile?: File | null;

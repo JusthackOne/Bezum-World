@@ -6,6 +6,7 @@ import type { AdminUpdateUserInput, AdminUpdateUserResponse } from "../../model/
 
 function buildJsonPayload(payload: AdminUpdateUserInput): Record<string, unknown> {
   return {
+    code: payload.code,
     ...(payload.username !== undefined ? { username: payload.username } : {}),
     ...(payload.avatarUrl !== undefined ? { avatarUrl: payload.avatarUrl } : {}),
     ...(payload.balance !== undefined ? { balance: payload.balance } : {}),
@@ -19,6 +20,7 @@ function buildJsonPayload(payload: AdminUpdateUserInput): Record<string, unknown
 
 function buildMultipartPayload(payload: AdminUpdateUserInput): FormData {
   const formData = new FormData();
+  formData.append("code", payload.code);
 
   if (payload.username !== undefined) {
     formData.append("username", payload.username);

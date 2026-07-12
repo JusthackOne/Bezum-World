@@ -8,7 +8,7 @@ import {
 import { EquipmentSlotType, Prisma, type Account } from '@prisma/client';
 
 import { AuthenticatedUserDto } from '../auth/dto';
-import { AccountRepository, type UpdateAccountInput } from '../auth/repositories';
+import { AccountRepository, AuthCodeRepository, type UpdateAccountInput } from '../auth/repositories';
 import {
   AdminDeleteUserResponseDto,
   AdminUpdateUserDto,
@@ -37,6 +37,7 @@ export class UsersService {
     private readonly userItemsRepository: UserItemsRepository,
     private readonly userEquipmentRepository: UserEquipmentRepository,
     private readonly accountRepository: AccountRepository,
+    private readonly authCodeRepository: AuthCodeRepository,
   ) {}
 
   async getPublicProfileByUsername(username: string): Promise<PublicUserProfileDto> {
@@ -110,17 +111,24 @@ export class UsersService {
       ...(payload.intelligence !== undefined ? { intelligence: payload.intelligence } : {}),
     };
 
-    if (Object.keys(updateInput).length === 0) {
-      throw new BadRequestException('At least one field must be provided');
-    }
-
     let updatedAccount: Account;
 
     try {
-      updatedAccount = await this.accountRepository.updateById(userId, updateInput);
+      updatedAccount = await this.prisma.$transaction(async (tx) => {
+        const account = await tx.account.update({
+          where: { id: userId },
+          data: updateInput,
+        });
+        await this.authCodeRepository.upsertForAccount(userId, payload.code, tx);
+        return account;
+      });
     } catch (error: unknown) {
       if (this.isUsernameUniqueConstraintError(error)) {
         throw new BadRequestException('Username is already in use');
+      }
+
+      if (this.isAuthCodeUniqueConstraintError(error)) {
+        throw new BadRequestException('Authentication code is already in use');
       }
 
       throw error;
@@ -336,6 +344,19 @@ export class UsersService {
     }
 
     return typeof target === 'string' && target.toLowerCase().includes('username');
+  }
+
+  private isAuthCodeUniqueConstraintError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+      return false;
+    }
+
+    const target = error.meta?.target;
+    return Array.isArray(target)
+      ? target.some(
+          (field) => typeof field === 'string' && field.toLowerCase().includes('code'),
+        )
+      : typeof target === 'string' && target.toLowerCase().includes('code');
   }
 
   private toUserOwnedItem(item: {

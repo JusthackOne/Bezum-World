@@ -165,7 +165,7 @@ export class AuthService implements OnModuleInit {
     uploadedAvatarUrl?: string,
   ): Promise<AdminCreateAccountResponseDto> {
     for (let attempt = 1; attempt <= MAX_AUTH_CODE_GENERATION_ATTEMPTS; attempt += 1) {
-      const generatedCode = this.generateAuthCode();
+      const authCode = payload.code ?? this.generateAuthCode();
 
       try {
         const created = await this.prisma.$transaction(async (tx) => {
@@ -183,11 +183,11 @@ export class AuthService implements OnModuleInit {
             tx,
           );
 
-          const authCode = await this.authCodeRepository.create(generatedCode, account.id, tx);
+          const createdAuthCode = await this.authCodeRepository.create(authCode, account.id, tx);
 
           return {
             account,
-            code: authCode.code,
+            code: createdAuthCode.code,
           };
         });
 
@@ -196,8 +196,12 @@ export class AuthService implements OnModuleInit {
           code: created.code,
         };
       } catch (error) {
-        if (this.isAuthCodeCollision(error)) {
+        if (this.isAuthCodeCollision(error) && payload.code === undefined) {
           continue;
+        }
+
+        if (this.isAuthCodeCollision(error)) {
+          throw new BadRequestException('Authentication code is already in use');
         }
 
         if (this.isUsernameCollision(error)) {

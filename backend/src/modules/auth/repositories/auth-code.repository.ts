@@ -27,6 +27,18 @@ export class AuthCodeRepository {
     });
   }
 
+  async upsertForAccount(
+    accountId: string,
+    code: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<AuthCode> {
+    return this.getClient(tx).authCode.upsert({
+      where: { accountId },
+      create: { accountId, code },
+      update: { code },
+    });
+  }
+
   private getClient(tx?: Prisma.TransactionClient): PrismaService | Prisma.TransactionClient {
     return tx ?? this.prisma;
   }

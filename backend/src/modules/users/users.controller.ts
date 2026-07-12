@@ -69,7 +69,7 @@ export class UsersController {
     }),
   )
   @ApiOperation({
-    summary: 'Create account and auto-generate unique login code',
+    summary: 'Create account with an optional unique login code',
     description: 'Available only for authenticated admin.',
   })
   @ApiBearerAuth('access-token')
@@ -78,6 +78,7 @@ export class UsersController {
     schema: {
       type: 'object',
       properties: {
+        code: { type: 'string', pattern: '^[A-Za-z0-9]{6}$' },
         username: { type: 'string' },
         balance: { type: 'integer', minimum: 0 },
         gameScore: { type: 'integer', minimum: 0 },
