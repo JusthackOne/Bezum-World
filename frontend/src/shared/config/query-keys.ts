@@ -9,6 +9,8 @@ export const queryKeys = {
     limit: number;
   }) => ["admin", "tasks", filters.search, filters.type, filters.page, filters.limit] as const,
   adminTaskById: (taskId: string) => ["admin", "tasks", "by-id", taskId] as const,
+  adminBossBattles: ["admin", "boss-battles"] as const,
+  adminBossBattleById: (id: string) => ["admin", "boss-battles", "by-id", id] as const,
   shopItems: ["shop", "items"] as const,
   clientTasksPrefix: ["client", "tasks"] as const,
   clientTasks: (filters: { search: string; type: "all" | "daily" | "weekly" | "event" }) =>

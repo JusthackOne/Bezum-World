@@ -20,6 +20,7 @@ export function AdminSidebar() {
   const isUsersActive = pathname.startsWith("/admin/users");
   const isItemsActive = pathname.startsWith("/admin/items");
   const isTasksActive = pathname.startsWith("/admin/tasks");
+  const isBossBattlesActive = pathname.startsWith("/admin/boss-battles");
 
   return (
     <Sidebar>
@@ -32,7 +33,6 @@ export function AdminSidebar() {
                 <Link href="/admin/users">Users</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isItemsActive}>
                 <Link href="/admin/items">Items</Link>
@@ -42,6 +42,12 @@ export function AdminSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isTasksActive}>
                 <Link href="/admin/tasks">Tasks</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isBossBattlesActive}>
+                <Link href="/admin/boss-battles">Boss Battles</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
