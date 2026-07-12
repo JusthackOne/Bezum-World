@@ -320,6 +320,18 @@ export class BossBattlesService {
       const endsAt = input.endsAt ? new Date(input.endsAt) : before.endsAt;
       this.validatePeriod(startsAt.toISOString(), endsAt.toISOString());
       const initialHp = input.initialHp ?? before.initialHp;
+      const publicationStatuses: BossBattleStatus[] = [
+        BossBattleStatus.DRAFT,
+        BossBattleStatus.SCHEDULED,
+        BossBattleStatus.ACTIVE,
+      ];
+      const canChangePublication = publicationStatuses.includes(before.status);
+      const publicationStatus =
+        input.publish === undefined || !canChangePublication
+          ? undefined
+          : input.publish
+            ? this.publishedStatus(startsAt, endsAt)
+            : BossBattleStatus.DRAFT;
       const currentHp =
         input.initialHp === undefined
           ? before.currentHp
@@ -338,6 +350,7 @@ export class BossBattlesService {
             ? { attackCooldownSeconds: input.attackCooldownSeconds }
             : {}),
           ...(input.attributes ?? {}),
+          ...(publicationStatus !== undefined ? { status: publicationStatus } : {}),
           version: { increment: 1 },
           ...(currentHp === 0 && before.status === BossBattleStatus.ACTIVE
             ? { status: BossBattleStatus.DEFEATED, defeatedAt: new Date(), finishedAt: new Date() }
@@ -364,7 +377,12 @@ export class BossBattlesService {
         );
       return after;
     });
-    if (input.startsAt || input.endsAt) await this.schedule(id, result.startsAt, result.endsAt);
+    if (result.status === BossBattleStatus.DRAFT) await this.unschedule(id);
+    else if (
+      result.status === BossBattleStatus.SCHEDULED ||
+      result.status === BossBattleStatus.ACTIVE
+    )
+      await this.schedule(id, result.startsAt, result.endsAt);
     if (result.currentHp === 0) await this.enqueueFinalize(id);
     return this.repository.findBattle(id);
   }
@@ -401,6 +419,14 @@ export class BossBattlesService {
       this.replaceJob(`boss-battle-expire:${id}`, EXPIRE_JOB, id, endsAt),
     ]);
   }
+  private async unschedule(id: string) {
+    await Promise.all(
+      [`boss-battle-activate:${id}`, `boss-battle-expire:${id}`].map(async (jobId) => {
+        const job = await this.queue.getJob(jobId);
+        if (job) await job.remove();
+      }),
+    );
+  }
   private async replaceJob(jobId: string, name: string, id: string, at: Date) {
     const old = await this.queue.getJob(jobId);
     if (old) await old.remove();
@@ -428,6 +454,11 @@ export class BossBattlesService {
   }
   private validatePeriod(start: string, end: string) {
     if (new Date(start) >= new Date(end)) throw this.error('INVALID_BATTLE_PERIOD');
+  }
+  private publishedStatus(startsAt: Date, endsAt: Date): BossBattleStatus {
+    const now = new Date();
+    if (endsAt <= now) throw this.error('BOSS_BATTLE_EXPIRED');
+    return startsAt <= now ? BossBattleStatus.ACTIVE : BossBattleStatus.SCHEDULED;
   }
   private validateRewards(rewards: BossRewardDto[]) {
     try {

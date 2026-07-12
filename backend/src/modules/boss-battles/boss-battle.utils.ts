@@ -24,7 +24,10 @@ export function calculateBossDamage(
   }
   const userPower = calculateBattlesPower(userAttributes);
   const bossPower = calculateBattlesPower(bossAttributes);
-  const ratio = Math.max(MIN_POWER_RATIO, Math.min(MAX_POWER_RATIO, userPower / Math.max(1, bossPower)));
+  const ratio = Math.max(
+    MIN_POWER_RATIO,
+    Math.min(MAX_POWER_RATIO, userPower / Math.max(1, bossPower)),
+  );
   const damage = Math.round(BOSS_BASE_DAMAGE * ratio * randomMultiplier);
   return {
     userPower,
@@ -33,7 +36,11 @@ export function calculateBossDamage(
   };
 }
 
-export interface RewardRange { id?: string; placeFrom: number; placeTo: number }
+export interface RewardRange {
+  id?: string;
+  placeFrom: number;
+  placeTo: number;
+}
 
 export function validateRewardRanges(rewards: RewardRange[]): void {
   for (const place of [1, 2, 3]) {

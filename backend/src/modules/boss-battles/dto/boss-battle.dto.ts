@@ -70,6 +70,7 @@ export class UpdateBossBattleDto {
   @ValidateNested({ each: true })
   @Type(() => BossRewardDto)
   rewards?: BossRewardDto[];
+  @IsOptional() @IsBoolean() publish?: boolean;
 }
 
 export class FinishBossBattleDto {

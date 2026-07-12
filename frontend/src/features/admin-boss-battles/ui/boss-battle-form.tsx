@@ -61,7 +61,7 @@ const schema = z
     initialHp: z.coerce.number().int().positive(),
     attributes: attrs,
     attackCooldownSeconds: z.coerce.number().int().positive(),
-    publish: z.boolean(),
+    draft: z.boolean(),
     rewards: z.array(reward).min(3),
   })
   .superRefine((v, c) => {
@@ -134,7 +134,7 @@ function defaults(b?: BossBattle): Values {
           intelligence: b.intelligence,
         },
         attackCooldownSeconds: b.attackCooldownSeconds,
-        publish: false,
+        draft: b.status === "DRAFT",
         rewards: b.rewards.map((r) => ({
           placeFrom: r.placeFrom,
           placeTo: r.placeTo,
@@ -172,7 +172,7 @@ function defaults(b?: BossBattle): Values {
         initialHp: 10000,
         attributes: { ...emptyAttrs },
         attackCooldownSeconds: 3600,
-        publish: false,
+        draft: true,
         rewards: defaultRewards,
       };
 }
@@ -245,7 +245,7 @@ export function BossBattleForm({ battle }: { battle?: BossBattle }) {
         attributes: v.attributes,
         attackCooldownSeconds: v.attackCooldownSeconds,
         rewards,
-        ...(!battle ? { publish: v.publish } : {}),
+        publish: !v.draft,
       };
       const saved = await save.mutateAsync(payload);
       toast.success(battle ? "Boss battle updated" : "Boss battle created");
@@ -322,12 +322,16 @@ export function BossBattleForm({ battle }: { battle?: BossBattle }) {
               {...form.register("description")}
             />
           </label>
-          {!battle ? (
-            <label className="flex items-center gap-2">
-              <input type="checkbox" {...form.register("publish")} />
-              Publish immediately or schedule by start date
-            </label>
-          ) : null}
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              disabled={
+                battle !== undefined && !["DRAFT", "SCHEDULED", "ACTIVE"].includes(battle.status)
+              }
+              {...form.register("draft")}
+            />
+            Save as draft
+          </label>
         </CardContent>
       </Card>
       <Card>
