@@ -65,6 +65,7 @@ export interface BossBattle extends BossAttributes {
   participant: BossParticipant | null;
   canAttack: boolean;
   nextAttackAt: string | null;
+  damageRange: { min: number; max: number } | null;
 }
 
 export interface BossLeaderboardEntry {

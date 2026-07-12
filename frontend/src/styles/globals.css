@@ -158,3 +158,33 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes boss-damage-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(1.15);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.9);
+  }
+}
+
+.boss-damage-indicator {
+  animation: boss-damage-fall 800ms ease-out forwards;
+  text-shadow:
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boss-damage-indicator {
+    animation: none;
+    opacity: 1;
+  }
+}

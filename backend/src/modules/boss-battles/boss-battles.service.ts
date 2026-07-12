@@ -78,7 +78,16 @@ export class BossBattlesService {
   async get(id: string, userId?: string) {
     const battle = await this.repository.findBattle(id);
     if (!battle) throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
-    const participant = userId ? await this.repository.findParticipant(id, userId) : null;
+    const [participant, user] = await Promise.all([
+      userId ? this.repository.findParticipant(id, userId) : null,
+      userId ? this.repository.findUser(userId) : null,
+    ]);
+    const damageRange = user
+      ? {
+          min: calculateBossDamage(user, battle, 0.9).calculatedDamage,
+          max: calculateBossDamage(user, battle, 1.1).calculatedDamage,
+        }
+      : null;
     return {
       ...battle,
       serverTime: new Date(),
@@ -90,6 +99,7 @@ export class BossBattlesService {
         new Date() < battle.endsAt &&
         (!participant || participant.nextAttackAt <= new Date()),
       nextAttackAt: participant?.nextAttackAt ?? null,
+      damageRange,
     };
   }
 

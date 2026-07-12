@@ -15,7 +15,7 @@ export class BossBattlesRepository {
   async lockBattle(id: string, tx: Prisma.TransactionClient) {
     const rows = await tx.$queryRaw<
       Array<{ id: string }>
-    >`SELECT id FROM boss_battles WHERE id = ${id}::uuid FOR UPDATE`;
+    >`SELECT id FROM boss_battles WHERE id = ${id} FOR UPDATE`;
     if (rows.length === 0) return null;
     return tx.bossBattle.findUnique({
       where: { id },
@@ -86,7 +86,7 @@ export class BossBattlesRepository {
     })();
   }
 
-  findUser(userId: string, tx: Prisma.TransactionClient) {
+  findUser(userId: string, tx: Prisma.TransactionClient = this.prisma) {
     return tx.account.findUnique({ where: { id: userId } });
   }
 
@@ -158,7 +158,7 @@ export class BossBattlesRepository {
       }>
     >`
       SELECT ranked.place, ranked.user_id AS "userId", a.username, a."avatarUrl", ranked.total_damage AS "totalDamage", ranked.attacks_count AS "attacksCount", ranked.last_attack_at AS "lastAttackAt"
-      FROM (SELECT p.*, DENSE_RANK() OVER (ORDER BY p.total_damage DESC) AS place FROM boss_battle_participants p WHERE p.boss_battle_id = ${battleId}::uuid) ranked
+      FROM (SELECT p.*, DENSE_RANK() OVER (ORDER BY p.total_damage DESC) AS place FROM boss_battle_participants p WHERE p.boss_battle_id = ${battleId}) ranked
       JOIN "Account" a ON a.id = ranked.user_id
       ORDER BY ranked.place, ranked.last_attack_at, ranked.user_id OFFSET ${skip} LIMIT ${take}`;
   }
@@ -172,7 +172,7 @@ export class BossBattlesRepository {
   }
   lockResult(battleId: string, userId: string, tx: Prisma.TransactionClient) {
     return (async () => {
-      await tx.$queryRaw`SELECT id FROM boss_battle_results WHERE boss_battle_id = ${battleId}::uuid AND user_id = ${userId}::uuid FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM boss_battle_results WHERE boss_battle_id = ${battleId} AND user_id = ${userId} FOR UPDATE`;
       return tx.bossBattleResult.findUnique({
         where: { bossBattleId_userId: { bossBattleId: battleId, userId } },
         include: { reward: { include: { itemTemplate: true } }, claim: true, battle: true },
