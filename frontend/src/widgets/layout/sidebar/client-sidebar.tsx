@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ActivityIcon,
+  SkullIcon,
   ListTodoIcon,
   LogOutIcon,
   PanelLeftIcon,
@@ -59,6 +60,7 @@ export function ClientSidebar() {
   const clearSession = useClientAuthStore((state) => state.clearSession);
 
   const isShopActive = pathname.startsWith("/shop");
+  const isBossBattleActive = pathname.startsWith("/boss-battle");
   const isBattlesActive = pathname.startsWith("/battles");
   const isTasksActive = pathname.startsWith("/tasks");
   const isLeaderboardActive = pathname.startsWith("/leaderboard");
@@ -68,37 +70,51 @@ export function ClientSidebar() {
   const profileHref = session?.user.username
     ? publicUserRoutes.profile(session.user.username)
     : "/user";
-  const navItems: ClientNavItem[] = [
-    {
-      href: "/shop",
-      label: "Shop",
-      Icon: ShoppingBagIcon,
-      isActive: isShopActive,
-    },
-    {
-      href: "/tasks",
-      label: "Tasks",
-      Icon: ListTodoIcon,
-      isActive: isTasksActive,
-    },
-    {
-      href: "/battles",
-      label: "Battles",
-      Icon: SwordsIcon,
-      isActive: isBattlesActive,
-    },
-    {
-      href: "/leaderboard",
-      label: "LeaderBoard",
-      Icon: TrophyIcon,
-      isActive: isLeaderboardActive,
-    },
-    {
-      href: "/events",
-      label: "Events",
-      Icon: ActivityIcon,
-      isActive: isEventsActive,
-    },
+  const navRows: ClientNavItem[][] = [
+    [
+      {
+        href: "/leaderboard",
+        label: "Leaderboard",
+        Icon: TrophyIcon,
+        isActive: isLeaderboardActive,
+      },
+    ],
+    [
+      {
+        href: "/boss-battle",
+        label: "Boss",
+        Icon: SkullIcon,
+        isActive: isBossBattleActive,
+      },
+      {
+        href: "/battles",
+        label: "Battles",
+        Icon: SwordsIcon,
+        isActive: isBattlesActive,
+      },
+    ],
+    [
+      {
+        href: "/shop",
+        label: "Shop",
+        Icon: ShoppingBagIcon,
+        isActive: isShopActive,
+      },
+      {
+        href: "/tasks",
+        label: "Tasks",
+        Icon: ListTodoIcon,
+        isActive: isTasksActive,
+      },
+    ],
+    [
+      {
+        href: "/events",
+        label: "Events",
+        Icon: ActivityIcon,
+        isActive: isEventsActive,
+      },
+    ],
   ];
 
   const logoutMutation = useMutation({
@@ -148,23 +164,28 @@ export function ClientSidebar() {
         <SidebarContent className="justify-center">
           <SidebarGroup className="px-3 py-2">
             <nav aria-label="Client navigation" className="mx-auto w-full max-w-[220px]">
-              <div className="flex flex-col items-center gap-3 min-[800px]:gap-4">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={[
-                      "group flex h-20 w-20 flex-col items-center justify-center rounded-full border transition-all duration-150 min-[380px]:h-[5.5rem] min-[380px]:w-[5.5rem] min-[800px]:h-24 min-[800px]:w-24",
-                      item.isActive
-                        ? "border-sidebar-primary bg-sidebar-primary text-white shadow-[0_0_0_3px_color-mix(in_oklch,var(--sidebar-primary)_25%,transparent)]"
-                        : "border-sidebar-border border-2 bg-sidebar-accent/80 text-sidebar-foreground hover:border-sidebar-primary/70 hover:bg-sidebar-accent/60 hover:shadow-[0_0_22px_color-mix(in_oklch,var(--sidebar-primary)_28%,transparent)]",
-                    ].join(" ")}
-                  >
-                    <item.Icon className="size-8 min-[800px]:size-9" />
-                    <span className="mt-1 text-[13px] font-semibold leading-none tracking-wide min-[800px]:text-sm">
-                      {item.label}
-                    </span>
-                  </Link>
+              <div className="flex flex-col gap-3 min-[800px]:gap-4">
+                {navRows.map((row) => (
+                  <div key={row.map((item) => item.href).join(":")} className="flex w-full">
+                    {row.map((item) => (
+                      <div key={item.href} className="flex flex-1 justify-center">
+                        <Link
+                          href={item.href}
+                          className={[
+                            "group flex h-20 w-20 flex-col items-center justify-center rounded-full border transition-all duration-150 min-[380px]:h-[5.5rem] min-[380px]:w-[5.5rem] min-[800px]:h-24 min-[800px]:w-24",
+                            item.isActive
+                              ? "border-sidebar-primary bg-sidebar-primary text-white shadow-[0_0_0_3px_color-mix(in_oklch,var(--sidebar-primary)_25%,transparent)]"
+                              : "border-sidebar-border border-2 bg-sidebar-accent/80 text-sidebar-foreground hover:border-sidebar-primary/70 hover:bg-sidebar-accent/60 hover:shadow-[0_0_22px_color-mix(in_oklch,var(--sidebar-primary)_28%,transparent)]",
+                          ].join(" ")}
+                        >
+                          <item.Icon className="size-8 min-[800px]:size-9" />
+                          <span className="mt-1 text-[13px] font-semibold leading-none tracking-wide min-[800px]:text-sm">
+                            {item.label}
+                          </span>
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
                 ))}
               </div>
             </nav>

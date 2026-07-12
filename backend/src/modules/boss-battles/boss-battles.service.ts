@@ -348,7 +348,6 @@ export class BossBattlesService {
               action: 'UPDATED',
               beforeData: this.json(before),
               afterData: this.json(input),
-              ...(input.reason !== undefined ? { reason: input.reason } : {}),
             },
           },
         },
@@ -370,13 +369,7 @@ export class BossBattlesService {
     return this.repository.findBattle(id);
   }
 
-  async finish(
-    adminId: string,
-    id: string,
-    grantRewards: boolean,
-    confirm: boolean,
-    reason?: string,
-  ) {
+  async finish(adminId: string, id: string, grantRewards: boolean, confirm: boolean) {
     if (!confirm) throw this.error('ADMIN_CONFIRMATION_REQUIRED');
     await this.repository.transaction(async (tx) => {
       const battle = await this.repository.lockBattle(id, tx);
@@ -393,7 +386,6 @@ export class BossBattlesService {
               action: grantRewards ? 'MANUAL_FINISH' : 'CANCELLED',
               beforeData: this.json(battle),
               afterData: this.json({ grantRewards }),
-              ...(reason !== undefined ? { reason } : {}),
             },
           },
         },

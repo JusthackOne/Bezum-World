@@ -1,5 +1,19 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { EquipmentSlotType, ItemRarity } from '@prisma/client';
 
 export class BossAttributesDto {
@@ -51,17 +65,21 @@ export class UpdateBossBattleDto {
   @IsOptional() @IsInt() @Min(1) initialHp?: number;
   @IsOptional() @ValidateNested() @Type(() => BossAttributesDto) attributes?: BossAttributesDto;
   @IsOptional() @IsInt() @Min(1) attackCooldownSeconds?: number;
-  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => BossRewardDto) rewards?: BossRewardDto[];
-  @IsOptional() @IsString() reason?: string;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BossRewardDto)
+  rewards?: BossRewardDto[];
 }
 
 export class FinishBossBattleDto {
   @IsBoolean() confirm!: boolean;
   @IsBoolean() grantRewards!: boolean;
-  @IsOptional() @IsString() reason?: string;
 }
 
-export class BossBattleIdParamsDto { @IsUUID() id!: string; }
+export class BossBattleIdParamsDto {
+  @IsUUID() id!: string;
+}
 export class BossLeaderboardQueryDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 20;

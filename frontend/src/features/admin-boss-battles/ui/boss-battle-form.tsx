@@ -62,7 +62,6 @@ const schema = z
     attributes: attrs,
     attackCooldownSeconds: z.coerce.number().int().positive(),
     publish: z.boolean(),
-    reason: z.string(),
     rewards: z.array(reward).min(3),
   })
   .superRefine((v, c) => {
@@ -136,7 +135,6 @@ function defaults(b?: BossBattle): Values {
         },
         attackCooldownSeconds: b.attackCooldownSeconds,
         publish: false,
-        reason: "",
         rewards: b.rewards.map((r) => ({
           placeFrom: r.placeFrom,
           placeTo: r.placeTo,
@@ -175,7 +173,6 @@ function defaults(b?: BossBattle): Values {
         attributes: { ...emptyAttrs },
         attackCooldownSeconds: 3600,
         publish: false,
-        reason: "",
         rewards: defaultRewards,
       };
 }
@@ -249,7 +246,6 @@ export function BossBattleForm({ battle }: { battle?: BossBattle }) {
         attackCooldownSeconds: v.attackCooldownSeconds,
         rewards,
         ...(!battle ? { publish: v.publish } : {}),
-        ...(battle && v.reason ? { reason: v.reason } : {}),
       };
       const saved = await save.mutateAsync(payload);
       toast.success(battle ? "Boss battle updated" : "Boss battle created");
@@ -331,11 +327,7 @@ export function BossBattleForm({ battle }: { battle?: BossBattle }) {
               <input type="checkbox" {...form.register("publish")} />
               Publish immediately or schedule by start date
             </label>
-          ) : (
-            <Field label="Audit reason">
-              <Input {...form.register("reason")} />
-            </Field>
-          )}
+          ) : null}
         </CardContent>
       </Card>
       <Card>

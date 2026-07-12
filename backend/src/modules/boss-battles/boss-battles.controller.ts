@@ -129,13 +129,7 @@ export class AdminBossBattlesController {
     @Body() body: FinishBossBattleDto,
     @Req() request: RequestWithAuthUser,
   ) {
-    return this.service.finish(
-      this.adminId(request),
-      params.id,
-      body.grantRewards,
-      body.confirm,
-      body.reason,
-    );
+    return this.service.finish(this.adminId(request), params.id, body.grantRewards, body.confirm);
   }
   private adminId(request: RequestWithAuthUser) {
     if (!request.user?.sub || request.user.actorType !== 'admin')

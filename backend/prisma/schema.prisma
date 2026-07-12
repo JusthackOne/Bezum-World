@@ -263,7 +263,6 @@ model BossBattleAuditLog {
   action       String
   beforeData   Json?      @map("before_data")
   afterData    Json?      @map("after_data")
-  reason       String?
   createdAt    DateTime   @default(now()) @map("created_at")
   battle       BossBattle @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
 
