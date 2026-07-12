@@ -8,6 +8,7 @@ import { EquipmentSlotType, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { EventsService } from '../events/events.service';
+import { calculateBattlesPower } from './battle-power';
 import type {
   BattlePlayerDto,
   BattlePlayerEquipmentDto,
@@ -258,12 +259,7 @@ export class BattlesService {
   }
 
   private calculatePower(stats: FinalBattleStats): number {
-    return (
-      stats.strength * 0.35 +
-      stats.endurance * 0.25 +
-      stats.intelligence * 0.2 +
-      stats.charisma * 0.2
-    );
+    return calculateBattlesPower(stats);
   }
 
   private applyPowerNoise(power: number): number {

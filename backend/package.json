@@ -16,6 +16,7 @@
     "lint": "bunx --bun eslint .",
     "lint:fix": "bunx --bun eslint . --fix",
     "format": "bunx --bun prettier --write .",
+    "test": "bun test",
     "prisma:generate": "bunx --bun prisma generate",
     "prisma:migrate:dev": "bunx --bun prisma migrate dev",
     "prisma:studio": "bunx --bun prisma studio",

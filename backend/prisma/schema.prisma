@@ -32,33 +32,243 @@ enum BattleEventResult {
   LOSE
 }
 
+enum BossBattleStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  DEFEATED
+  EXPIRED
+  CANCELLED
+  FINALIZING
+  COMPLETED
+}
+
+enum BossRewardClaimStatus {
+  NOT_ELIGIBLE
+  AVAILABLE
+  PROCESSING
+  CLAIMED
+  FAILED
+}
+
 model Account {
-  id               String    @id @default(uuid())
-  username         String    @unique
-  avatarUrl        String?
-  balance          Int       @default(0)
-  gameScore        Int       @default(0)
-  strength         Int       @default(0)
-  charisma         Int       @default(0)
-  endurance        Int       @default(0)
-  intelligence     Int       @default(0)
-  lastTimeLoggedIn DateTime?
-  createdAt        DateTime  @default(now())
-  authCode         AuthCode?
-  items            Item[]
-  equipment        UserEquipmentSlot[]
-  taskSubmissions  TaskSubmission[]
-  taskSuggestions  TaskSuggestion[] @relation("TaskSuggestionCreator")
-  taskSuggestionVotes TaskSuggestionVote[] @relation("TaskSuggestionVoter")
-  attackedBattles  BattleLog[] @relation("BattleAttacker")
-  defendedBattles  BattleLog[] @relation("BattleDefender")
-  wonBattles       BattleLog[] @relation("BattleWinner")
-  lostBattles      BattleLog[] @relation("BattleLoser")
-  purchaseEvents   GameEvent[] @relation("GameEventPurchaseUser")
-  challengedEvents GameEvent[] @relation("GameEventChallenger")
-  opponentEvents   GameEvent[] @relation("GameEventOpponent")
-  wonEvents        GameEvent[] @relation("GameEventWinner")
-  taskCompletedEvents GameEvent[] @relation("GameEventTaskCompletedUser")
+  id                  String                  @id @default(uuid())
+  username            String                  @unique
+  avatarUrl           String?
+  balance             Int                     @default(0)
+  gameScore           Int                     @default(0)
+  strength            Int                     @default(0)
+  charisma            Int                     @default(0)
+  endurance           Int                     @default(0)
+  intelligence        Int                     @default(0)
+  lastTimeLoggedIn    DateTime?
+  createdAt           DateTime                @default(now())
+  authCode            AuthCode?
+  items               Item[]
+  equipment           UserEquipmentSlot[]
+  taskSubmissions     TaskSubmission[]
+  taskSuggestions     TaskSuggestion[]        @relation("TaskSuggestionCreator")
+  taskSuggestionVotes TaskSuggestionVote[]    @relation("TaskSuggestionVoter")
+  attackedBattles     BattleLog[]             @relation("BattleAttacker")
+  defendedBattles     BattleLog[]             @relation("BattleDefender")
+  wonBattles          BattleLog[]             @relation("BattleWinner")
+  lostBattles         BattleLog[]             @relation("BattleLoser")
+  purchaseEvents      GameEvent[]             @relation("GameEventPurchaseUser")
+  challengedEvents    GameEvent[]             @relation("GameEventChallenger")
+  opponentEvents      GameEvent[]             @relation("GameEventOpponent")
+  wonEvents           GameEvent[]             @relation("GameEventWinner")
+  taskCompletedEvents GameEvent[]             @relation("GameEventTaskCompletedUser")
+  bossAttacks         BossAttack[]
+  bossParticipants    BossBattleParticipant[]
+  bossResults         BossBattleResult[]
+  bossRewardClaims    BossRewardClaim[]
+}
+
+model BossBattle {
+  id                    String                  @id @default(uuid())
+  name                  String
+  description           String?
+  imageUrl              String?                 @map("image_url")
+  startsAt              DateTime                @map("starts_at")
+  endsAt                DateTime                @map("ends_at")
+  initialHp             Int                     @map("initial_hp")
+  currentHp             Int                     @map("current_hp")
+  totalAppliedDamage    Int                     @default(0) @map("total_applied_damage")
+  strength              Int
+  charisma              Int
+  endurance             Int
+  intelligence          Int
+  attackCooldownSeconds Int                     @map("attack_cooldown_seconds")
+  status                BossBattleStatus        @default(DRAFT)
+  defeatedAt            DateTime?               @map("defeated_at")
+  finishedAt            DateTime?               @map("finished_at")
+  resultsFinalizedAt    DateTime?               @map("results_finalized_at")
+  version               Int                     @default(1)
+  rewardsEnabled        Boolean                 @default(true) @map("rewards_enabled")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  rewards               BossBattleReward[]
+  attacks               BossAttack[]
+  participants          BossBattleParticipant[]
+  results               BossBattleResult[]
+  claims                BossRewardClaim[]
+  auditLogs             BossBattleAuditLog[]
+
+  @@index([status, startsAt])
+  @@index([status, endsAt])
+  @@map("boss_battles")
+}
+
+model BossBattleReward {
+  id              String                  @id @default(uuid())
+  bossBattleId    String                  @map("boss_battle_id")
+  placeFrom       Int                     @map("place_from")
+  placeTo         Int                     @map("place_to")
+  goldAmount      Int                     @default(0) @map("gold_amount")
+  gameScoreAmount Int                     @default(0) @map("game_score_amount")
+  strength        Int                     @default(0)
+  charisma        Int                     @default(0)
+  endurance       Int                     @default(0)
+  intelligence    Int                     @default(0)
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+  battle          BossBattle              @relation(fields: [bossBattleId], references: [id], onDelete: Cascade)
+  itemTemplate    BossRewardItemTemplate?
+  results         BossBattleResult[]
+  claims          BossRewardClaim[]
+
+  @@index([bossBattleId, placeFrom, placeTo])
+  @@map("boss_battle_rewards")
+}
+
+model BossRewardItemTemplate {
+  id                 String            @id @default(uuid())
+  bossBattleRewardId String            @unique @map("boss_battle_reward_id")
+  name               String
+  description        String?
+  imageUrl           String?           @map("image_url")
+  slotType           EquipmentSlotType @map("slot_type")
+  rarity             ItemRarity
+  durability         Int?
+  strength           Int?
+  charisma           Int?
+  agility            Int?
+  intelligence       Int?
+  metadata           Json?
+  createdAt          DateTime          @default(now()) @map("created_at")
+  reward             BossBattleReward  @relation(fields: [bossBattleRewardId], references: [id], onDelete: Cascade)
+
+  @@map("boss_reward_item_templates")
+}
+
+model BossAttack {
+  id                     String     @id @default(uuid())
+  bossBattleId           String     @map("boss_battle_id")
+  userId                 String     @map("user_id")
+  calculatedDamage       Int        @map("calculated_damage")
+  appliedDamage          Int        @map("applied_damage")
+  userPower              Float      @map("user_power")
+  bossPower              Float      @map("boss_power")
+  randomMultiplier       Float      @map("random_multiplier")
+  userAttributesSnapshot Json       @map("user_attributes_snapshot")
+  bossAttributesSnapshot Json       @map("boss_attributes_snapshot")
+  formulaIdentifier      String     @map("formula_identifier")
+  formulaVersion         Int        @map("formula_version")
+  attackedAt             DateTime   @map("attacked_at")
+  cooldownSlot           DateTime   @map("cooldown_slot")
+  createdAt              DateTime   @default(now()) @map("created_at")
+  battle                 BossBattle @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
+  user                   Account    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([bossBattleId, userId, cooldownSlot])
+  @@index([bossBattleId, attackedAt])
+  @@index([bossBattleId, userId, attackedAt(sort: Desc)])
+  @@map("boss_attacks")
+}
+
+model BossBattleParticipant {
+  id               String     @id @default(uuid())
+  bossBattleId     String     @map("boss_battle_id")
+  userId           String     @map("user_id")
+  totalDamage      Int        @default(0) @map("total_damage")
+  attacksCount     Int        @default(0) @map("attacks_count")
+  firstAttackAt    DateTime   @map("first_attack_at")
+  lastAttackAt     DateTime   @map("last_attack_at")
+  lastCooldownSlot DateTime   @map("last_cooldown_slot")
+  nextAttackAt     DateTime   @map("next_attack_at")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  battle           BossBattle @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
+  user             Account    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([bossBattleId, userId])
+  @@index([bossBattleId, totalDamage(sort: Desc)])
+  @@map("boss_battle_participants")
+}
+
+model BossBattleResult {
+  id                String                @id @default(uuid())
+  bossBattleId      String                @map("boss_battle_id")
+  userId            String                @map("user_id")
+  place             Int
+  totalDamage       Int                   @map("total_damage")
+  attacksCount      Int                   @map("attacks_count")
+  firstAttackAt     DateTime              @map("first_attack_at")
+  lastAttackAt      DateTime              @map("last_attack_at")
+  rewardId          String?               @map("reward_id")
+  rewardClaimStatus BossRewardClaimStatus @map("reward_claim_status")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  battle            BossBattle            @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
+  user              Account               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  reward            BossBattleReward?     @relation(fields: [rewardId], references: [id], onDelete: Restrict)
+  claim             BossRewardClaim?
+
+  @@unique([bossBattleId, userId])
+  @@index([bossBattleId, place])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("boss_battle_results")
+}
+
+model BossRewardClaim {
+  id                 String                @id @default(uuid())
+  bossBattleId       String                @map("boss_battle_id")
+  bossBattleResultId String                @unique @map("boss_battle_result_id")
+  bossBattleRewardId String                @map("boss_battle_reward_id")
+  userId             String                @map("user_id")
+  place              Int
+  status             BossRewardClaimStatus
+  idempotencyKey     String                @map("idempotency_key")
+  rewardSnapshot     Json                  @map("reward_snapshot")
+  attemptCount       Int                   @default(1) @map("attempt_count")
+  lastError          String?               @map("last_error")
+  claimedAt          DateTime?             @map("claimed_at")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  battle             BossBattle            @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
+  result             BossBattleResult      @relation(fields: [bossBattleResultId], references: [id], onDelete: Restrict)
+  reward             BossBattleReward      @relation(fields: [bossBattleRewardId], references: [id], onDelete: Restrict)
+  user               Account               @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([bossBattleId, userId])
+  @@index([userId, status])
+  @@index([bossBattleId, status])
+  @@map("boss_reward_claims")
+}
+
+model BossBattleAuditLog {
+  id           String     @id @default(uuid())
+  bossBattleId String     @map("boss_battle_id")
+  adminUserId  String     @map("admin_user_id")
+  action       String
+  beforeData   Json?      @map("before_data")
+  afterData    Json?      @map("after_data")
+  reason       String?
+  createdAt    DateTime   @default(now()) @map("created_at")
+  battle       BossBattle @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
+
+  @@index([bossBattleId, createdAt(sort: Desc)])
+  @@map("boss_battle_audit_logs")
 }
 
 model AuthCode {
@@ -87,12 +297,12 @@ enum ItemRarity {
 }
 
 model Item {
-  id           String      @id @default(uuid())
-  ownerUserId  String?     @map("owner_user_id")
-  owner        Account?    @relation(fields: [ownerUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  id           String     @id @default(uuid())
+  ownerUserId  String?    @map("owner_user_id")
+  owner        Account?   @relation(fields: [ownerUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   name         String
   description  String?
-  imageUrl     String?     @map("image_url")
+  imageUrl     String?    @map("image_url")
   strength     Int?
   charisma     Int?
   agility      Int?
@@ -101,25 +311,25 @@ model Item {
   rarity       ItemRarity
   durability   Int?
 
-  slotType  EquipmentSlotType
-  equippedSlot UserEquipmentSlot?
-  purchaseEvents GameEvent[] @relation("GameEventItem")
-  createdAt    DateTime    @default(now()) @map("created_at")
+  slotType       EquipmentSlotType
+  equippedSlot   UserEquipmentSlot?
+  purchaseEvents GameEvent[]        @relation("GameEventItem")
+  createdAt      DateTime           @default(now()) @map("created_at")
 
   @@index([ownerUserId])
   @@map("items")
 }
 
 model UserEquipmentSlot {
-  id        String               @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId    String
-  user      Account                 @relation(fields: [userId], references: [id])
+  userId String
+  user   Account @relation(fields: [userId], references: [id])
 
-  slotType  EquipmentSlotType
+  slotType EquipmentSlotType
 
-  itemId    String?              @unique
-  item      Item?                @relation(fields: [itemId], references: [id])
+  itemId String? @unique
+  item   Item?   @relation(fields: [itemId], references: [id])
 
   @@unique([userId, slotType])
 }
@@ -144,7 +354,7 @@ model Task {
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
   submissions        TaskSubmission[]
-  completedEvents    GameEvent[] @relation("GameEventCompletedTask")
+  completedEvents    GameEvent[]      @relation("GameEventCompletedTask")
 
   @@index([type])
   @@index([createdAt])
@@ -179,11 +389,11 @@ model TaskSuggestion {
 }
 
 model TaskSuggestionVote {
-  id           String   @id @default(uuid())
-  suggestionId String   @map("suggestion_id")
-  voterUserId  String   @map("voter_user_id")
+  id               String   @id @default(uuid())
+  suggestionId     String   @map("suggestion_id")
+  voterUserId      String   @map("voter_user_id")
   suggestedForDate DateTime @map("suggested_for_date") @db.Date
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt        DateTime @default(now()) @map("created_at")
 
   suggestion TaskSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
   voter      Account        @relation("TaskSuggestionVoter", fields: [voterUserId], references: [id], onDelete: Cascade)
@@ -195,15 +405,15 @@ model TaskSuggestionVote {
 }
 
 model TaskSubmission {
-  id         String   @id @default(uuid())
-  taskId     String   @map("task_id")
-  userId     String   @map("user_id")
-  proofImage String?  @map("proof_image")
-  grantedGameScore Int @default(0) @map("granted_game_score")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid())
+  taskId           String   @map("task_id")
+  userId           String   @map("user_id")
+  proofImage       String?  @map("proof_image")
+  grantedGameScore Int      @default(0) @map("granted_game_score")
+  createdAt        DateTime @default(now()) @map("created_at")
 
-  task Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user Account @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task           Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user           Account    @relation(fields: [userId], references: [id], onDelete: Cascade)
   completedEvent GameEvent? @relation("GameEventTaskSubmission")
 
   @@index([taskId])
@@ -213,17 +423,17 @@ model TaskSubmission {
 }
 
 model BattleLog {
-  id                    String   @id @default(uuid())
-  attackerUserId        String   @map("attacker_user_id")
-  defenderUserId        String   @map("defender_user_id")
-  attackerPower         Float    @map("attacker_power")
-  defenderPower         Float    @map("defender_power")
-  attackerWinProbability Float   @map("attacker_win_probability")
-  winnerUserId          String   @map("winner_user_id")
-  loserUserId           String   @map("loser_user_id")
-  transferredCoins      Int      @map("transferred_coins")
-  gameScoreReward       Int      @map("game_score_reward")
-  createdAt             DateTime @default(now()) @map("created_at")
+  id                     String   @id @default(uuid())
+  attackerUserId         String   @map("attacker_user_id")
+  defenderUserId         String   @map("defender_user_id")
+  attackerPower          Float    @map("attacker_power")
+  defenderPower          Float    @map("defender_power")
+  attackerWinProbability Float    @map("attacker_win_probability")
+  winnerUserId           String   @map("winner_user_id")
+  loserUserId            String   @map("loser_user_id")
+  transferredCoins       Int      @map("transferred_coins")
+  gameScoreReward        Int      @map("game_score_reward")
+  createdAt              DateTime @default(now()) @map("created_at")
 
   attacker Account @relation("BattleAttacker", fields: [attackerUserId], references: [id], onDelete: Cascade)
   defender Account @relation("BattleDefender", fields: [defenderUserId], references: [id], onDelete: Cascade)
@@ -237,30 +447,30 @@ model BattleLog {
 }
 
 model GameEvent {
-  id              String             @id @default(uuid())
-  type            GameEventType
-  purchaseUserId  String?            @map("purchase_user_id")
-  itemId          String?            @map("item_id")
-  challengerId    String?            @map("challenger_id")
-  opponentId      String?            @map("opponent_id")
-  winnerId        String?            @map("winner_id")
-  taskCompletedUserId String?         @map("task_completed_user_id")
-  taskId          String?             @map("task_id")
-  taskSubmissionId String?            @unique @map("task_submission_id")
-  proofImage      String?             @map("proof_image")
-  battleResult    BattleEventResult? @map("battle_result")
-  gameScoreReward Int?               @map("game_score_reward")
-  goldReward      Int?               @map("gold_reward")
-  createdAt       DateTime           @default(now()) @map("created_at")
+  id                  String             @id @default(uuid())
+  type                GameEventType
+  purchaseUserId      String?            @map("purchase_user_id")
+  itemId              String?            @map("item_id")
+  challengerId        String?            @map("challenger_id")
+  opponentId          String?            @map("opponent_id")
+  winnerId            String?            @map("winner_id")
+  taskCompletedUserId String?            @map("task_completed_user_id")
+  taskId              String?            @map("task_id")
+  taskSubmissionId    String?            @unique @map("task_submission_id")
+  proofImage          String?            @map("proof_image")
+  battleResult        BattleEventResult? @map("battle_result")
+  gameScoreReward     Int?               @map("game_score_reward")
+  goldReward          Int?               @map("gold_reward")
+  createdAt           DateTime           @default(now()) @map("created_at")
 
-  purchaseUser Account? @relation("GameEventPurchaseUser", fields: [purchaseUserId], references: [id], onDelete: Cascade)
-  item         Item?    @relation("GameEventItem", fields: [itemId], references: [id], onDelete: Restrict)
-  challenger   Account? @relation("GameEventChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
-  opponent     Account? @relation("GameEventOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
-  winner       Account? @relation("GameEventWinner", fields: [winnerId], references: [id], onDelete: Cascade)
-  taskCompletedUser Account? @relation("GameEventTaskCompletedUser", fields: [taskCompletedUserId], references: [id], onDelete: Cascade)
-  task         Task?   @relation("GameEventCompletedTask", fields: [taskId], references: [id], onDelete: Cascade)
-  taskSubmission TaskSubmission? @relation("GameEventTaskSubmission", fields: [taskSubmissionId], references: [id], onDelete: Cascade)
+  purchaseUser      Account?        @relation("GameEventPurchaseUser", fields: [purchaseUserId], references: [id], onDelete: Cascade)
+  item              Item?           @relation("GameEventItem", fields: [itemId], references: [id], onDelete: Restrict)
+  challenger        Account?        @relation("GameEventChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  opponent          Account?        @relation("GameEventOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+  winner            Account?        @relation("GameEventWinner", fields: [winnerId], references: [id], onDelete: Cascade)
+  taskCompletedUser Account?        @relation("GameEventTaskCompletedUser", fields: [taskCompletedUserId], references: [id], onDelete: Cascade)
+  task              Task?           @relation("GameEventCompletedTask", fields: [taskId], references: [id], onDelete: Cascade)
+  taskSubmission    TaskSubmission? @relation("GameEventTaskSubmission", fields: [taskSubmissionId], references: [id], onDelete: Cascade)
 
   @@index([type, createdAt])
   @@index([createdAt])

@@ -11,6 +11,7 @@ import { QueueModule } from './infrastructure/queue/queue.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BattlesModule } from './modules/battles/battles.module';
+import { BossBattlesModule } from './modules/boss-battles/boss-battles.module';
 import { EventsModule } from './modules/events/events.module';
 import { ItemsModule } from './modules/items/items.module';
 import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
@@ -33,6 +34,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     EventsModule,
     BattlesModule,
+    BossBattlesModule,
     ItemsModule,
     LeaderboardModule,
     TasksModule,
