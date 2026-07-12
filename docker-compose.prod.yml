@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: social-rpg-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: social_rpg
       POSTGRES_USER: postgres
@@ -17,6 +18,7 @@ services:
   redis:
     image: redis:8-alpine
     container_name: social-rpg-redis
+    restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
@@ -31,6 +33,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: social-rpg-backend
+    restart: unless-stopped
     env_file:
       - ./backend/.env.production
     volumes:
@@ -48,6 +51,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: social-rpg-frontend
+    restart: unless-stopped
     env_file:
       - ./frontend/.env.production
     ports:
