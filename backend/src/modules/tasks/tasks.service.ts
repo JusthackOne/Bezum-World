@@ -17,6 +17,7 @@ import type {
   ClientTaskResponseDto,
   ClientTasksListResponseDto,
   CreateTaskDto,
+  DeleteTaskSuggestionResponseDto,
   GetAdminTasksQueryDto,
   GetClientTasksQueryDto,
   SubmitTaskDto,
@@ -142,6 +143,45 @@ export class TasksService {
       ),
       hasSuggestedToday: suggestions.some((suggestion) => suggestion.creatorUserId === userId),
     };
+  }
+
+  async updateOwnTaskSuggestion(
+    suggestionId: string,
+    userId: string,
+    payload: CreateTaskDto,
+    uploadedImageUrl?: string,
+  ): Promise<TaskSuggestionResponseDto> {
+    return this.prisma.$transaction(async (tx) => {
+      const suggestion = await this.getEditableOwnedSuggestion(suggestionId, userId, tx);
+      const updatedSuggestion = await this.taskSuggestionRepository.update(
+        suggestion.id,
+        {
+          type: payload.type,
+          title: payload.title,
+          description: this.normalizeNullableString(payload.description),
+          image: this.normalizeNullableString(uploadedImageUrl ?? payload.image),
+          rewardMoney: payload.rewardMoney,
+          rewardGameScore: payload.rewardGameScore ?? null,
+          rewardAttributes: this.toRewardAttributesJson(payload.rewardAttributes),
+          requiresProofImage: payload.requiresProofImage,
+          submissionLimit: this.resolveSubmissionLimit(payload.type, payload.submissionLimit, null),
+        },
+        tx,
+      );
+
+      return this.toTaskSuggestionResponse(updatedSuggestion, userId);
+    });
+  }
+
+  async deleteOwnTaskSuggestion(
+    suggestionId: string,
+    userId: string,
+  ): Promise<DeleteTaskSuggestionResponseDto> {
+    return this.prisma.$transaction(async (tx) => {
+      const suggestion = await this.getEditableOwnedSuggestion(suggestionId, userId, tx);
+      await this.taskSuggestionRepository.delete(suggestion.id, tx);
+      return { deletedSuggestionId: suggestion.id };
+    });
   }
 
   async voteForTaskSuggestion(
@@ -824,8 +864,30 @@ export class TasksService {
       voteCount: suggestion._count.votes,
       hasVoted,
       canVote: !isOwnSuggestion && !cannotVoteBecauseVotedToday,
+      isOwner: isOwnSuggestion,
       createdAt: suggestion.createdAt.toISOString(),
     };
+  }
+
+  private async getEditableOwnedSuggestion(
+    suggestionId: string,
+    userId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<TaskSuggestionWithCreatorAndVotes> {
+    const suggestion = await this.taskSuggestionRepository.findByIdWithCreatorAndVotes(
+      suggestionId,
+      tx,
+    );
+    if (!suggestion) throw new NotFoundException('Task suggestion is not found');
+    if (suggestion.creatorUserId !== userId) {
+      throw new ForbiddenException('Only the suggestion owner can change it');
+    }
+    const today = this.getConfiguredDateKey(new Date());
+    if (suggestion.status !== 'pending' || suggestion.publishedTaskId !== null ||
+        suggestion.suggestedForDate.getTime() !== today.getTime()) {
+      throw new ConflictException('Task suggestion can no longer be changed');
+    }
+    return suggestion;
   }
 
   private isUniqueConstraintError(error: unknown): boolean {

@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { tz } from "@date-fns/tz";
 import { differenceInMinutes, endOfDay } from "date-fns";
-import { LightbulbIcon, SearchIcon, ThumbsUpIcon, UploadIcon } from "lucide-react";
+import { LightbulbIcon, PencilIcon, SearchIcon, ThumbsUpIcon, Trash2Icon, UploadIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { AdminTaskForm, type AdminTaskFormValues } from "@/features/admin-tasks/ui";
@@ -11,9 +11,11 @@ import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import {
   useClientTasksQuery,
   useCreateTaskSuggestionMutation,
+  useDeleteTaskSuggestionMutation,
   useSubmitClientTaskMutation,
   useTaskSuggestionsQuery,
   useVoteTaskSuggestionMutation,
+  useUpdateTaskSuggestionMutation,
 } from "@/features/client-tasks/api";
 import type {
   ClientTask,
@@ -206,6 +208,8 @@ export function TasksPage() {
   const [selectedTask, setSelectedTask] = useState<ClientTask | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState<TaskSuggestion | null>(null);
   const [suggestionDialogOpen, setSuggestionDialogOpen] = useState(false);
+  const [editingSuggestion, setEditingSuggestion] = useState<TaskSuggestion | null>(null);
+  const [pendingSuggestionDelete, setPendingSuggestionDelete] = useState<TaskSuggestion | null>(null);
   const [proofTask, setProofTask] = useState<ClientTask | null>(null);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofValidationMessage, setProofValidationMessage] = useState<string | null>(null);
@@ -228,6 +232,8 @@ export function TasksPage() {
   const suggestionsQuery = useTaskSuggestionsQuery();
   const submitTaskMutation = useSubmitClientTaskMutation();
   const createSuggestionMutation = useCreateTaskSuggestionMutation();
+  const updateSuggestionMutation = useUpdateTaskSuggestionMutation();
+  const deleteSuggestionMutation = useDeleteTaskSuggestionMutation();
   const voteSuggestionMutation = useVoteTaskSuggestionMutation();
 
   const tasks = useMemo(() => tasksQuery.data?.items ?? [], [tasksQuery.data?.items]);
@@ -372,7 +378,7 @@ export function TasksPage() {
     const rewardAttributes = buildRewardAttributes(values);
 
     try {
-      await createSuggestionMutation.mutateAsync({
+      const taskPayload = {
         type: values.type as ClientTaskType,
         title: values.title.trim(),
         ...(values.description ? { description: values.description.trim() } : {}),
@@ -385,12 +391,23 @@ export function TasksPage() {
         ...(values.type === "daily" && values.submissionLimit !== undefined
           ? { submissionLimit: values.submissionLimit }
           : {}),
-      });
+      };
+      if (editingSuggestion) {
+        await updateSuggestionMutation.mutateAsync({
+          suggestionId: editingSuggestion.id,
+          ...taskPayload,
+        });
+      } else {
+        await createSuggestionMutation.mutateAsync(taskPayload);
+      }
 
       setSuggestionDialogOpen(false);
+      setEditingSuggestion(null);
       showToast(
-        "Suggestion submitted",
-        "Your task suggestion is available for community voting today.",
+        editingSuggestion ? "Suggestion updated" : "Suggestion submitted",
+        editingSuggestion
+          ? "Your changes were saved and existing votes were preserved."
+          : "Your task suggestion is available for community voting today.",
       );
     } catch (error: unknown) {
       showToast(
@@ -400,6 +417,27 @@ export function TasksPage() {
       );
       throw error;
     }
+  }
+
+  async function deleteSuggestion(suggestion: TaskSuggestion) {
+    try {
+      await deleteSuggestionMutation.mutateAsync(suggestion.id);
+      setPendingSuggestionDelete(null);
+      setSelectedSuggestion(null);
+      showToast("Suggestion deleted", "You can submit another suggestion today.");
+    } catch (error: unknown) {
+      showToast(
+        "Delete failed",
+        error instanceof Error ? error.message : "Unable to delete suggestion.",
+        "destructive",
+      );
+    }
+  }
+
+  function startEditingSuggestion(suggestion: TaskSuggestion) {
+    setSelectedSuggestion(null);
+    setEditingSuggestion(suggestion);
+    setSuggestionDialogOpen(true);
   }
 
   if (tasksQuery.isError) {
@@ -536,6 +574,16 @@ export function TasksPage() {
                             <span>{suggestion.voteCount}</span>
                           </div>
                         )}
+                        {suggestion.isOwner ? (
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <Button type="button" variant="outline" onClick={() => startEditingSuggestion(suggestion)}>
+                              <PencilIcon className="size-4" /> Edit
+                            </Button>
+                            <Button type="button" variant="destructive" onClick={() => setPendingSuggestionDelete(suggestion)}>
+                              <Trash2Icon className="size-4" /> Delete
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
                     </article>
                   );
@@ -747,25 +795,42 @@ export function TasksPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={suggestionDialogOpen} onOpenChange={setSuggestionDialogOpen}>
+      <Dialog open={suggestionDialogOpen} onOpenChange={(open) => {
+        setSuggestionDialogOpen(open);
+        if (!open) setEditingSuggestion(null);
+      }}>
         <DialogContent className="max-h-[85vh] max-w-[calc(100vw-2rem)] overflow-hidden p-0 sm:max-w-2xl">
           <div className="max-h-[85vh] min-w-0 space-y-4 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle>Suggest a New Task</DialogTitle>
+              <DialogTitle>{editingSuggestion ? "Edit Task Suggestion" : "Suggest a New Task"}</DialogTitle>
               <DialogDescription>
                 Suggestions are limited to one per calendar day.
               </DialogDescription>
             </DialogHeader>
 
-            {hasSuggestedToday ? (
+            {hasSuggestedToday && !editingSuggestion ? (
               <p className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
                 You have already suggested a task today.
               </p>
             ) : (
               <AdminTaskForm
-                submitLabel="Submit suggestion"
-                submitPendingLabel="Submitting..."
-                isSubmitting={createSuggestionMutation.isPending}
+                submitLabel={editingSuggestion ? "Save changes" : "Submit suggestion"}
+                submitPendingLabel={editingSuggestion ? "Saving..." : "Submitting..."}
+                isSubmitting={createSuggestionMutation.isPending || updateSuggestionMutation.isPending}
+                initialValues={editingSuggestion ? {
+                  type: editingSuggestion.type,
+                  title: editingSuggestion.title,
+                  description: editingSuggestion.description ?? "",
+                  image: editingSuggestion.image ?? "",
+                  rewardMoney: editingSuggestion.rewardMoney,
+                  rewardGameScore: editingSuggestion.rewardGameScore ?? undefined,
+                  rewardStrength: editingSuggestion.rewardAttributes?.strength,
+                  rewardIntelligence: editingSuggestion.rewardAttributes?.intelligence,
+                  rewardCharisma: editingSuggestion.rewardAttributes?.charisma,
+                  rewardEndurance: editingSuggestion.rewardAttributes?.endurance,
+                  requiresProofImage: editingSuggestion.requiresProofImage,
+                  submissionLimit: editingSuggestion.submissionLimit ?? undefined,
+                } : undefined}
                 errorMessage={
                   createSuggestionMutation.error instanceof Error
                     ? createSuggestionMutation.error.message
@@ -777,6 +842,30 @@ export function TasksPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={pendingSuggestionDelete !== null} onOpenChange={(open) => !open && setPendingSuggestionDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete task suggestion?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this task suggestion? All of its votes will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteSuggestionMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteSuggestionMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (pendingSuggestionDelete) void deleteSuggestion(pendingSuggestionDelete);
+              }}
+            >
+              {deleteSuggestionMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog
         open={selectedSuggestion !== null}

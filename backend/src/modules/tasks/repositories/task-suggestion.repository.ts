@@ -32,6 +32,11 @@ export interface CreateTaskSuggestionInput {
   submissionLimit: number | null;
 }
 
+export type UpdateTaskSuggestionInput = Omit<
+  CreateTaskSuggestionInput,
+  'creatorUserId' | 'suggestedForDate'
+>;
+
 @Injectable()
 export class TaskSuggestionRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -98,6 +103,22 @@ export class TaskSuggestionRepository {
         suggestedForDate,
       },
     });
+  }
+
+  async update(
+    suggestionId: string,
+    input: UpdateTaskSuggestionInput,
+    tx: Prisma.TransactionClient,
+  ): Promise<TaskSuggestionWithCreatorAndVotes> {
+    return tx.taskSuggestion.update({
+      where: { id: suggestionId },
+      data: input,
+      include: this.suggestionInclude(),
+    });
+  }
+
+  async delete(suggestionId: string, tx: Prisma.TransactionClient): Promise<void> {
+    await tx.taskSuggestion.delete({ where: { id: suggestionId } });
   }
 
   async findPendingSuggestionDatesBefore(

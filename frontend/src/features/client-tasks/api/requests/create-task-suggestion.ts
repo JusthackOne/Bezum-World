@@ -33,9 +33,26 @@ function normalizeRewardAttributes(
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
-function buildMultipartPayload(payload: CreateTaskSuggestionInput): FormData {
-  const formData = new FormData();
+export function buildTaskSuggestionRequestBody(
+  payload: CreateTaskSuggestionInput,
+): FormData | Record<string, unknown> {
   const rewardAttributes = normalizeRewardAttributes(payload);
+  if (!(payload.imageFile instanceof File)) {
+    return {
+      type: payload.type,
+      title: payload.title,
+      ...(payload.description ? { description: payload.description } : {}),
+      ...(payload.image ? { image: payload.image } : {}),
+      rewardMoney: payload.rewardMoney,
+      ...(payload.rewardGameScore !== undefined ? { rewardGameScore: payload.rewardGameScore } : {}),
+      ...(rewardAttributes ? { rewardAttributes } : {}),
+      requiresProofImage: payload.requiresProofImage,
+      ...(payload.type === "daily" && payload.submissionLimit !== undefined
+        ? { submissionLimit: payload.submissionLimit }
+        : {}),
+    };
+  }
+  const formData = new FormData();
 
   formData.append("type", payload.type);
   formData.append("title", payload.title);
@@ -70,25 +87,7 @@ function buildMultipartPayload(payload: CreateTaskSuggestionInput): FormData {
 export async function createTaskSuggestion(
   payload: CreateTaskSuggestionInput,
 ): Promise<TaskSuggestion> {
-  const rewardAttributes = normalizeRewardAttributes(payload);
-  const hasImageFile = payload.imageFile instanceof File;
-  const requestBody = hasImageFile
-    ? buildMultipartPayload(payload)
-    : {
-        type: payload.type,
-        title: payload.title,
-        ...(payload.description ? { description: payload.description } : {}),
-        ...(payload.image ? { image: payload.image } : {}),
-        rewardMoney: payload.rewardMoney,
-        ...(payload.rewardGameScore !== undefined
-          ? { rewardGameScore: payload.rewardGameScore }
-          : {}),
-        ...(rewardAttributes ? { rewardAttributes } : {}),
-        requiresProofImage: payload.requiresProofImage,
-        ...(payload.type === "daily" && payload.submissionLimit !== undefined
-          ? { submissionLimit: payload.submissionLimit }
-          : {}),
-      };
+  const requestBody = buildTaskSuggestionRequestBody(payload);
 
   return requestApiData(
     () =>

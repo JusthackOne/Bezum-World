@@ -76,6 +76,7 @@ export interface TaskSuggestion {
   voteCount: number;
   hasVoted: boolean;
   canVote: boolean;
+  isOwner: boolean;
   createdAt: string;
 }
 
@@ -99,6 +100,14 @@ export interface CreateTaskSuggestionInput {
 
 export interface VoteTaskSuggestionInput {
   suggestionId: string;
+}
+
+export interface UpdateTaskSuggestionInput extends CreateTaskSuggestionInput {
+  suggestionId: string;
+}
+
+export interface DeleteTaskSuggestionResponse {
+  deletedSuggestionId: string;
 }
 
 export interface VoteTaskSuggestionResponse {

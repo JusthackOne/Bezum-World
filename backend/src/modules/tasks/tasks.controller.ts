@@ -43,6 +43,7 @@ import {
   AdminTasksListResponseDto,
   AdminDeleteTaskResponseDto,
   CreateTaskDto,
+  DeleteTaskSuggestionResponseDto,
   ClientTasksListResponseDto,
   GetAdminTasksQueryDto,
   GetClientTasksQueryDto,
@@ -296,6 +297,49 @@ export class TasksController {
     }
 
     return this.tasksService.getCurrentDayTaskSuggestions(request.user.sub);
+  }
+
+  @Patch('tasks/suggestions/:suggestionId')
+  @UseGuards(AccessTokenGuard)
+  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: MAX_TASK_IMAGE_SIZE_BYTES } }))
+  @ApiOperation({ summary: 'Update the current user\'s current-day task suggestion' })
+  @ApiBearerAuth('access-token')
+  @ApiConsumes('application/json', 'multipart/form-data')
+  @ApiOkResponse({ type: TaskSuggestionResponseDto })
+  @ApiForbiddenResponse({ description: 'The current user does not own the suggestion' })
+  @ApiNotFoundResponse({ description: 'Task suggestion is not found' })
+  @ApiConflictResponse({ description: 'Task suggestion can no longer be changed' })
+  async updateTaskSuggestion(
+    @Param() params: TaskSuggestionIdParamsDto,
+    @Body() body: CreateTaskDto,
+    @UploadedFile() imageFile: UploadedTaskImageFile | undefined,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<TaskSuggestionResponseDto> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can update task suggestions');
+    }
+    const uploadedImageUrl = imageFile ? await this.storeTaskImage(imageFile) : undefined;
+    return this.tasksService.updateOwnTaskSuggestion(
+      params.suggestionId, request.user.sub, body, uploadedImageUrl,
+    );
+  }
+
+  @Delete('tasks/suggestions/:suggestionId')
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({ summary: 'Delete the current user\'s current-day task suggestion' })
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: DeleteTaskSuggestionResponseDto })
+  @ApiForbiddenResponse({ description: 'The current user does not own the suggestion' })
+  @ApiNotFoundResponse({ description: 'Task suggestion is not found' })
+  @ApiConflictResponse({ description: 'Task suggestion can no longer be changed' })
+  async deleteTaskSuggestion(
+    @Param() params: TaskSuggestionIdParamsDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<DeleteTaskSuggestionResponseDto> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can delete task suggestions');
+    }
+    return this.tasksService.deleteOwnTaskSuggestion(params.suggestionId, request.user.sub);
   }
 
   @Post('tasks/suggestions/:suggestionId/vote')

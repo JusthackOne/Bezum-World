@@ -2,6 +2,7 @@ export * from './admin-delete-task-response.dto';
 export * from './admin-tasks-list-response.dto';
 export * from './client-task-response.dto';
 export * from './create-task.dto';
+export * from './delete-task-suggestion-response.dto';
 export * from './get-admin-tasks-query.dto';
 export * from './get-client-tasks-query.dto';
 export * from './submit-task-response.dto';

@@ -92,6 +92,12 @@ export class TaskSuggestionResponseDto {
   canVote!: boolean;
 
   @ApiProperty({
+    description: 'Whether the current user owns this suggestion',
+    example: false,
+  })
+  isOwner!: boolean;
+
+  @ApiProperty({
     description: 'Suggestion creation timestamp',
     example: '2026-07-11T09:00:00.000Z',
   })
