@@ -51,7 +51,7 @@ interface ClientNavItem {
 export function ClientSidebar() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { state, isMobile, openMobile, toggleSidebar } = useSidebar();
+  const { toggleSidebar } = useSidebar();
   const pathname = usePathname();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
@@ -63,7 +63,6 @@ export function ClientSidebar() {
   const isTasksActive = pathname.startsWith("/tasks");
   const isLeaderboardActive = pathname.startsWith("/leaderboard");
   const isEventsActive = pathname.startsWith("/events");
-  const isSidebarExpanded = isMobile ? openMobile : state === "expanded";
 
   const username = session?.user.username ?? "Unknown user";
   const profileHref = session?.user.username
@@ -114,21 +113,6 @@ export function ClientSidebar() {
 
   return (
     <>
-      {!isSidebarExpanded ? (
-        <div className="fixed top-4 left-4 z-40">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 rounded-full border-sidebar-border/80 bg-background/95 shadow-md backdrop-blur-sm"
-            onClick={toggleSidebar}
-          >
-            <PanelLeftIcon className="size-4" />
-            <span className="sr-only">Open sidebar</span>
-          </Button>
-        </div>
-      ) : null}
-
       <Sidebar>
         <SidebarHeader className="gap-3 border-b border-sidebar-border/60 p-3">
           <div className="flex items-center justify-between gap-2">
