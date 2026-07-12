@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, TaskType, type Task, type TaskSubmission } from '@prisma/client';
+import { randomInt } from 'node:crypto';
 
 import type { AccessTokenPayload } from '../auth/types/access-token-payload.type';
 import { AccountRepository } from '../auth/repositories';
@@ -610,7 +611,12 @@ export class TasksService {
         FOR UPDATE
       `;
 
-      const winner = await this.taskSuggestionRepository.findWinnerForDate(suggestedForDate, tx);
+      const topVotedSuggestions =
+        await this.taskSuggestionRepository.findTopVotedSuggestionsForDate(suggestedForDate, tx);
+      const winner =
+        topVotedSuggestions.length === 0
+          ? null
+          : topVotedSuggestions[randomInt(topVotedSuggestions.length)];
 
       if (!winner) {
         await this.taskSuggestionRepository.markDateProcessed(

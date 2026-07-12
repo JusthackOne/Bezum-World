@@ -141,30 +141,29 @@ export class TaskSuggestionRepository {
     return groupedDates.map((dateGroup) => dateGroup.suggestedForDate);
   }
 
-  async findWinnerForDate(
+  async findTopVotedSuggestionsForDate(
     suggestedForDate: Date,
     tx: Prisma.TransactionClient,
-  ): Promise<TaskSuggestionWithCreatorAndVotes | null> {
+  ): Promise<TaskSuggestionWithCreatorAndVotes[]> {
     const suggestions = await tx.taskSuggestion.findMany({
       where: {
         suggestedForDate,
         status: TaskSuggestionStatus.pending,
       },
       include: this.suggestionInclude(),
-      orderBy: [
-        {
-          votes: {
-            _count: 'desc',
-          },
+      orderBy: {
+        votes: {
+          _count: 'desc',
         },
-        {
-          createdAt: 'asc',
-        },
-      ],
-      take: 1,
+      },
     });
 
-    return suggestions[0] ?? null;
+    const highestVoteCount = suggestions[0]?._count.votes;
+    if (highestVoteCount === undefined) {
+      return [];
+    }
+
+    return suggestions.filter((suggestion) => suggestion._count.votes === highestVoteCount);
   }
 
   async markDateProcessed(
