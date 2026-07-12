@@ -1,6 +1,8 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { tz } from "@date-fns/tz";
+import { differenceInMinutes, endOfDay } from "date-fns";
 import { LightbulbIcon, SearchIcon, ThumbsUpIcon, UploadIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -171,6 +173,17 @@ function getTaskRewardVisuals(task: TaskRewardSource): RewardBadgeItem[] {
   return rewards;
 }
 
+function getTimeUntilEndOfDay(now: Date, timeZone: string): string {
+  const timeZoneContext = tz(timeZone);
+  const remainingMinutes = differenceInMinutes(endOfDay(now, { in: timeZoneContext }), now, {
+    roundingMethod: "ceil",
+  });
+  const hours = Math.floor(remainingMinutes / 60);
+  const minutes = remainingMinutes % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
 function buildRewardAttributes(values: AdminTaskFormValues): ClientTaskRewardAttributes | undefined {
   const rewardAttributes = {
     ...(values.rewardStrength !== undefined ? { strength: values.rewardStrength } : {}),
@@ -198,6 +211,7 @@ export function TasksPage() {
   const [proofValidationMessage, setProofValidationMessage] = useState<string | null>(null);
   const [pendingCompletion, setPendingCompletion] = useState<PendingTaskCompletion | null>(null);
   const [submittingTaskId, setSubmittingTaskId] = useState<string | null>(null);
+  const [timeUntilEndOfDay, setTimeUntilEndOfDay] = useState("--:--");
   const [toastState, setToastState] = useState<ToastState>({
     key: 0,
     open: false,
@@ -227,6 +241,19 @@ export function TasksPage() {
     () => (proofFile ? URL.createObjectURL(proofFile) : null),
     [proofFile],
   );
+
+  useEffect(() => {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    const updateTimeUntilEndOfDay = () => {
+      setTimeUntilEndOfDay(getTimeUntilEndOfDay(new Date(), timeZone));
+    };
+
+    updateTimeUntilEndOfDay();
+    const intervalId = window.setInterval(updateTimeUntilEndOfDay, 1_000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     if (!proofPreviewUrl) {
@@ -424,12 +451,16 @@ export function TasksPage() {
 
         {suggestions.length > 0 ? (
           <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
+            <div>
               <div>
                 <h2 className="text-lg font-semibold">Today&apos;s Suggestions</h2>
-                <p className="text-muted-foreground text-xs">
-                  The highest-voted task becomes active after today ends.
-                </p>
+                <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <p>The highest-voted task becomes active after today ends.</p>
+                  <p className="shrink-0 font-medium text-foreground">
+                    Time remaining:{" "}
+                    <time className="tabular-nums">{timeUntilEndOfDay}</time>
+                  </p>
+                </div>
               </div>
             </div>
 
