@@ -4,8 +4,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  OnModuleDestroy,
-  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, TaskType, type Task, type TaskSubmission } from '@prisma/client';
@@ -47,13 +45,9 @@ const DEFAULT_ADMIN_TASKS_PAGE = 1;
 const DEFAULT_ADMIN_TASKS_LIMIT = 20;
 const DEFAULT_DAILY_SUBMISSION_LIMIT = 1;
 const EVENT_COMPLETION_FEED_VISIBILITY_MS = 3 * 24 * 60 * 60 * 1000;
-const TASK_SUGGESTION_PROCESS_INTERVAL_MS = 5 * 60 * 1000;
 
 @Injectable()
-export class TasksService implements OnModuleInit, OnModuleDestroy {
-  private suggestionProcessingTimer: NodeJS.Timeout | null = null;
-  private suggestionProcessingInProgress = false;
-
+export class TasksService {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
@@ -63,20 +57,6 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
     private readonly accountRepository: AccountRepository,
     private readonly eventsService: EventsService,
   ) {}
-
-  onModuleInit(): void {
-    this.suggestionProcessingTimer = setInterval(() => {
-      void this.processPendingSuggestionDays();
-    }, TASK_SUGGESTION_PROCESS_INTERVAL_MS);
-    void this.processPendingSuggestionDays();
-  }
-
-  onModuleDestroy(): void {
-    if (this.suggestionProcessingTimer) {
-      clearInterval(this.suggestionProcessingTimer);
-      this.suggestionProcessingTimer = null;
-    }
-  }
 
   async createTaskByAdmin(payload: CreateTaskDto): Promise<TaskResponseDto> {
     const createdTask = await this.taskRepository.create({
@@ -230,22 +210,12 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
   }
 
   async processPendingSuggestionDays(): Promise<void> {
-    if (this.suggestionProcessingInProgress) {
-      return;
-    }
+    const todayDateKey = this.getConfiguredDateKey(new Date());
+    const pendingDates =
+      await this.taskSuggestionRepository.findPendingSuggestionDatesBefore(todayDateKey);
 
-    this.suggestionProcessingInProgress = true;
-
-    try {
-      const todayDateKey = this.getConfiguredDateKey(new Date());
-      const pendingDates =
-        await this.taskSuggestionRepository.findPendingSuggestionDatesBefore(todayDateKey);
-
-      for (const suggestedForDate of pendingDates) {
-        await this.processSuggestionDate(suggestedForDate);
-      }
-    } finally {
-      this.suggestionProcessingInProgress = false;
+    for (const suggestedForDate of pendingDates) {
+      await this.processSuggestionDate(suggestedForDate);
     }
   }
 
