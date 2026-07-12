@@ -85,9 +85,7 @@ function BattleRewards({ event }: { event: BattleGameEvent }) {
     rewards.push({ kind: "balance", value: event.goldReward });
   }
 
-  return (
-    <RewardBadgesList rewards={rewards} emptyLabel="No reward" className="justify-center" />
-  );
+  return <RewardBadgesList rewards={rewards} emptyLabel="No reward" className="justify-center" />;
 }
 
 function PurchaseEventRow({ event }: { event: Extract<GameEvent, { type: "PURCHASE" }> }) {

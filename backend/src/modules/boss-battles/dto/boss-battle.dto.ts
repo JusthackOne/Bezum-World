@@ -6,7 +6,6 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
-  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -23,15 +22,25 @@ export class BossAttributesDto {
   @IsInt() @Min(0) intelligence!: number;
 }
 
+export class BossRewardItemAttributesDto {
+  @IsOptional() @IsInt() @Min(0) strength?: number;
+  @IsOptional() @IsInt() @Min(0) charisma?: number;
+  @IsOptional() @IsInt() @Min(0) agility?: number;
+  @IsOptional() @IsInt() @Min(0) intelligence?: number;
+}
+
 export class BossRewardItemDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsString() imageUrl?: string;
   @IsEnum(EquipmentSlotType) slotType!: EquipmentSlotType;
   @IsEnum(ItemRarity) rarity!: ItemRarity;
+  @IsInt() @Min(0) price!: number;
   @IsOptional() @IsInt() @Min(0) durability?: number;
-  @IsOptional() @ValidateNested() @Type(() => BossAttributesDto) attributes?: BossAttributesDto;
-  @IsOptional() @IsObject() metadata?: Record<string, unknown>;
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => BossRewardItemAttributesDto)
+  attributes?: BossRewardItemAttributesDto;
 }
 
 export class BossRewardDto {

@@ -7,6 +7,7 @@ export function useUpdateTaskSuggestionMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateTaskSuggestion,
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.taskSuggestionsToday }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taskSuggestionsToday }),
   });
 }

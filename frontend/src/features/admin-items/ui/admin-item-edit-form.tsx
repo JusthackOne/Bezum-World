@@ -158,7 +158,11 @@ export function AdminItemEditForm({ itemId }: AdminItemEditFormProps) {
           </div>
           <div>
             <span className="font-medium">Owner User ID:</span>{" "}
-            {item.owner_user_id ? <span className="font-mono text-xs">{item.owner_user_id}</span> : "N/A"}
+            {item.owner_user_id ? (
+              <span className="font-mono text-xs">{item.owner_user_id}</span>
+            ) : (
+              "N/A"
+            )}
           </div>
           <div className="sm:col-span-2">
             <span className="font-medium">Created At:</span> {item.created_at}
@@ -190,10 +194,12 @@ export function AdminItemEditForm({ itemId }: AdminItemEditFormProps) {
               });
 
               setWasSaved(true);
-              queryClient.setQueryData(queryKeys.adminItems("all"), (currentItems: typeof itemsQuery.data) =>
-                currentItems?.map((nextItem) =>
-                  nextItem.id === updatedItem.id ? updatedItem : nextItem,
-                ),
+              queryClient.setQueryData(
+                queryKeys.adminItems("all"),
+                (currentItems: typeof itemsQuery.data) =>
+                  currentItems?.map((nextItem) =>
+                    nextItem.id === updatedItem.id ? updatedItem : nextItem,
+                  ),
               );
               await Promise.all([
                 queryClient.invalidateQueries({ queryKey: queryKeys.adminItems("all") }),

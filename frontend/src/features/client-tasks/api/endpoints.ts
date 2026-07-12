@@ -5,6 +5,5 @@ export const clientTasksEndpoints = {
   todaySuggestions: "/tasks/suggestions/today",
   voteSuggestion: (suggestionId: string) =>
     `/tasks/suggestions/${encodeURIComponent(suggestionId)}/vote`,
-  suggestion: (suggestionId: string) =>
-    `/tasks/suggestions/${encodeURIComponent(suggestionId)}`,
+  suggestion: (suggestionId: string) => `/tasks/suggestions/${encodeURIComponent(suggestionId)}`,
 };

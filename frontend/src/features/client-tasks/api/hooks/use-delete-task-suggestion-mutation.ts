@@ -7,6 +7,7 @@ export function useDeleteTaskSuggestionMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteTaskSuggestion,
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.taskSuggestionsToday }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taskSuggestionsToday }),
   });
 }

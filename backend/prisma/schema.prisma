@@ -149,6 +149,7 @@ model BossRewardItemTemplate {
   imageUrl           String?           @map("image_url")
   slotType           EquipmentSlotType @map("slot_type")
   rarity             ItemRarity
+  price              Int               @default(0)
   durability         Int?
   strength           Int?
   charisma           Int?

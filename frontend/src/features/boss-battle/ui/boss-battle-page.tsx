@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
+  CheckCircle2Icon,
   CoinsIcon,
   CrownIcon,
   HelpCircleIcon,
@@ -21,7 +22,10 @@ import {
   useClaimBossRewardMutation,
   useCurrentBossBattleQuery,
 } from "@/features/boss-battle/api";
-import { isBossBattleFinal } from "@/features/boss-battle/model/boss-battle-outcome";
+import {
+  getBossBattleOutcomeLabel,
+  isBossBattleFinal,
+} from "@/features/boss-battle/model/boss-battle-outcome";
 import { bossBattleRoutes } from "@/features/boss-battle/routes";
 import type {
   BossBattle,
@@ -80,6 +84,13 @@ function formatDuration(ms: number): string {
     return `${String(d).padStart(2, "0")}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m`;
   if (h) return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m`;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function formatOrdinal(value: number): string {
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+  const suffix = value % 10 === 1 ? "st" : value % 10 === 2 ? "nd" : value % 10 === 3 ? "rd" : "th";
+  return `${value}${suffix}`;
 }
 
 function useServerNow(serverTime: string): number {
@@ -152,14 +163,12 @@ function BattleTimer({ battle, onBoundary }: { battle: BossBattle; onBoundary: (
     }
   }, [at, onBoundary, remaining]);
   return (
-    <Card className="mx-auto w-fit min-w-44">
-      <CardContent className="px-5 py-3 text-center">
-        <p className="text-xs text-muted-foreground">
-          {battle.status === "SCHEDULED" ? "Battle starts in" : "Battle ends in"}
-        </p>
-        <p className="font-semibold tabular-nums">{formatDuration(remaining)}</p>
-      </CardContent>
-    </Card>
+    <p className="mx-auto inline-flex max-w-full items-center gap-2 whitespace-nowrap rounded-lg border bg-card px-4 py-2 text-sm shadow-sm sm:mx-0">
+      <span className="text-muted-foreground">
+        {battle.status === "SCHEDULED" ? "Battle starts in" : "Battle ends in"}
+      </span>
+      <span className="font-semibold tabular-nums">{formatDuration(remaining)}</span>
+    </p>
   );
 }
 
@@ -172,13 +181,13 @@ function BattleNavigationStatus({
   historical: boolean;
   onBoundary: () => void;
 }) {
+  const completedAt =
+    battle.status === "DEFEATED" || battle.status === "FINALIZING" || battle.status === "COMPLETED"
+      ? (battle.defeatedAt ?? battle.finishedAt ?? battle.endsAt)
+      : (battle.finishedAt ?? battle.endsAt);
   return (
-    <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
-      <Button
-        asChild
-        variant="outline"
-        className="h-10 w-full justify-self-center px-4 sm:w-auto sm:justify-self-start"
-      >
+    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Button asChild variant="outline" className="h-10 w-full px-4 sm:w-auto">
         <Link
           href={bossBattleRoutes.history}
           className="inline-flex items-center gap-2 whitespace-nowrap"
@@ -188,28 +197,83 @@ function BattleNavigationStatus({
         </Link>
       </Button>
       {historical && isBossBattleFinal(battle.status) ? (
-        <span aria-hidden="true" />
+        <p className="min-w-0 rounded-lg border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm sm:text-right">
+          <span className="font-semibold text-foreground">
+            {getBossBattleOutcomeLabel(battle.status)}
+          </span>{" "}
+          <span className="whitespace-normal sm:whitespace-nowrap">
+            ·{" "}
+            {new Intl.DateTimeFormat(undefined, { dateStyle: "long", timeStyle: "short" }).format(
+              new Date(completedAt),
+            )}
+          </span>
+        </p>
       ) : (
         <BattleTimer battle={battle} onBoundary={onBoundary} />
       )}
-      <span className="hidden sm:block" aria-hidden="true" />
     </div>
   );
 }
 
-function BossDamageIndicator({ damage }: { damage: { id: string; value: number } | null }) {
-  if (!damage) return null;
+function RewardResource({ type, value }: { type: "gold" | "gameScore"; value: number }) {
+  const gold = type === "gold";
+  return (
+    <span
+      className={cn(
+        "inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-lg border px-2.5 py-1.5 shadow-sm",
+        gold
+          ? "border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.13),rgba(251,191,36,0.08))]"
+          : "border-fuchsia-400/60 bg-[linear-gradient(120deg,rgba(244,114,182,0.12),rgba(96,165,250,0.12),rgba(52,211,153,0.12),rgba(250,204,21,0.12))]",
+      )}
+    >
+      {gold ? (
+        <CoinsIcon className="size-4 shrink-0 text-amber-300" />
+      ) : (
+        <GameScoreIcon className="size-4 shrink-0 text-fuchsia-300" />
+      )}
+      <span
+        className={cn(
+          "min-w-0 truncate text-sm font-semibold tabular-nums",
+          gold
+            ? "bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-transparent"
+            : "bg-gradient-to-r from-fuchsia-300 via-sky-300 to-emerald-300 bg-clip-text text-transparent",
+        )}
+        title={String(value)}
+      >
+        {formatBalance(value)}
+      </span>
+    </span>
+  );
+}
+
+function BossDamageIndicator({
+  damage,
+  defeated,
+}: {
+  damage: { id: string; value: number } | null;
+  defeated: boolean;
+}) {
+  if (!damage && !defeated) return null;
   return createPortal(
     <div
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-black/25 animate-in fade-in duration-150 motion-reduce:animate-none"
     >
-      <span
-        key={damage.id}
-        className="boss-damage-indicator text-4xl font-black text-white sm:text-5xl"
-      >
-        -{formatBalance(damage.value)}
-      </span>
+      <div className="flex flex-col items-center gap-3 text-center">
+        {damage ? (
+          <span
+            key={damage.id}
+            className="boss-damage-indicator text-4xl font-black text-white sm:text-5xl"
+          >
+            -{formatBalance(damage.value)}
+          </span>
+        ) : null}
+        {defeated ? (
+          <span className="boss-damage-indicator rounded-lg border border-amber-300 bg-black/70 px-4 py-2 text-xl font-black text-amber-300 sm:text-2xl">
+            You defeated the boss!
+          </span>
+        ) : null}
+      </div>
     </div>,
     document.body,
   );
@@ -378,17 +442,9 @@ function RewardCard({ reward, place }: { reward: BossReward; place: number }) {
           <ItemDisplayCard item={item} showPrice={false} className="mx-auto min-h-44 max-w-48" />
         ) : null}
         <div className="flex flex-wrap justify-center gap-1.5">
-          {reward.goldAmount > 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs">
-              <CoinsIcon className="size-3 text-amber-500" />
-              {formatBalance(reward.goldAmount)}
-            </span>
-          ) : null}
+          {reward.goldAmount > 0 ? <RewardResource type="gold" value={reward.goldAmount} /> : null}
           {reward.gameScoreAmount > 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs">
-              <GameScoreIcon className="size-3" />
-              {formatBalance(reward.gameScoreAmount)}
-            </span>
+            <RewardResource type="gameScore" value={reward.gameScoreAmount} />
           ) : null}
           {attributeOrder
             .filter((k) => reward[k] > 0)
@@ -476,17 +532,9 @@ function RewardReceivedModal({
               </div>
             ) : null}
             <div className="flex flex-wrap justify-center gap-2">
-              {reward.gold > 0 ? (
-                <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm">
-                  <CoinsIcon className="size-4 text-amber-500" />
-                  {formatBalance(reward.gold)}
-                </span>
-              ) : null}
+              {reward.gold > 0 ? <RewardResource type="gold" value={reward.gold} /> : null}
               {reward.gameScore > 0 ? (
-                <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm">
-                  <GameScoreIcon className="size-4" />
-                  {formatBalance(reward.gameScore)}
-                </span>
+                <RewardResource type="gameScore" value={reward.gameScore} />
               ) : null}
               {attributeOrder
                 .filter((key) => reward.attributes[key] > 0)
@@ -578,21 +626,32 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
   const detailQuery = useBossBattleQuery(battleId);
   const query = battleId ? detailQuery : currentQuery,
     battle = query.data;
+  const refetchBattle = query.refetch;
   const attack = useAttackBossMutation(battle?.id),
     claim = useClaimBossRewardMutation(battle?.id);
   const [damage, setDamage] = useState<{ id: string; value: number } | null>(null);
   const [localHp, setLocalHp] = useState<number | null>(null);
   const [trailHp, setTrailHp] = useState<number | null>(null);
   const [claimedReward, setClaimedReward] = useState<BossClaimRewardResult | null>(null);
+  const [showDefeatEffect, setShowDefeatEffect] = useState(false);
+  const setSession = useClientAuthStore((state) => state.setSession);
+  const session = useClientAuthStore((state) => state.session);
   const damageTimer = useRef<number | null>(null),
-    trailTimer = useRef<number | null>(null);
+    trailTimer = useRef<number | null>(null),
+    defeatTimer = useRef<number | null>(null);
   useEffect(
     () => () => {
       if (damageTimer.current) clearTimeout(damageTimer.current);
       if (trailTimer.current) clearTimeout(trailTimer.current);
+      if (defeatTimer.current) clearTimeout(defeatTimer.current);
     },
     [],
   );
+  useEffect(() => {
+    if (battle?.status !== "DEFEATED" && battle?.status !== "FINALIZING") return;
+    const timer = window.setInterval(() => void refetchBattle(), 1500);
+    return () => window.clearInterval(timer);
+  }, [battle?.status, refetchBattle]);
   if (query.isPending)
     return (
       <section className="space-y-4">
@@ -641,7 +700,7 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
     trail = trailHp ?? hp,
     claimStatus = battle.participant?.rewardClaimStatus;
   const canClaim =
-    battle.status === "COMPLETED" &&
+    isBossBattleFinal(battle.status) &&
     Boolean(battle.resultsFinalizedAt) &&
     battle.rewardsEnabled &&
     claimStatus === "AVAILABLE";
@@ -656,11 +715,16 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
       damageTimer.current = window.setTimeout(() => setDamage(null), 800);
       if (trailTimer.current) clearTimeout(trailTimer.current);
       trailTimer.current = window.setTimeout(() => setTrailHp(result.currentHp), 180);
+      if (result.bossDefeated) {
+        setShowDefeatEffect(true);
+        defeatTimer.current = window.setTimeout(() => setShowDefeatEffect(false), 1600);
+        await refetchBattle();
+      }
     } catch (error) {
       setLocalHp(null);
       setTrailHp(null);
       toast.error(error instanceof Error ? error.message : "Unable to attack the boss.");
-      void query.refetch();
+      void refetchBattle();
     }
   };
   return (
@@ -674,7 +738,7 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
       </div>
       <BattleNavigationStatus
         battle={battle}
-        historical={Boolean(battleId)}
+        historical={isBossBattleFinal(battle.status)}
         onBoundary={() => void query.refetch()}
       />
       <div className="relative overflow-hidden rounded-2xl border bg-muted">
@@ -690,7 +754,7 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
             <SkullIcon className="size-16" />
           </div>
         )}
-        <BossDamageIndicator damage={damage} />
+        <BossDamageIndicator damage={damage} defeated={showDefeatEffect} />
       </div>
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">{battle.name}</h2>
@@ -700,13 +764,65 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
             <AttributeBadge key={k} attribute={k} value={battle[k]} />
           ))}
         </div>
+        {canClaim ? (
+          <div className="flex justify-center py-2">
+            <Button
+              className="h-auto min-h-12 w-full max-w-md whitespace-normal border border-amber-300/70 bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-3 text-center font-semibold leading-tight text-amber-950 shadow-[0_0_24px_rgba(245,158,11,0.3)] hover:from-amber-400 hover:to-yellow-400 sm:px-5"
+              disabled={claim.isPending}
+              onClick={async () => {
+                try {
+                  const reward = await claim.mutateAsync();
+                  if (session) {
+                    setSession({
+                      ...session,
+                      user: {
+                        ...session.user,
+                        balance: session.user.balance + reward.gold,
+                        gameScore: session.user.gameScore + reward.gameScore,
+                        strength: session.user.strength + reward.attributes.strength,
+                        charisma: session.user.charisma + reward.attributes.charisma,
+                        endurance: session.user.endurance + reward.attributes.endurance,
+                        intelligence: session.user.intelligence + reward.attributes.intelligence,
+                      },
+                    });
+                  }
+                  setClaimedReward(reward);
+                  toast.success("Reward claimed");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Unable to claim the reward.");
+                }
+              }}
+            >
+              <TrophyIcon className="size-5 shrink-0" />
+              {claim.isPending
+                ? "Claiming..."
+                : battle.participant?.place
+                  ? `Claim Reward for ${formatOrdinal(battle.participant.place)} Place`
+                  : "Claim Reward"}
+            </Button>
+          </div>
+        ) : claimStatus === "CLAIMED" ? (
+          <div className="flex justify-center py-2">
+            <div className="inline-flex max-w-full items-center gap-3 rounded-xl border border-emerald-400/60 bg-emerald-500/10 px-5 py-3 text-emerald-700 shadow-[0_0_20px_rgba(16,185,129,0.16)] dark:text-emerald-300">
+              <CheckCircle2Icon className="size-6 shrink-0" aria-hidden="true" />
+              <div>
+                <p className="font-semibold">Reward Claimed</p>
+                {battle.participant?.place ? (
+                  <p className="text-xs opacity-80">
+                    {formatOrdinal(battle.participant.place)} Place reward received
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
         {battle.description ? (
           <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
             {battle.description}
           </p>
         ) : null}
       </div>
-      {!battleId || battle.status === "ACTIVE" ? (
+      {battle.status === "ACTIVE" ? (
         <BossAttackControl
           battle={battle}
           pending={attack.isPending}
@@ -715,24 +831,6 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
         />
       ) : null}
       <BossLeaderboard battleId={battle.id} />
-      {canClaim ? (
-        <Button
-          disabled={claim.isPending}
-          onClick={async () => {
-            try {
-              const reward = await claim.mutateAsync();
-              setClaimedReward(reward);
-              toast.success("Reward claimed");
-            } catch (e) {
-              toast.error(e instanceof Error ? e.message : "Unable to claim the reward.");
-            }
-          }}
-        >
-          {claim.isPending ? "Claiming..." : "Claim Reward"}
-        </Button>
-      ) : claimStatus === "CLAIMED" ? (
-        <p className="font-semibold text-emerald-500">Reward Claimed</p>
-      ) : null}
       <Rewards rewards={battle.rewards} />
       <RewardReceivedModal reward={claimedReward} onClose={() => setClaimedReward(null)} />
     </section>

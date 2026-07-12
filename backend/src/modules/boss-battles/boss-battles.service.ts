@@ -65,7 +65,8 @@ export class BossBattlesService {
     return battle;
   }
 
-  list(history = false) {
+  async list(history = false) {
+    await this.reconcileOverdueBattles();
     return this.repository.listBattles(
       history
         ? [BossBattleStatus.COMPLETED, BossBattleStatus.EXPIRED, BossBattleStatus.CANCELLED]
@@ -73,11 +74,13 @@ export class BossBattlesService {
     );
   }
   async history(page: number, limit: number) {
+    await this.reconcileOverdueBattles();
     const result = await this.repository.listPublicHistory(page, Math.min(limit, 100));
     return {
       items: result.items.map(({ participants, ...battle }) => ({
         ...battle,
-        winner: participants[0]?.user ?? null,
+        winner:
+          battle.status === BossBattleStatus.COMPLETED ? (participants[0]?.user ?? null) : null,
       })),
       page,
       limit: Math.min(limit, 100),
@@ -85,15 +88,27 @@ export class BossBattlesService {
       serverTime: new Date(),
     };
   }
-  current() {
-    return this.repository.findCurrent();
+  async current() {
+    await this.reconcileOverdueBattles();
+    const active = await this.repository.findCurrent();
+    return active.length > 0 ? active : this.repository.findLatestCompleted();
   }
   async get(id: string, userId?: string) {
-    const battle = await this.repository.findBattle(id);
+    await this.reconcileOverdueBattles();
+    let battle = await this.repository.findBattle(id);
     if (!battle || (userId && battle.status === BossBattleStatus.DRAFT))
       throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
-    const [participant, user] = await Promise.all([
+    if (
+      !battle.resultsFinalizedAt &&
+      (battle.status === BossBattleStatus.DEFEATED || battle.status === BossBattleStatus.FINALIZING)
+    ) {
+      await this.finalize(id);
+      battle = await this.repository.findBattle(id);
+      if (!battle) throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
+    }
+    const [participant, result, user] = await Promise.all([
       userId ? this.repository.findParticipant(id, userId) : null,
+      userId ? this.repository.findResult(id, userId) : null,
       userId ? this.repository.findUser(userId) : null,
     ]);
     const damageRange = user
@@ -105,7 +120,13 @@ export class BossBattlesService {
     return {
       ...battle,
       serverTime: new Date(),
-      participant,
+      participant: participant
+        ? {
+            ...participant,
+            place: result?.place,
+            rewardClaimStatus: result?.rewardClaimStatus,
+          }
+        : null,
       canAttack:
         battle.status === BossBattleStatus.ACTIVE &&
         battle.currentHp > 0 &&
@@ -489,6 +510,10 @@ export class BossBattlesService {
       },
     );
   }
+  private async reconcileOverdueBattles() {
+    const overdue = await this.repository.findOverdueIds();
+    for (const battle of overdue) await this.expire(battle.id);
+  }
   private validatePeriod(start: string, end: string) {
     if (new Date(start) >= new Date(end)) throw this.error('INVALID_BATTLE_PERIOD');
   }
@@ -535,12 +560,12 @@ export class BossBattlesService {
       imageUrl: item.imageUrl ?? null,
       slotType: item.slotType,
       rarity: item.rarity,
+      price: item.price,
       durability: item.durability ?? null,
       strength: item.attributes?.strength ?? null,
       charisma: item.attributes?.charisma ?? null,
-      agility: item.attributes?.endurance ?? null,
+      agility: item.attributes?.agility ?? null,
       intelligence: item.attributes?.intelligence ?? null,
-      metadata: item.metadata ? this.json(item.metadata) : Prisma.JsonNull,
     };
   }
   private rewardCreate(reward: BossRewardDto): Prisma.BossBattleRewardCreateWithoutBattleInput {

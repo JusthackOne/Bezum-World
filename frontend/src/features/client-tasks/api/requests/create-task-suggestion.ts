@@ -3,10 +3,7 @@ import { requestApiData } from "@/shared/lib/api-request";
 import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
 
 import { clientTasksEndpoints } from "../endpoints";
-import type {
-  CreateTaskSuggestionInput,
-  TaskSuggestion,
-} from "../../model/client-task.types";
+import type { CreateTaskSuggestionInput, TaskSuggestion } from "../../model/client-task.types";
 
 function normalizeRewardAttributes(
   payload: CreateTaskSuggestionInput,
@@ -44,7 +41,9 @@ export function buildTaskSuggestionRequestBody(
       ...(payload.description ? { description: payload.description } : {}),
       ...(payload.image ? { image: payload.image } : {}),
       rewardMoney: payload.rewardMoney,
-      ...(payload.rewardGameScore !== undefined ? { rewardGameScore: payload.rewardGameScore } : {}),
+      ...(payload.rewardGameScore !== undefined
+        ? { rewardGameScore: payload.rewardGameScore }
+        : {}),
       ...(rewardAttributes ? { rewardAttributes } : {}),
       requiresProofImage: payload.requiresProofImage,
       ...(payload.type === "daily" && payload.submissionLimit !== undefined

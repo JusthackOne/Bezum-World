@@ -3,7 +3,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { tz } from "@date-fns/tz";
 import { differenceInMinutes, endOfDay } from "date-fns";
-import { LightbulbIcon, PencilIcon, SearchIcon, ThumbsUpIcon, Trash2Icon, UploadIcon } from "lucide-react";
+import {
+  LightbulbIcon,
+  PencilIcon,
+  SearchIcon,
+  ThumbsUpIcon,
+  Trash2Icon,
+  UploadIcon,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { AdminTaskForm, type AdminTaskFormValues } from "@/features/admin-tasks/ui";
@@ -89,8 +96,7 @@ const taskTypeVisuals: Record<
   }
 > = {
   daily: {
-    labelClassName:
-      "border-sky-500 bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-100",
+    labelClassName: "border-sky-500 bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-100",
     cardClassName:
       "border-sky-500/80 shadow-[0_0_0_1px_rgba(14,165,233,0.16),0_10px_28px_rgba(12,74,110,0.12)]",
   },
@@ -101,8 +107,7 @@ const taskTypeVisuals: Record<
       "border-emerald-500/80 shadow-[0_0_0_1px_rgba(16,185,129,0.16),0_10px_28px_rgba(6,95,70,0.12)]",
   },
   event: {
-    labelClassName:
-      "border-red-500 bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-100",
+    labelClassName: "border-red-500 bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-100",
     cardClassName:
       "border-red-500/80 shadow-[0_0_0_1px_rgba(239,68,68,0.2),0_10px_28px_rgba(127,29,29,0.16)]",
   },
@@ -186,7 +191,9 @@ function getTimeUntilEndOfDay(now: Date, timeZone: string): string {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-function buildRewardAttributes(values: AdminTaskFormValues): ClientTaskRewardAttributes | undefined {
+function buildRewardAttributes(
+  values: AdminTaskFormValues,
+): ClientTaskRewardAttributes | undefined {
   const rewardAttributes = {
     ...(values.rewardStrength !== undefined ? { strength: values.rewardStrength } : {}),
     ...(values.rewardIntelligence !== undefined ? { intelligence: values.rewardIntelligence } : {}),
@@ -209,7 +216,9 @@ export function TasksPage() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<TaskSuggestion | null>(null);
   const [suggestionDialogOpen, setSuggestionDialogOpen] = useState(false);
   const [editingSuggestion, setEditingSuggestion] = useState<TaskSuggestion | null>(null);
-  const [pendingSuggestionDelete, setPendingSuggestionDelete] = useState<TaskSuggestion | null>(null);
+  const [pendingSuggestionDelete, setPendingSuggestionDelete] = useState<TaskSuggestion | null>(
+    null,
+  );
   const [proofTask, setProofTask] = useState<ClientTask | null>(null);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofValidationMessage, setProofValidationMessage] = useState<string | null>(null);
@@ -276,7 +285,9 @@ export function TasksPage() {
       return;
     }
 
-    const updatedSuggestion = suggestions.find((suggestion) => suggestion.id === selectedSuggestion.id);
+    const updatedSuggestion = suggestions.find(
+      (suggestion) => suggestion.id === selectedSuggestion.id,
+    );
     if (updatedSuggestion) {
       setSelectedSuggestion(updatedSuggestion);
     }
@@ -385,7 +396,9 @@ export function TasksPage() {
         ...(values.image ? { image: values.image.trim() } : {}),
         ...(imageFile ? { imageFile } : {}),
         rewardMoney: values.rewardMoney,
-        ...(values.rewardGameScore !== undefined ? { rewardGameScore: values.rewardGameScore } : {}),
+        ...(values.rewardGameScore !== undefined
+          ? { rewardGameScore: values.rewardGameScore }
+          : {}),
         ...(rewardAttributes ? { rewardAttributes } : {}),
         requiresProofImage: values.requiresProofImage,
         ...(values.type === "daily" && values.submissionLimit !== undefined
@@ -495,8 +508,7 @@ export function TasksPage() {
                 <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                   <p>The highest-voted task becomes active after today ends.</p>
                   <p className="shrink-0 font-medium text-foreground">
-                    Time remaining:{" "}
-                    <time className="tabular-nums">{timeUntilEndOfDay}</time>
+                    Time remaining: <time className="tabular-nums">{timeUntilEndOfDay}</time>
                   </p>
                 </div>
               </div>
@@ -549,9 +561,7 @@ export function TasksPage() {
                         </div>
 
                         <div className="space-y-3 p-4">
-                          <h3 className="line-clamp-2 text-sm font-semibold">
-                            {suggestion.title}
-                          </h3>
+                          <h3 className="line-clamp-2 text-sm font-semibold">{suggestion.title}</h3>
                           <RewardBadgesList rewards={rewardVisuals} emptyLabel="No rewards" />
                         </div>
                       </button>
@@ -576,10 +586,18 @@ export function TasksPage() {
                         )}
                         {suggestion.isOwner ? (
                           <div className="mt-3 grid grid-cols-2 gap-3">
-                            <Button type="button" variant="outline" onClick={() => startEditingSuggestion(suggestion)}>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => startEditingSuggestion(suggestion)}
+                            >
                               <PencilIcon className="size-4" /> Edit
                             </Button>
-                            <Button type="button" variant="destructive" onClick={() => setPendingSuggestionDelete(suggestion)}>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              onClick={() => setPendingSuggestionDelete(suggestion)}
+                            >
                               <Trash2Icon className="size-4" /> Delete
                             </Button>
                           </div>
@@ -696,9 +714,7 @@ export function TasksPage() {
                   </div>
 
                   <div className="space-y-4 p-4">
-                    <h2 className="line-clamp-2 text-base font-semibold">
-                      {task.title}
-                    </h2>
+                    <h2 className="line-clamp-2 text-base font-semibold">{task.title}</h2>
 
                     <RewardBadgesList rewards={rewardVisuals} emptyLabel="No rewards" />
 
@@ -757,9 +773,7 @@ export function TasksPage() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={
-                      getTaskImageUrl(selectedTask.image)
-                    }
+                    src={getTaskImageUrl(selectedTask.image)}
                     alt={selectedTask.title}
                     className="h-full w-full object-cover"
                   />
@@ -795,14 +809,19 @@ export function TasksPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={suggestionDialogOpen} onOpenChange={(open) => {
-        setSuggestionDialogOpen(open);
-        if (!open) setEditingSuggestion(null);
-      }}>
+      <Dialog
+        open={suggestionDialogOpen}
+        onOpenChange={(open) => {
+          setSuggestionDialogOpen(open);
+          if (!open) setEditingSuggestion(null);
+        }}
+      >
         <DialogContent className="max-h-[85vh] max-w-[calc(100vw-2rem)] overflow-hidden p-0 sm:max-w-2xl">
           <div className="max-h-[85vh] min-w-0 space-y-4 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle>{editingSuggestion ? "Edit Task Suggestion" : "Suggest a New Task"}</DialogTitle>
+              <DialogTitle>
+                {editingSuggestion ? "Edit Task Suggestion" : "Suggest a New Task"}
+              </DialogTitle>
               <DialogDescription>
                 Suggestions are limited to one per calendar day.
               </DialogDescription>
@@ -816,21 +835,27 @@ export function TasksPage() {
               <AdminTaskForm
                 submitLabel={editingSuggestion ? "Save changes" : "Submit suggestion"}
                 submitPendingLabel={editingSuggestion ? "Saving..." : "Submitting..."}
-                isSubmitting={createSuggestionMutation.isPending || updateSuggestionMutation.isPending}
-                initialValues={editingSuggestion ? {
-                  type: editingSuggestion.type,
-                  title: editingSuggestion.title,
-                  description: editingSuggestion.description ?? "",
-                  image: editingSuggestion.image ?? "",
-                  rewardMoney: editingSuggestion.rewardMoney,
-                  rewardGameScore: editingSuggestion.rewardGameScore ?? undefined,
-                  rewardStrength: editingSuggestion.rewardAttributes?.strength,
-                  rewardIntelligence: editingSuggestion.rewardAttributes?.intelligence,
-                  rewardCharisma: editingSuggestion.rewardAttributes?.charisma,
-                  rewardEndurance: editingSuggestion.rewardAttributes?.endurance,
-                  requiresProofImage: editingSuggestion.requiresProofImage,
-                  submissionLimit: editingSuggestion.submissionLimit ?? undefined,
-                } : undefined}
+                isSubmitting={
+                  createSuggestionMutation.isPending || updateSuggestionMutation.isPending
+                }
+                initialValues={
+                  editingSuggestion
+                    ? {
+                        type: editingSuggestion.type,
+                        title: editingSuggestion.title,
+                        description: editingSuggestion.description ?? "",
+                        image: editingSuggestion.image ?? "",
+                        rewardMoney: editingSuggestion.rewardMoney,
+                        rewardGameScore: editingSuggestion.rewardGameScore ?? undefined,
+                        rewardStrength: editingSuggestion.rewardAttributes?.strength,
+                        rewardIntelligence: editingSuggestion.rewardAttributes?.intelligence,
+                        rewardCharisma: editingSuggestion.rewardAttributes?.charisma,
+                        rewardEndurance: editingSuggestion.rewardAttributes?.endurance,
+                        requiresProofImage: editingSuggestion.requiresProofImage,
+                        submissionLimit: editingSuggestion.submissionLimit ?? undefined,
+                      }
+                    : undefined
+                }
                 errorMessage={
                   createSuggestionMutation.error instanceof Error
                     ? createSuggestionMutation.error.message
@@ -843,16 +868,22 @@ export function TasksPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={pendingSuggestionDelete !== null} onOpenChange={(open) => !open && setPendingSuggestionDelete(null)}>
+      <AlertDialog
+        open={pendingSuggestionDelete !== null}
+        onOpenChange={(open) => !open && setPendingSuggestionDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete task suggestion?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this task suggestion? All of its votes will be removed.
+              Are you sure you want to delete this task suggestion? All of its votes will be
+              removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteSuggestionMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteSuggestionMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteSuggestionMutation.isPending}

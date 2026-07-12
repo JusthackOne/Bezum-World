@@ -10,6 +10,7 @@ import { resolveAssetUrl } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
 import { Input } from "@/shared/ui/8bit/input";
+import { ITEM_PRICE_MAX } from "../model/item-form-rules";
 import { ItemBalanceIndicator } from "./item-balance-indicator";
 
 const optionalIntField = (min: number, max: number, label: string) =>
@@ -32,7 +33,7 @@ const optionalMinIntField = (min: number, label: string) =>
 const itemFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(128),
   description: z.string().trim().min(1, "Description is required").max(4096),
-  price: z.number().int().min(0).max(1000),
+  price: z.number().int().min(0).max(ITEM_PRICE_MAX),
   rarity: z.enum(["unterlyanskiy", "basic_minimum", "sigma", "bezumnyy"]),
   slotType: z.enum(["HELMET", "ARMOR", "PANTS", "BOOTS", "LEFT_HAND", "RIGHT_HAND"]),
   strength: optionalMinIntField(0, "Strength"),
@@ -258,7 +259,7 @@ export function AdminItemForm({
             id="price"
             type="number"
             min={0}
-            max={1000}
+            max={ITEM_PRICE_MAX}
             {...form.register("price", { valueAsNumber: true })}
           />
           {form.formState.errors.price ? (

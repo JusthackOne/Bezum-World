@@ -10,10 +10,11 @@ export async function updateTaskSuggestion(
 ): Promise<TaskSuggestion> {
   const { suggestionId, ...task } = payload;
   return requestApiData(
-    () => clientHttpClient.patch<ApiSuccessResponse<TaskSuggestion>>(
-      clientTasksEndpoints.suggestion(suggestionId),
-      buildTaskSuggestionRequestBody(task),
-    ),
+    () =>
+      clientHttpClient.patch<ApiSuccessResponse<TaskSuggestion>>(
+        clientTasksEndpoints.suggestion(suggestionId),
+        buildTaskSuggestionRequestBody(task),
+      ),
     "Failed to update suggestion",
   );
 }

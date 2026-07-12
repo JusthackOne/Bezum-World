@@ -4,9 +4,10 @@ import Link from "next/link";
 
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { publicUserRoutes } from "@/features/public-user/routes";
-import { AvatarImage, RewardBadgesList, SidebarTrigger } from "@/shared/ui";
+import { AvatarImage, RewardBadgesList, SidebarTrigger, useSidebar } from "@/shared/ui";
 
 export function ClientHeader() {
+  const { state } = useSidebar();
   const user = useClientAuthStore((state) => state.session?.user);
   const profileHref = user?.username ? publicUserRoutes.profile(user.username) : "/user";
   const username = user?.username ?? "Current user";
@@ -14,6 +15,9 @@ export function ClientHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b bg-card/95 px-4 backdrop-blur-sm supports-[backdrop-filter]:bg-card/80 md:px-8">
       <SidebarTrigger className="size-9 rounded-full border bg-background shadow-sm md:hidden" />
+      {state === "collapsed" ? (
+        <SidebarTrigger className="hidden size-9 rounded-full border bg-background shadow-sm md:inline-flex" />
+      ) : null}
 
       <nav aria-label="User account" className="ml-auto flex items-center gap-3">
         <RewardBadgesList

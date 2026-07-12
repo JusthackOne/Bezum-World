@@ -24,7 +24,11 @@ export function CompactTaskCard({
     <article className={cn("overflow-hidden rounded-lg border bg-card shadow-sm", className)}>
       <div className="h-28 w-full overflow-hidden bg-muted/30">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={getTaskImageUrl(task.image)} alt={task.title} className="h-full w-full object-cover" />
+        <img
+          src={getTaskImageUrl(task.image)}
+          alt={task.title}
+          className="h-full w-full object-cover"
+        />
       </div>
       <div className="p-3">
         <h2 className="line-clamp-2 text-sm font-semibold">{task.title}</h2>

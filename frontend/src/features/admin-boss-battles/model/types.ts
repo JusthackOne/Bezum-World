@@ -20,8 +20,17 @@ export interface BossRewardItem {
   slotType: "HELMET" | "ARMOR" | "PANTS" | "BOOTS" | "LEFT_HAND" | "RIGHT_HAND";
   rarity: "unterlyanskiy" | "basic_minimum" | "sigma" | "bezumnyy";
   durability?: number;
-  attributes?: BossAttributes;
-  metadata?: Record<string, unknown>;
+  price: number;
+  strength?: number;
+  charisma?: number;
+  agility?: number;
+  intelligence?: number;
+  attributes?: {
+    strength?: number;
+    charisma?: number;
+    agility?: number;
+    intelligence?: number;
+  };
 }
 export interface BossReward {
   id?: string;

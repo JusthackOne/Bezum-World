@@ -94,12 +94,12 @@ export function BossBattleHistoryPage() {
   const changePage = (next: number) => router.push(`${bossBattleRoutes.history}?page=${next}`);
   return (
     <section className="mx-auto max-w-6xl space-y-5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
           <HistoryIcon className="size-6" />
           Boss Battle History
         </h1>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="w-full sm:w-auto">
           <Link href={bossBattleRoutes.current}>Current Battle</Link>
         </Button>
       </div>

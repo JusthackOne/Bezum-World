@@ -222,10 +222,7 @@ export function ProfileItemSlot({ label, item, icon: Icon, className }: ProfileI
         </button>
       </TooltipTrigger>
       <TooltipContent
-        className={cn(
-          "border-2 bg-card text-foreground w-64 p-3",
-          tooltipBorderClassName,
-        )}
+        className={cn("border-2 bg-card text-foreground w-64 p-3", tooltipBorderClassName)}
         sideOffset={8}
       >
         <ItemTooltip item={item} />

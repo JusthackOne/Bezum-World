@@ -80,6 +80,36 @@ export class BossBattlesRepository {
     });
   }
 
+  findOverdueIds() {
+    return this.prisma.bossBattle.findMany({
+      where: {
+        status: { in: [BossBattleStatus.ACTIVE, BossBattleStatus.SCHEDULED] },
+        endsAt: { lte: new Date() },
+        currentHp: { gt: 0 },
+      },
+      select: { id: true },
+    });
+  }
+
+  findLatestCompleted() {
+    return this.prisma.bossBattle.findMany({
+      where: {
+        status: {
+          in: [
+            BossBattleStatus.DEFEATED,
+            BossBattleStatus.FINALIZING,
+            BossBattleStatus.COMPLETED,
+            BossBattleStatus.EXPIRED,
+            BossBattleStatus.CANCELLED,
+          ],
+        },
+      },
+      include: { rewards: { include: { itemTemplate: true } } },
+      orderBy: [{ finishedAt: 'desc' }, { createdAt: 'desc' }],
+      take: 1,
+    });
+  }
+
   create(data: Prisma.BossBattleCreateInput, tx: Prisma.TransactionClient) {
     return tx.bossBattle.create({
       data,
@@ -161,6 +191,12 @@ export class BossBattlesRepository {
   findParticipant(battleId: string, userId: string) {
     return this.prisma.bossBattleParticipant.findUnique({
       where: { bossBattleId_userId: { bossBattleId: battleId, userId } },
+    });
+  }
+  findResult(battleId: string, userId: string) {
+    return this.prisma.bossBattleResult.findUnique({
+      where: { bossBattleId_userId: { bossBattleId: battleId, userId } },
+      select: { place: true, rewardClaimStatus: true },
     });
   }
   findParticipants(battleId: string, tx: Prisma.TransactionClient) {
@@ -262,7 +298,7 @@ export class BossBattlesRepository {
             charisma: reward.itemTemplate.charisma,
             agility: reward.itemTemplate.agility,
             intelligence: reward.itemTemplate.intelligence,
-            price: 0,
+            price: reward.itemTemplate.price,
             rarity: reward.itemTemplate.rarity,
             slotType: reward.itemTemplate.slotType,
             durability: reward.itemTemplate.durability,
