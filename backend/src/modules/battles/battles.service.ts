@@ -19,8 +19,7 @@ import { BattleRepository, type BattlePlayerRecord } from './repositories';
 
 const MIN_COIN_REWARD = 0;
 const MAX_COIN_REWARD = 10;
-const MIN_GAME_SCORE_REWARD = 0;
-const MAX_GAME_SCORE_REWARD = 10;
+const BATTLE_WIN_GAME_SCORE_REWARD = 5;
 
 interface FinalBattleStats {
   strength: number;
@@ -70,7 +69,7 @@ export class BattlesService {
           equipment: this.toBattleEquipment(opponent),
           stats: this.toBattleStatsDto(opponentStats),
           winChancePercent: this.toWinChancePercent(winProbability),
-          winGameScoreReward: this.calculateGameScoreReward(winProbability),
+          winGameScoreReward: BATTLE_WIN_GAME_SCORE_REWARD,
           winGoldReward: this.calculateCoinReward(winProbability),
           isBattleAvailableToday: !battledDefenderIds.has(opponent.id),
         };
@@ -159,7 +158,7 @@ export class BattlesService {
         ? currentUserWinProbability
         : 1 - currentUserWinProbability;
       const coinReward = this.calculateCoinReward(winnerWinProbability);
-      const gameScoreReward = this.calculateGameScoreReward(winnerWinProbability);
+      const gameScoreReward = BATTLE_WIN_GAME_SCORE_REWARD;
 
       await this.battleRepository.applyWinnerBattleRewards(
         winner.id,
@@ -284,12 +283,6 @@ export class BattlesService {
     const underdogReward = Math.round((1 - winnerWinProbability) * MAX_COIN_REWARD);
 
     return this.clamp(underdogReward, MIN_COIN_REWARD, MAX_COIN_REWARD);
-  }
-
-  private calculateGameScoreReward(winnerWinProbability: number): number {
-    const underdogScore = Math.round((1 - winnerWinProbability) * MAX_GAME_SCORE_REWARD);
-
-    return this.clamp(underdogScore, MIN_GAME_SCORE_REWARD, MAX_GAME_SCORE_REWARD);
   }
 
   private clamp(value: number, min: number, max: number): number {
