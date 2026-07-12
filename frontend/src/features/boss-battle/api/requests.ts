@@ -15,10 +15,9 @@ export async function getCurrentBossBattle(): Promise<BossBattle | null> {
   );
 }
 
-export function getBossLeaderboard(id: string, page: number): Promise<BossLeaderboard> {
+export function getBossLeaderboard(id: string): Promise<BossLeaderboard> {
   return requestApiData(
-    () =>
-      clientHttpClient.get(bossBattleEndpoints.leaderboard(id), { params: { page, limit: 20 } }),
+    () => clientHttpClient.get(bossBattleEndpoints.leaderboard(id)),
     "Unable to load the boss leaderboard.",
   );
 }

@@ -105,20 +105,13 @@ export class BossBattlesService {
 
   async leaderboard(id: string, userId: string, page: number, limit: number) {
     if (!(await this.repository.findBattle(id))) throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
-    const safeLimit = Math.min(limit, 100);
-    const [rows, total, ownParticipant] = await Promise.all([
-      this.repository.findLeaderboard(id, (page - 1) * safeLimit, safeLimit),
-      this.repository.countParticipants(id),
-      this.repository.findParticipant(id, userId),
-    ]);
+    void page;
+    void limit;
+    const total = await this.repository.countParticipants(id);
+    const rows = total > 0 ? await this.repository.findLeaderboard(id, 0, total) : [];
     const mapped = rows.map((row) => ({ ...row, place: Number(row.place) }));
-    let own: (typeof mapped)[number] | null = mapped.find((row) => row.userId === userId) ?? null;
-    if (!own && ownParticipant) {
-      const all = await this.repository.findLeaderboard(id, 0, total);
-      const row = all.find((entry) => entry.userId === userId);
-      own = row ? { ...row, place: Number(row.place) } : null;
-    }
-    return { items: mapped, own, page, limit: safeLimit, total };
+    const own = mapped.find((row) => row.userId === userId) ?? null;
+    return { items: mapped, own, page: 1, limit: total, total };
   }
 
   async attack(id: string, userId: string, now = new Date(), random = Math.random) {

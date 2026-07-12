@@ -436,8 +436,7 @@ function LeaderRow({ entry, current }: { entry: BossLeaderboardEntry; current: b
   );
 }
 function BossLeaderboard({ battleId }: { battleId: string }) {
-  const [page, setPage] = useState(1);
-  const q = useBossLeaderboardQuery(battleId, page);
+  const q = useBossLeaderboardQuery(battleId);
   const userId = useClientAuthStore((s) => s.session?.user.id);
   if (q.isPending) return <Skeleton className="h-48 w-full" />;
   if (q.isError)
@@ -468,18 +467,6 @@ function BossLeaderboard({ battleId }: { battleId: string }) {
           <LeaderRow entry={q.data.own} current />
         </>
       ) : null}
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" disabled={page === 1} onClick={() => setPage((v) => v - 1)}>
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          disabled={page * q.data.limit >= q.data.total}
-          onClick={() => setPage((v) => v + 1)}
-        >
-          Next
-        </Button>
-      </div>
     </section>
   );
 }

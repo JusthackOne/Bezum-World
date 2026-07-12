@@ -5,10 +5,10 @@ import { attackBoss, claimBossReward, getBossLeaderboard, getCurrentBossBattle }
 export function useCurrentBossBattleQuery() {
   return useQuery({ queryKey: queryKeys.currentBossBattle, queryFn: getCurrentBossBattle });
 }
-export function useBossLeaderboardQuery(battleId: string | undefined, page: number) {
+export function useBossLeaderboardQuery(battleId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.bossLeaderboard(battleId ?? "none", page),
-    queryFn: () => getBossLeaderboard(battleId!, page),
+    queryKey: queryKeys.bossLeaderboard(battleId ?? "none"),
+    queryFn: () => getBossLeaderboard(battleId!),
     enabled: Boolean(battleId),
   });
 }
