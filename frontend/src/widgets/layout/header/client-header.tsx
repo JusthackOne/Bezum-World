@@ -13,9 +13,9 @@ export function ClientHeader() {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b bg-card/95 px-4 backdrop-blur-sm supports-[backdrop-filter]:bg-card/80 md:px-8">
-      <SidebarTrigger className="size-9 rounded-full border bg-background shadow-sm" />
+      <SidebarTrigger className="size-9 rounded-full border bg-background shadow-sm md:hidden" />
 
-      <nav aria-label="User account" className="flex items-center gap-3">
+      <nav aria-label="User account" className="ml-auto flex items-center gap-3">
         <RewardBadgesList
           rewards={[
             { kind: "gameScore", value: user?.gameScore ?? 0 },
