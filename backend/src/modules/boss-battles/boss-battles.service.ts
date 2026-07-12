@@ -72,12 +72,26 @@ export class BossBattlesService {
         : undefined,
     );
   }
+  async history(page: number, limit: number) {
+    const result = await this.repository.listPublicHistory(page, Math.min(limit, 100));
+    return {
+      items: result.items.map(({ participants, ...battle }) => ({
+        ...battle,
+        winner: participants[0]?.user ?? null,
+      })),
+      page,
+      limit: Math.min(limit, 100),
+      total: result.total,
+      serverTime: new Date(),
+    };
+  }
   current() {
     return this.repository.findCurrent();
   }
   async get(id: string, userId?: string) {
     const battle = await this.repository.findBattle(id);
-    if (!battle) throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
+    if (!battle || (userId && battle.status === BossBattleStatus.DRAFT))
+      throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
     const [participant, user] = await Promise.all([
       userId ? this.repository.findParticipant(id, userId) : null,
       userId ? this.repository.findUser(userId) : null,
@@ -104,7 +118,27 @@ export class BossBattlesService {
   }
 
   async leaderboard(id: string, userId: string, page: number, limit: number) {
-    if (!(await this.repository.findBattle(id))) throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
+    const battle = await this.repository.findBattle(id);
+    if (!battle || battle.status === BossBattleStatus.DRAFT)
+      throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
+    if (battle.resultsFinalizedAt) {
+      const results = await this.repository.findFinalLeaderboard(id);
+      const mapped = results.map((result) => ({
+        place: result.place,
+        userId: result.userId,
+        username: result.user.username,
+        avatarUrl: result.user.avatarUrl,
+        totalDamage: result.totalDamage,
+        attacksCount: result.attacksCount,
+      }));
+      return {
+        items: mapped.slice((page - 1) * limit, page * limit),
+        own: mapped.find((row) => row.userId === userId) ?? null,
+        page,
+        limit,
+        total: mapped.length,
+      };
+    }
     void page;
     void limit;
     const total = await this.repository.countParticipants(id);

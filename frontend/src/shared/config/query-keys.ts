@@ -22,6 +22,8 @@ export const queryKeys = {
   eventsPrefix: ["events"] as const,
   battlesPlayers: ["battles", "players"] as const,
   currentBossBattle: ["boss-battles", "current"] as const,
+  bossBattleHistory: (page: number) => ["boss-battles", "history", page] as const,
+  bossBattleById: (id: string) => ["boss-battles", "by-id", id] as const,
   bossLeaderboard: (battleId: string) => ["boss-battles", battleId, "leaderboard"] as const,
   userProfile: (username: string) => ["users", "profile", username] as const,
   publicUserProfile: (username: string) => ["users", "public-profile", username] as const,

@@ -60,12 +60,50 @@ export interface BossBattle extends BossAttributes {
   status: BossBattleStatus;
   rewardsEnabled: boolean;
   resultsFinalizedAt: string | null;
+  finishedAt: string | null;
+  defeatedAt?: string | null;
+  createdAt: string;
   rewards: BossReward[];
   serverTime: string;
   participant: BossParticipant | null;
   canAttack: boolean;
   nextAttackAt: string | null;
   damageRange: { min: number; max: number } | null;
+}
+
+export interface BossBattleHistoryItem {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  status: BossBattleStatus;
+  initialHp: number;
+  currentHp: number;
+  startsAt: string;
+  endsAt: string;
+  defeatedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+  winner: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+  } | null;
+}
+
+export interface BossBattleHistory {
+  items: BossBattleHistoryItem[];
+  page: number;
+  limit: number;
+  total: number;
+  serverTime: string;
+}
+
+export interface BossClaimRewardResult {
+  place: number;
+  gold: number;
+  gameScore: number;
+  attributes: BossAttributes;
+  item: BossRewardItem | null;
 }
 
 export interface BossLeaderboardEntry {

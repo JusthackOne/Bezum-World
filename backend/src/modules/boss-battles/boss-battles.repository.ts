@@ -38,6 +38,40 @@ export class BossBattlesRepository {
     });
   }
 
+  async listPublicHistory(page: number, limit: number) {
+    const where: Prisma.BossBattleWhereInput = { status: { not: BossBattleStatus.DRAFT } };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.bossBattle.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          imageUrl: true,
+          status: true,
+          initialHp: true,
+          currentHp: true,
+          startsAt: true,
+          endsAt: true,
+          defeatedAt: true,
+          finishedAt: true,
+          createdAt: true,
+          participants: {
+            orderBy: [{ totalDamage: 'desc' }, { lastAttackAt: 'asc' }, { userId: 'asc' }],
+            take: 1,
+            select: {
+              user: { select: { id: true, username: true, avatarUrl: true } },
+            },
+          },
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.bossBattle.count({ where }),
+    ]);
+    return { items, total };
+  }
+
   findCurrent() {
     return this.prisma.bossBattle.findMany({
       where: { status: BossBattleStatus.ACTIVE },
@@ -161,6 +195,14 @@ export class BossBattlesRepository {
       FROM (SELECT p.*, DENSE_RANK() OVER (ORDER BY p.total_damage DESC) AS place FROM boss_battle_participants p WHERE p.boss_battle_id = ${battleId}) ranked
       JOIN "Account" a ON a.id = ranked.user_id
       ORDER BY ranked.place, ranked.last_attack_at, ranked.user_id OFFSET ${skip} LIMIT ${take}`;
+  }
+
+  findFinalLeaderboard(battleId: string) {
+    return this.prisma.bossBattleResult.findMany({
+      where: { bossBattleId: battleId },
+      include: { user: { select: { username: true, avatarUrl: true } } },
+      orderBy: [{ place: 'asc' }, { lastAttackAt: 'asc' }, { userId: 'asc' }],
+    });
   }
 
   createResult(data: Prisma.BossBattleResultUncheckedCreateInput, tx: Prisma.TransactionClient) {

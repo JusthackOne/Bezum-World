@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import {
   CoinsIcon,
   CrownIcon,
   HelpCircleIcon,
+  HistoryIcon,
   MedalIcon,
   SkullIcon,
   SwordsIcon,
@@ -15,11 +17,15 @@ import { toast } from "sonner";
 import {
   useAttackBossMutation,
   useBossLeaderboardQuery,
+  useBossBattleQuery,
   useClaimBossRewardMutation,
   useCurrentBossBattleQuery,
 } from "@/features/boss-battle/api";
+import { isBossBattleFinal } from "@/features/boss-battle/model/boss-battle-outcome";
+import { bossBattleRoutes } from "@/features/boss-battle/routes";
 import type {
   BossBattle,
+  BossClaimRewardResult,
   BossLeaderboardEntry,
   BossReward,
 } from "@/features/boss-battle/model/boss-battle.types";
@@ -42,15 +48,6 @@ import {
 import { Skeleton } from "@/shared/ui/8bit/skeleton";
 
 const attributeOrder = ["strength", "intelligence", "charisma", "endurance"] as const;
-const statusLabels: Partial<Record<BossBattle["status"], string>> = {
-  SCHEDULED: "Battle Scheduled",
-  DEFEATED: "Boss Defeated",
-  FINALIZING: "Finalizing Results",
-  COMPLETED: "Battle Completed",
-  EXPIRED: "Battle Expired",
-  CANCELLED: "Battle Cancelled",
-};
-
 const topPlaceStyles: Record<1 | 2 | 3, { container: string; badge: string }> = {
   1: {
     container:
@@ -166,6 +163,40 @@ function BattleTimer({ battle, onBoundary }: { battle: BossBattle; onBoundary: (
   );
 }
 
+function BattleNavigationStatus({
+  battle,
+  historical,
+  onBoundary,
+}: {
+  battle: BossBattle;
+  historical: boolean;
+  onBoundary: () => void;
+}) {
+  return (
+    <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <Button
+        asChild
+        variant="outline"
+        className="h-10 w-full justify-self-center px-4 sm:w-auto sm:justify-self-start"
+      >
+        <Link
+          href={bossBattleRoutes.history}
+          className="inline-flex items-center gap-2 whitespace-nowrap"
+        >
+          <HistoryIcon className="size-4 shrink-0" aria-hidden="true" />
+          Battle History
+        </Link>
+      </Button>
+      {historical && isBossBattleFinal(battle.status) ? (
+        <span aria-hidden="true" />
+      ) : (
+        <BattleTimer battle={battle} onBoundary={onBoundary} />
+      )}
+      <span className="hidden sm:block" aria-hidden="true" />
+    </div>
+  );
+}
+
 function BossDamageIndicator({ damage }: { damage: { id: string; value: number } | null }) {
   if (!damage) return null;
   return createPortal(
@@ -201,7 +232,6 @@ function BossHpBar({
         <span>
           {formatBalance(current)} / {formatBalance(initial)} HP
         </span>
-        {current === 0 ? <span>Boss Defeated</span> : null}
       </div>
       <div
         className="relative h-4 overflow-hidden rounded-full bg-muted"
@@ -407,6 +437,78 @@ function Rewards({ rewards }: { rewards: BossReward[] }) {
   );
 }
 
+function RewardReceivedModal({
+  reward,
+  onClose,
+}: {
+  reward: BossClaimRewardResult | null;
+  onClose: () => void;
+}) {
+  const item = reward?.item
+    ? {
+        id: reward.item.id,
+        name: reward.item.name,
+        description: reward.item.description,
+        image_url: reward.item.imageUrl,
+        strength: reward.item.strength,
+        charisma: reward.item.charisma,
+        agility: reward.item.agility,
+        intelligence: reward.item.intelligence,
+        price: 0,
+        rarity: reward.item.rarity,
+        slotType: reward.item.slotType,
+        durability: reward.item.durability,
+      }
+    : null;
+  return (
+    <Dialog open={Boolean(reward)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent font="normal">
+        <DialogHeader>
+          <DialogTitle>Reward Received</DialogTitle>
+          <DialogDescription>You received:</DialogDescription>
+        </DialogHeader>
+        {reward ? (
+          <div className="space-y-4">
+            {item ? (
+              <div className="space-y-2 text-center">
+                <ItemDisplayCard item={item} showPrice={false} className="mx-auto max-w-52" />
+                <p className="text-sm text-muted-foreground">Item added to inventory</p>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap justify-center gap-2">
+              {reward.gold > 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm">
+                  <CoinsIcon className="size-4 text-amber-500" />
+                  {formatBalance(reward.gold)}
+                </span>
+              ) : null}
+              {reward.gameScore > 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm">
+                  <GameScoreIcon className="size-4" />
+                  {formatBalance(reward.gameScore)}
+                </span>
+              ) : null}
+              {attributeOrder
+                .filter((key) => reward.attributes[key] > 0)
+                .map((key) => (
+                  <AttributeBadge
+                    key={key}
+                    attribute={key}
+                    value={reward.attributes[key]}
+                    className="w-20"
+                  />
+                ))}
+            </div>
+          </div>
+        ) : null}
+        <DialogFooter>
+          <Button onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function LeaderRow({ entry, current }: { entry: BossLeaderboardEntry; current: boolean }) {
   const placeStyle = getTopPlaceStyle(entry.place);
   return (
@@ -471,14 +573,17 @@ function BossLeaderboard({ battleId }: { battleId: string }) {
   );
 }
 
-export function BossBattlePage() {
-  const query = useCurrentBossBattleQuery(),
+export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
+  const currentQuery = useCurrentBossBattleQuery();
+  const detailQuery = useBossBattleQuery(battleId);
+  const query = battleId ? detailQuery : currentQuery,
     battle = query.data;
   const attack = useAttackBossMutation(battle?.id),
     claim = useClaimBossRewardMutation(battle?.id);
   const [damage, setDamage] = useState<{ id: string; value: number } | null>(null);
   const [localHp, setLocalHp] = useState<number | null>(null);
   const [trailHp, setTrailHp] = useState<number | null>(null);
+  const [claimedReward, setClaimedReward] = useState<BossClaimRewardResult | null>(null);
   const damageTimer = useRef<number | null>(null),
     trailTimer = useRef<number | null>(null);
   useEffect(
@@ -521,6 +626,15 @@ export function BossBattlePage() {
             <p className="font-semibold">No active boss battle</p>
           </CardContent>
         </Card>
+        <Button asChild variant="outline" className="h-10 w-full px-4 sm:w-auto">
+          <Link
+            href={bossBattleRoutes.history}
+            className="inline-flex items-center gap-2 whitespace-nowrap"
+          >
+            <HistoryIcon className="size-4 shrink-0" aria-hidden="true" />
+            Battle History
+          </Link>
+        </Button>
       </section>
     );
   const hp = localHp ?? battle.currentHp,
@@ -558,7 +672,11 @@ export function BossBattlePage() {
         </h1>
         <BossBattleHelpModal />
       </div>
-      <BattleTimer battle={battle} onBoundary={() => void query.refetch()} />
+      <BattleNavigationStatus
+        battle={battle}
+        historical={Boolean(battleId)}
+        onBoundary={() => void query.refetch()}
+      />
       <div className="relative overflow-hidden rounded-2xl border bg-muted">
         {battle.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- API-hosted images are not restricted to configured Next.js hosts.
@@ -575,14 +693,7 @@ export function BossBattlePage() {
         <BossDamageIndicator damage={damage} />
       </div>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-2xl font-semibold">{battle.name}</h2>
-          {statusLabels[battle.status] ? (
-            <span className="rounded-full border px-3 py-1 text-sm font-semibold">
-              {statusLabels[battle.status]}
-            </span>
-          ) : null}
-        </div>
+        <h2 className="text-2xl font-semibold">{battle.name}</h2>
         <BossHpBar current={hp} initial={battle.initialHp} trail={trail} />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {attributeOrder.map((k) => (
@@ -595,18 +706,22 @@ export function BossBattlePage() {
           </p>
         ) : null}
       </div>
-      <BossAttackControl
-        battle={battle}
-        pending={attack.isPending}
-        onAttack={() => void doAttack()}
-        onBoundary={() => void query.refetch()}
-      />
+      {!battleId || battle.status === "ACTIVE" ? (
+        <BossAttackControl
+          battle={battle}
+          pending={attack.isPending}
+          onAttack={() => void doAttack()}
+          onBoundary={() => void query.refetch()}
+        />
+      ) : null}
+      <BossLeaderboard battleId={battle.id} />
       {canClaim ? (
         <Button
           disabled={claim.isPending}
           onClick={async () => {
             try {
-              await claim.mutateAsync();
+              const reward = await claim.mutateAsync();
+              setClaimedReward(reward);
               toast.success("Reward claimed");
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "Unable to claim the reward.");
@@ -618,8 +733,8 @@ export function BossBattlePage() {
       ) : claimStatus === "CLAIMED" ? (
         <p className="font-semibold text-emerald-500">Reward Claimed</p>
       ) : null}
-      <BossLeaderboard battleId={battle.id} />
       <Rewards rewards={battle.rewards} />
+      <RewardReceivedModal reward={claimedReward} onClose={() => setClaimedReward(null)} />
     </section>
   );
 }

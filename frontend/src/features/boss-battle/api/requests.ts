@@ -1,5 +1,11 @@
 import { bossBattleEndpoints } from "./endpoints";
-import type { BossAttackResult, BossBattle, BossLeaderboard } from "../model/boss-battle.types";
+import type {
+  BossAttackResult,
+  BossBattle,
+  BossBattleHistory,
+  BossClaimRewardResult,
+  BossLeaderboard,
+} from "../model/boss-battle.types";
 import { clientHttpClient } from "@/shared/lib/client-http-client";
 import { requestApiData } from "@/shared/lib/api-request";
 
@@ -12,6 +18,20 @@ export async function getCurrentBossBattle(): Promise<BossBattle | null> {
   return requestApiData(
     () => clientHttpClient.get(bossBattleEndpoints.details(current[0]!.id)),
     "Unable to load the boss battle.",
+  );
+}
+
+export function getBossBattle(id: string): Promise<BossBattle> {
+  return requestApiData(
+    () => clientHttpClient.get(bossBattleEndpoints.details(id)),
+    "Unable to load the boss battle.",
+  );
+}
+
+export function getBossBattleHistory(page: number, limit = 20): Promise<BossBattleHistory> {
+  return requestApiData(
+    () => clientHttpClient.get(bossBattleEndpoints.history, { params: { page, limit } }),
+    "Unable to load boss battle history.",
   );
 }
 
@@ -29,7 +49,7 @@ export function attackBoss(id: string): Promise<BossAttackResult> {
   );
 }
 
-export function claimBossReward(id: string): Promise<unknown> {
+export function claimBossReward(id: string): Promise<BossClaimRewardResult> {
   return requestApiData(
     () => clientHttpClient.post(bossBattleEndpoints.claim(id)),
     "Unable to claim the reward.",

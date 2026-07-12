@@ -24,6 +24,7 @@ import type { RequestWithAuthUser } from '../auth/types/request-with-auth-user.t
 import { BossBattlesService } from './boss-battles.service';
 import {
   BossBattleIdParamsDto,
+  BossBattleHistoryQueryDto,
   BossLeaderboardQueryDto,
   CreateBossBattleDto,
   FinishBossBattleDto,
@@ -42,8 +43,10 @@ export class BossBattlesController {
   @Get('current') @ApiOperation({ summary: 'List active boss battles' }) current() {
     return this.service.current();
   }
-  @Get('history') @ApiOperation({ summary: 'List finished boss battles' }) history() {
-    return this.service.list(true);
+  @Get('history') @ApiOperation({ summary: 'List public boss battles' }) history(
+    @Query() query: BossBattleHistoryQueryDto,
+  ) {
+    return this.service.history(query.page, query.limit);
   }
   @Get(':id') get(@Param() params: BossBattleIdParamsDto, @Req() request: RequestWithAuthUser) {
     return this.service.get(params.id, this.userId(request));
