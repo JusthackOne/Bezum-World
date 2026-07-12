@@ -19,7 +19,7 @@ import type {
 import { BattleRepository, type BattlePlayerRecord } from './repositories';
 
 const MIN_COIN_REWARD = 0;
-const MAX_COIN_REWARD = 10;
+const MAX_COIN_REWARD = 20;
 const BATTLE_WIN_GAME_SCORE_REWARD = 5;
 
 interface FinalBattleStats {

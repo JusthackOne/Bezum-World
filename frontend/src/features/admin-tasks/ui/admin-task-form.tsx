@@ -10,6 +10,7 @@ import { env } from "@/shared/config/env";
 import { Button } from "@/shared/ui/8bit/button";
 import { Checkbox } from "@/shared/ui/8bit/checkbox";
 import { Input } from "@/shared/ui/8bit/input";
+import { TaskBalanceIndicator } from "./task-balance-indicator";
 
 const optionalIntField = (min: number, max: number, label: string) =>
   z
@@ -25,10 +26,7 @@ const optionalIntField = (min: number, max: number, label: string) =>
 
 const optionalMinIntField = (min: number, label: string) =>
   z
-    .union([
-      z.literal(""),
-      z.coerce.number().int().min(min, `${label} must be at least ${min}`),
-    ])
+    .union([z.literal(""), z.coerce.number().int().min(min, `${label} must be at least ${min}`)])
     .transform<number | undefined>((value) => (value === "" ? undefined : value));
 
 const taskFormSchema = z.object({
@@ -90,6 +88,24 @@ export function AdminTaskForm({
   const watchedType = useWatch({
     control: form.control,
     name: "type",
+  });
+  const [
+    watchedRewardMoney,
+    watchedRewardGameScore,
+    watchedRewardStrength,
+    watchedRewardEndurance,
+    watchedRewardIntelligence,
+    watchedRewardCharisma,
+  ] = useWatch({
+    control: form.control,
+    name: [
+      "rewardMoney",
+      "rewardGameScore",
+      "rewardStrength",
+      "rewardEndurance",
+      "rewardIntelligence",
+      "rewardCharisma",
+    ],
   });
 
   useEffect(() => {
@@ -199,17 +215,21 @@ export function AdminTaskForm({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="rewardMoney" className="text-sm font-medium">
-            Reward Money
+          <label htmlFor="submissionLimit" className="text-sm font-medium">
+            Submission Limit{" "}
+            {watchedType === "daily" ? "(daily only)" : "(ignored for current type)"}
           </label>
           <Input
-            id="rewardMoney"
+            id="submissionLimit"
             type="number"
-            min={0}
-            {...form.register("rewardMoney", { valueAsNumber: true })}
+            min={1}
+            disabled={watchedType !== "daily"}
+            {...form.register("submissionLimit")}
           />
-          {form.formState.errors.rewardMoney ? (
-            <p className="text-xs text-destructive">{form.formState.errors.rewardMoney.message}</p>
+          {form.formState.errors.submissionLimit ? (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.submissionLimit.message}
+            </p>
           ) : null}
         </div>
       </div>
@@ -239,6 +259,16 @@ export function AdminTaskForm({
         ) : null}
       </div>
 
+      <TaskBalanceIndicator
+        type={watchedType}
+        rewardMoney={watchedRewardMoney}
+        rewardGameScore={watchedRewardGameScore}
+        rewardStrength={watchedRewardStrength}
+        rewardEndurance={watchedRewardEndurance}
+        rewardIntelligence={watchedRewardIntelligence}
+        rewardCharisma={watchedRewardCharisma}
+      />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="rewardGameScore" className="text-sm font-medium">
@@ -253,21 +283,17 @@ export function AdminTaskForm({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="submissionLimit" className="text-sm font-medium">
-            Submission Limit{" "}
-            {watchedType === "daily" ? "(daily only)" : "(ignored for current type)"}
+          <label htmlFor="rewardMoney" className="text-sm font-medium">
+            Reward Money
           </label>
           <Input
-            id="submissionLimit"
+            id="rewardMoney"
             type="number"
-            min={1}
-            disabled={watchedType !== "daily"}
-            {...form.register("submissionLimit")}
+            min={0}
+            {...form.register("rewardMoney", { valueAsNumber: true })}
           />
-          {form.formState.errors.submissionLimit ? (
-            <p className="text-xs text-destructive">
-              {form.formState.errors.submissionLimit.message}
-            </p>
+          {form.formState.errors.rewardMoney ? (
+            <p className="text-xs text-destructive">{form.formState.errors.rewardMoney.message}</p>
           ) : null}
         </div>
 
@@ -275,12 +301,7 @@ export function AdminTaskForm({
           <label htmlFor="rewardStrength" className="text-sm font-medium">
             Strength Reward (optional)
           </label>
-          <Input
-            id="rewardStrength"
-            type="number"
-            min={0}
-            {...form.register("rewardStrength")}
-          />
+          <Input id="rewardStrength" type="number" min={0} {...form.register("rewardStrength")} />
           {form.formState.errors.rewardStrength ? (
             <p className="text-xs text-destructive">
               {form.formState.errors.rewardStrength.message}
@@ -309,12 +330,7 @@ export function AdminTaskForm({
           <label htmlFor="rewardCharisma" className="text-sm font-medium">
             Charisma Reward (optional)
           </label>
-          <Input
-            id="rewardCharisma"
-            type="number"
-            min={0}
-            {...form.register("rewardCharisma")}
-          />
+          <Input id="rewardCharisma" type="number" min={0} {...form.register("rewardCharisma")} />
           {form.formState.errors.rewardCharisma ? (
             <p className="text-xs text-destructive">
               {form.formState.errors.rewardCharisma.message}
@@ -326,12 +342,7 @@ export function AdminTaskForm({
           <label htmlFor="rewardEndurance" className="text-sm font-medium">
             Endurance Reward (optional)
           </label>
-          <Input
-            id="rewardEndurance"
-            type="number"
-            min={0}
-            {...form.register("rewardEndurance")}
-          />
+          <Input id="rewardEndurance" type="number" min={0} {...form.register("rewardEndurance")} />
           {form.formState.errors.rewardEndurance ? (
             <p className="text-xs text-destructive">
               {form.formState.errors.rewardEndurance.message}

@@ -7,3 +7,4 @@ export * from "./new-badge";
 export * from "./attribute-badge";
 export * from "./avatar-image";
 export * from "./profile-item-slot";
+export * from "./balance-indicator";

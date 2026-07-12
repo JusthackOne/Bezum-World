@@ -3,13 +3,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImageIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { resolveAssetUrl } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
 import { Input } from "@/shared/ui/8bit/input";
+import { ItemBalanceIndicator } from "./item-balance-indicator";
 
 const optionalIntField = (min: number, max: number, label: string) =>
   z
@@ -25,10 +26,7 @@ const optionalIntField = (min: number, max: number, label: string) =>
 
 const optionalMinIntField = (min: number, label: string) =>
   z
-    .union([
-      z.literal(""),
-      z.coerce.number().int().min(min, `${label} must be at least ${min}`),
-    ])
+    .union([z.literal(""), z.coerce.number().int().min(min, `${label} must be at least ${min}`)])
     .transform<number | undefined>((value) => (value === "" ? undefined : value));
 
 const itemFormSchema = z.object({
@@ -110,6 +108,17 @@ export function AdminItemForm({
           durability: initialValues.durability ?? "",
         }
       : defaultFormValues,
+  });
+  const [
+    watchedPrice,
+    watchedStrength,
+    watchedAgility,
+    watchedIntelligence,
+    watchedCharisma,
+    watchedDurability,
+  ] = useWatch({
+    control: form.control,
+    name: ["price", "strength", "agility", "intelligence", "charisma", "durability"],
   });
 
   useEffect(() => {
@@ -231,6 +240,15 @@ export function AdminItemForm({
         ) : null}
       </div>
 
+      <ItemBalanceIndicator
+        price={watchedPrice}
+        strength={watchedStrength}
+        agility={watchedAgility}
+        intelligence={watchedIntelligence}
+        charisma={watchedCharisma}
+        durability={watchedDurability}
+      />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="price" className="text-sm font-medium">
@@ -322,12 +340,7 @@ export function AdminItemForm({
           <label htmlFor="intelligence" className="text-sm font-medium">
             Intelligence (optional)
           </label>
-          <Input
-            id="intelligence"
-            type="number"
-            min={0}
-            {...form.register("intelligence")}
-          />
+          <Input id="intelligence" type="number" min={0} {...form.register("intelligence")} />
           {form.formState.errors.intelligence ? (
             <p className="text-xs text-destructive">{form.formState.errors.intelligence.message}</p>
           ) : null}

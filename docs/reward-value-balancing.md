@@ -23,21 +23,21 @@ Source: `backend/src/modules/battles/battle-power.ts`.
 The following scale is used to keep the calculations in whole numbers:
 
 ```text
-1 Battle Power = 1,000 RV
+1 Battle Power = 1000 RV
 ```
 
 This scale does not change the relative attribute weights.
 
 ## Reward Coefficients
 
-| Reward component | RV coefficient | Basis                                      |
-| ---------------- | -------------: | ------------------------------------------ |
-| Gold             |              1 | Base economic unit                         |
-| Game Score       |             10 | Configurable ratio: 1 Game Score = 10 Gold |
-| Strength         |            350 | `0.35 × 1,000`                             |
-| Endurance        |            250 | `0.25 × 1,000`                             |
-| Intelligence     |            200 | `0.20 × 1,000`                             |
-| Charisma         |            200 | `0.20 × 1,000`                             |
+| Reward component | RV coefficient | Basis                                       |
+| ---------------- | -------------: | ------------------------------------------- |
+| Gold             |            600 | Configured economy weight                   |
+| Game Score       |            250 | Configurable ratio: 2.4 Game Score = 1 Gold |
+| Strength         |            350 | `0.35 × 1,000`                              |
+| Endurance        |            250 | `0.25 × 1,000`                              |
+| Intelligence     |            200 | `0.20 × 1,000`                              |
+| Charisma         |            200 | `0.20 × 1,000`                              |
 
 One point of Strength is worth `1.75` times one point of Intelligence or Charisma because that ratio is used by the Battle formula.
 
@@ -45,8 +45,8 @@ One point of Strength is worth `1.75` times one point of Intelligence or Charism
 
 ```text
 ActualRV =
-    Gold × 1
-  + GameScore × 10
+    Gold × 600
+  + GameScore × 250
   + Strength × 350
   + Endurance × 250
   + Intelligence × 200
@@ -56,7 +56,7 @@ ActualRV =
 Short form:
 
 ```text
-ActualRV = G + 10GS + 350STR + 250END + 200INT + 200CHA
+ActualRV = 600G + 250GS + 350STR + 250END + 200INT + 200CHA
 ```
 
 Every missing reward component is treated as zero.
@@ -80,7 +80,7 @@ Event uses `14` because it is worth two Weekly tasks:
 The initial target value for one balanced Daily task is:
 
 ```text
-DailyBaseRV = 500
+DailyBaseRV = 2,000
 ```
 
 Calculate the target value as follows:
@@ -89,13 +89,13 @@ Calculate the target value as follows:
 TargetRV = DailyBaseRV × TaskTypeMultiplier
 ```
 
-With a base value of `500 RV`, the targets are:
+With a base value of `2,000 RV`, the targets are:
 
 | Task type | Target RV |
 | --------- | --------: |
-| Daily     |       500 |
-| Weekly    |     3,500 |
-| Event     |     7,000 |
+| Daily     |     2,000 |
+| Weekly    |    14,000 |
+| Event     |    28,000 |
 
 ## Balance Formula
 
@@ -107,7 +107,7 @@ Complete expression:
 
 ```text
 BalancePercent =
-  (G + 10GS + 350STR + 250END + 200INT + 200CHA)
+  (600G + 250GS + 350STR + 250END + 200INT + 200CHA)
   / (DailyBaseRV × TaskTypeMultiplier)
   × 100
 ```
@@ -127,30 +127,30 @@ BalancePercent =
 Reward:
 
 ```text
-2,000 Gold
-50 Game Score
-+2 Strength
-+1 Intelligence
-+1 Endurance
+4 Gold
+28 Game Score
++8 Strength
++4 Intelligence
++4 Endurance
 ```
 
 Actual value:
 
 ```text
-ActualRV = 2,000 + 50×10 + 2×350 + 1×200 + 1×250
-ActualRV = 3,650 RV
+ActualRV = 4×600 + 28×250 + 8×350 + 4×200 + 4×250
+ActualRV = 14,000 RV
 ```
 
 Weekly target value:
 
 ```text
-TargetRV = 500 × 7 = 3,500 RV
+TargetRV = 2,000 × 7 = 14,000 RV
 ```
 
 Balance result:
 
 ```text
-BalancePercent = 3,650 / 3,500 × 100 = 104.29%
+BalancePercent = 14,000 / 14,000 × 100 = 100%
 ```
 
 The result is within the `90–110%` range, so the reward is balanced.

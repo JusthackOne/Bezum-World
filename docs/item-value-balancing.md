@@ -8,7 +8,7 @@
 | Agility                       |      `0.25` |
 | Intelligence                  |      `0.20` |
 | Charisma                      |      `0.20` |
-| Gold per Effective Item Power |        `60` |
+| Gold per Effective Item Power |         `4` |
 
 In the current Battle logic, an item's `Agility` increases the player's `Endurance`.
 
@@ -33,7 +33,7 @@ DurabilityMultiplier = 0.5 + 0.5 × (Durability / 100)
 ```text
 EffectiveItemPower = ItemPower × DurabilityMultiplier
 
-ExpectedPriceGold = EffectiveItemPower × 60
+ExpectedPriceGold = EffectiveItemPower × 4
 
 ItemBalancePercent = ActualPrice / ExpectedPriceGold × 100
 ```
@@ -46,7 +46,7 @@ ItemBalancePercent =
   / (
       (0.35STR + 0.25AGI + 0.20INT + 0.20CHA)
       × (0.5 + 0.5 × Durability / 100)
-      × 60
+      × 4
     )
   × 100
 ```
@@ -73,8 +73,8 @@ Durability = 41
 
 ItemPower = 12.5
 DurabilityMultiplier = 0.705
-ExpectedPriceGold = 12.5 × 0.705 × 60 = 528.75
-ItemBalancePercent = 870 / 528.75 × 100 = 164.54%
+ExpectedPriceGold = 12.5 × 0.705 × 4 = 35.25
+ItemBalancePercent = 870 / 35.25 × 100 = 2,468.09%
 ```
 
 Result: the item is much too expensive.
