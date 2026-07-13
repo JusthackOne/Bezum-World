@@ -40,7 +40,8 @@ const badge: Record<BossBattleStatus, string> = {
   CANCELLED: "bg-red-600",
   COMPLETED: "bg-cyan-700",
 };
-const fmt = (v: string) => new Date(v).toLocaleString();
+const fmt = (v: string) =>
+  new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(v));
 export function BossBattlesTable() {
   const router = useRouter();
   const query = useAdminBossBattlesQuery();

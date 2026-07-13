@@ -203,7 +203,7 @@ function BattleNavigationStatus({
           </span>{" "}
           <span className="whitespace-normal sm:whitespace-nowrap">
             ·{" "}
-            {new Intl.DateTimeFormat(undefined, { dateStyle: "long", timeStyle: "short" }).format(
+            {new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeStyle: "short" }).format(
               new Date(completedAt),
             )}
           </span>
