@@ -741,7 +741,7 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
         historical={isBossBattleFinal(battle.status)}
         onBoundary={() => void query.refetch()}
       />
-      <div className="relative overflow-hidden rounded-2xl border bg-muted">
+      <div className="relative overflow-hidden rounded-2xl border">
         {battle.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- API-hosted images are not restricted to configured Next.js hosts.
           <img
