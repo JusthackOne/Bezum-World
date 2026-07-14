@@ -747,7 +747,7 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
           <img
             src={resolveAssetUrl(battle.imageUrl)}
             alt={battle.name}
-            className="max-h-[32rem] w-full object-cover"
+            className="max-h-[32rem] w-full object-contain"
           />
         ) : (
           <div className="flex aspect-[16/7] items-center justify-center">
