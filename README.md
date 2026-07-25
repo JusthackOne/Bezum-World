@@ -15,7 +15,7 @@ Bezum World is a social RPG where real-life tasks, character progression, items,
 .
 +-- backend/              # NestJS API, Prisma schema, migrations, uploads
 +-- frontend/             # Next.js client and admin UI
-+-- docker-compose.yml    # Local full-stack Docker setup
++-- docker-compose.local.yml # Local full-stack Docker setup with hot reload
 `-- docker-compose.prod.yml
 ```
 
@@ -29,7 +29,7 @@ Requirements:
 Start PostgreSQL and Redis from the repository root:
 
 ```bash
-docker compose up -d postgres redis
+docker compose -f docker-compose.local.yml up -d postgres redis
 ```
 
 Prepare the backend:
@@ -60,22 +60,42 @@ Local URLs:
 - PostgreSQL: `localhost:5433`
 - Redis: `localhost:6379`
 
-To run the full local stack in Docker instead:
+To run the full local stack in Docker with hot reload for both the frontend and backend:
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+The local Compose setup mounts `frontend/` and `backend/` into their containers. Next.js and NestJS watch these mounted sources and reload automatically after code changes. Dependencies, Next.js build artifacts, uploaded files, PostgreSQL data, and Redis data are kept in Docker volumes.
+
+After changing `package.json` or `bun.lock`, rebuild the affected images so the dependency volumes are recreated from the updated image:
+
+```bash
+docker compose -f docker-compose.local.yml up -d --build --renew-anon-volumes
+```
+
+Run Prisma migrations inside the backend container when setting up the database or after adding migrations:
+
+```bash
+docker compose -f docker-compose.local.yml exec backend bun run prisma:migrate:dev
+```
+
+Follow application logs:
+
+```bash
+docker compose -f docker-compose.local.yml logs -f frontend backend
 ```
 
 Stop local Docker services:
 
 ```bash
-docker compose down
+docker compose -f docker-compose.local.yml down
 ```
 
 Remove local Docker volumes as well:
 
 ```bash
-docker compose down -v
+docker compose -f docker-compose.local.yml down -v
 ```
 
 ## 🚀 Production
