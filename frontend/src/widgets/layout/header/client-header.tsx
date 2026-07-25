@@ -3,12 +3,14 @@
 import Link from "next/link";
 
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
+import { usePublicUserProfileQuery } from "@/features/public-user/api";
 import { publicUserRoutes } from "@/features/public-user/routes";
 import { AvatarImage, RewardBadgesList, SidebarTrigger, useSidebar } from "@/shared/ui";
 
 export function ClientHeader() {
   const { state } = useSidebar();
   const user = useClientAuthStore((state) => state.session?.user);
+  const currentUserQuery = usePublicUserProfileQuery(user?.username ?? "");
   const profileHref = user?.username ? publicUserRoutes.profile(user.username) : "/user";
   const username = user?.username ?? "Current user";
 
@@ -22,8 +24,11 @@ export function ClientHeader() {
       <nav aria-label="User account" className="ml-auto flex items-center gap-3">
         <RewardBadgesList
           rewards={[
-            { kind: "gameScore", value: user?.gameScore ?? 0 },
-            { kind: "balance", value: user?.balance ?? 0 },
+            {
+              kind: "gameScore",
+              value: currentUserQuery.data?.gameScore ?? user?.gameScore ?? 0,
+            },
+            { kind: "balance", value: currentUserQuery.data?.balance ?? user?.balance ?? 0 },
           ]}
           showPlusSign={false}
           className="flex-nowrap gap-2"

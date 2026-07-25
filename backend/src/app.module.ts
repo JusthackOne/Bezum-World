@@ -15,6 +15,7 @@ import { BossBattlesModule } from './modules/boss-battles/boss-battles.module';
 import { EventsModule } from './modules/events/events.module';
 import { ItemsModule } from './modules/items/items.module';
 import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
+import { SlotsModule } from './modules/slots/slots.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -37,6 +38,7 @@ import { UsersModule } from './modules/users/users.module';
     BossBattlesModule,
     ItemsModule,
     LeaderboardModule,
+    SlotsModule,
     TasksModule,
     UsersModule,
   ],
