@@ -1,0 +1,6 @@
+{
+  "tailwindCSS.validate": true,
+  "tailwindCSS.codeActions": true,
+  "tailwindCSS.lint.suggestCanonicalClasses": "error",
+  "tailwindCSS.experimental.configFile": "frontend/src/styles/globals.css"
+}

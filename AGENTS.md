@@ -89,6 +89,9 @@ Core mechanics:
 
 - use shadcn/ui as base
 - use Tailwind for layout
+- use canonical Tailwind CSS v4 utility classes whenever an equivalent utility exists
+- treat `tailwindcss(suggestCanonicalClasses)` diagnostics in changed code as errors and resolve them before finishing
+- prefer theme utilities and spacing-scale utilities over arbitrary values; use arbitrary values only when no exact canonical utility exists
 - custom CSS only for game-specific components:
   - cards
   - items
