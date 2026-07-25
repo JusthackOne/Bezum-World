@@ -41,7 +41,7 @@ export function TaskBalanceIndicator({
   rewardCharisma,
 }: TaskBalanceIndicatorProps) {
   const actualRewardValue =
-    rewardValue(rewardMoney) * 600 +
+    rewardValue(rewardMoney) * 250 +
     rewardValue(rewardGameScore) * 250 +
     rewardValue(rewardStrength) * 350 +
     rewardValue(rewardEndurance) * 250 +
