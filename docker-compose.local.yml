@@ -78,13 +78,13 @@ services:
       dockerfile: Dockerfile
       target: deps
     container_name: social-rpg-frontend-local
-    command: ["bun", "run", "dev", "--hostname", "0.0.0.0"]
+    command: ["bun", "run", "dev", "--webpack", "--hostname", "0.0.0.0"]
     environment:
       NODE_ENV: development
       PORT: 3000
       NEXT_PUBLIC_APP_NAME: Bezum World
       NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api
-      WATCHPACK_POLLING: "true"
+      WATCHPACK_POLLING: "500"
     ports:
       - "3000:3000"
     volumes:
