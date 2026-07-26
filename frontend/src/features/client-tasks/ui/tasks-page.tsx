@@ -14,7 +14,6 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { AdminTaskForm, type AdminTaskFormValues } from "@/features/admin-tasks/ui";
-import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import {
   useClientTasksQuery,
   useCreateTaskSuggestionMutation,
@@ -206,8 +205,6 @@ function buildRewardAttributes(
 
 export function TasksPage() {
   const queryClient = useQueryClient();
-  const session = useClientAuthStore((state) => state.session);
-  const setSession = useClientAuthStore((state) => state.setSession);
 
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
@@ -317,36 +314,14 @@ export function TasksPage() {
     setSubmittingTaskId(task.id);
 
     try {
-      const response = await submitTaskMutation.mutateAsync({
+      await submitTaskMutation.mutateAsync({
         taskId: task.id,
         ...(proofImageFile ? { proofImageFile } : {}),
       });
 
-      if (session) {
-        setSession({
-          ...session,
-          user: {
-            ...session.user,
-            balance: response.user.balance,
-            gameScore: response.user.gameScore,
-            strength: response.user.strength,
-            intelligence: response.user.intelligence,
-            charisma: response.user.charisma,
-            endurance: response.user.endurance,
-          },
-        });
-      }
-
       await queryClient.invalidateQueries({
         queryKey: queryKeys.clientTasksPrefix,
       });
-
-      const username = session?.user.username?.trim();
-      if (username) {
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.publicUserProfile(username),
-        });
-      }
 
       const rewardVisuals = getTaskRewardVisuals(task);
       showToast(

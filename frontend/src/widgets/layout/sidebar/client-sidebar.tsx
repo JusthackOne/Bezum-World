@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ActivityIcon,
+  CircleDollarSignIcon,
   SkullIcon,
   ListTodoIcon,
   LogOutIcon,
@@ -62,6 +63,7 @@ export function ClientSidebar() {
   const isShopActive = pathname.startsWith("/shop");
   const isBossBattleActive = pathname.startsWith("/boss-battle");
   const isBattlesActive = pathname.startsWith("/battles");
+  const isSlotsActive = pathname.startsWith("/slots");
   const isTasksActive = pathname.startsWith("/tasks");
   const isLeaderboardActive = pathname.startsWith("/leaderboard");
   const isEventsActive = pathname.startsWith("/events");
@@ -91,6 +93,14 @@ export function ClientSidebar() {
         label: "Battles",
         Icon: SwordsIcon,
         isActive: isBattlesActive,
+      },
+    ],
+    [
+      {
+        href: "/slots",
+        label: "Slots",
+        Icon: CircleDollarSignIcon,
+        isActive: isSlotsActive,
       },
     ],
     [

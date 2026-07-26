@@ -31,13 +31,13 @@ build-backend:
 	cd backend && bun run build
 
 docker-up:
-	docker compose up -d postgres redis
+	docker compose -f docker-compose.local.yml up -d postgres redis
 
 docker-down:
-	docker compose down
+	docker compose -f docker-compose.local.yml down
 
 docker-up-full:
-	docker compose up -d --build
+	docker compose -f docker-compose.local.yml up -d --build
 
 docker-up-prod:
 	docker compose -f docker-compose.prod.yml up -d postgres redis

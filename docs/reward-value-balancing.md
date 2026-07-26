@@ -32,8 +32,8 @@ This scale does not change the relative attribute weights.
 
 | Reward component | RV coefficient | Basis                                       |
 | ---------------- | -------------: | ------------------------------------------- |
-| Gold             |            600 | Configured economy weight                   |
-| Game Score       |            250 | Configurable ratio: 2.4 Game Score = 1 Gold |
+| Gold             |            250 | Configured economy weight                   |
+| Game Score       |            250 | Configured economy weight                   |
 | Strength         |            350 | `0.35 × 1,000`                              |
 | Endurance        |            250 | `0.25 × 1,000`                              |
 | Intelligence     |            200 | `0.20 × 1,000`                              |
@@ -45,7 +45,7 @@ One point of Strength is worth `1.75` times one point of Intelligence or Charism
 
 ```text
 ActualRV =
-    Gold × 600
+    Gold × 250
   + GameScore × 250
   + Strength × 350
   + Endurance × 250
@@ -56,7 +56,7 @@ ActualRV =
 Short form:
 
 ```text
-ActualRV = 600G + 250GS + 350STR + 250END + 200INT + 200CHA
+ActualRV = 250G + 250GS + 350STR + 250END + 200INT + 200CHA
 ```
 
 Every missing reward component is treated as zero.
@@ -107,7 +107,7 @@ Complete expression:
 
 ```text
 BalancePercent =
-  (600G + 250GS + 350STR + 250END + 200INT + 200CHA)
+  (250G + 250GS + 350STR + 250END + 200INT + 200CHA)
   / (DailyBaseRV × TaskTypeMultiplier)
   × 100
 ```
@@ -137,8 +137,8 @@ Reward:
 Actual value:
 
 ```text
-ActualRV = 4×600 + 28×250 + 8×350 + 4×200 + 4×250
-ActualRV = 14,000 RV
+ActualRV = 4×250 + 28×250 + 8×350 + 4×200 + 4×250
+ActualRV = 12,600 RV
 ```
 
 Weekly target value:
@@ -150,7 +150,7 @@ TargetRV = 2,000 × 7 = 14,000 RV
 Balance result:
 
 ```text
-BalancePercent = 14,000 / 14,000 × 100 = 100%
+BalancePercent = 12,600 / 14,000 × 100 = 90%
 ```
 
 The result is within the `90–110%` range, so the reward is balanced.

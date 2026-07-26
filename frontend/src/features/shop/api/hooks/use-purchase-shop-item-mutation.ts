@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { refreshCurrentUserProfile } from "@/features/auth/api";
 import { queryKeys } from "@/shared/config/query-keys";
 
 import { purchaseShopItem } from "../requests/purchase-shop-item";
@@ -11,8 +12,11 @@ export function usePurchaseShopItemMutation() {
 
   return useMutation({
     mutationFn: purchaseShopItem,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.eventsPrefix });
+    onSuccess: async () => {
+      await Promise.all([
+        refreshCurrentUserProfile(queryClient),
+        queryClient.invalidateQueries({ queryKey: queryKeys.eventsPrefix }),
+      ]);
     },
   });
 }

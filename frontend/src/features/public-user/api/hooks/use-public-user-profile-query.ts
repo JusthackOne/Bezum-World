@@ -10,5 +10,6 @@ export function usePublicUserProfileQuery(username: string) {
   return useQuery({
     queryKey: queryKeys.publicUserProfile(username),
     queryFn: () => getPublicUserProfile(username),
+    enabled: username.trim().length > 0,
   });
 }

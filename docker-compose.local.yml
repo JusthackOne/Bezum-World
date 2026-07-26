@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: social-rpg-postgres-dev
+    container_name: social-rpg-postgres-local
     environment:
       POSTGRES_DB: social_rpg
       POSTGRES_USER: postgres
@@ -9,7 +9,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_local_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d social_rpg"]
       interval: 5s
@@ -18,12 +18,12 @@ services:
 
   redis:
     image: redis:8-alpine
-    container_name: social-rpg-redis-dev
+    container_name: social-rpg-redis-local
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - redis_local_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -34,7 +34,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: social-rpg-backend-dev
+      target: deps
+    container_name: social-rpg-backend-local
+    command: ["bun", "run", "dev"]
     environment:
       APP_DOMAIN: http://localhost
       NODE_ENV: development
@@ -47,8 +49,23 @@ services:
       REDIS_DB: 0
       REDIS_PASSWORD: ""
       QUEUE_DEFAULT_NAME: default
+      AUTH_JWT_ACCESS_SECRET: local-development-access-secret
+      AUTH_JWT_REFRESH_SECRET: local-development-refresh-secret
+      AUTH_ACCESS_TOKEN_TTL_SECONDS: 900
+      AUTH_REFRESH_TOKEN_TTL_SECONDS: 604800
+      AUTH_REFRESH_COOKIE_NAME: refresh_token
+      AUTH_REFRESH_COOKIE_SECURE: "false"
+      AUTH_ADMIN_USERNAME: admin
+      AUTH_ADMIN_PASSWORD: local-admin-password
+      SEED_ENV: test
+      CHOKIDAR_USEPOLLING: "true"
+      TSC_WATCHFILE: DynamicPriorityPolling
     ports:
       - "3001:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - backend_local_uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,18 +76,26 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: social-rpg-frontend-dev
+      target: deps
+    container_name: social-rpg-frontend-local
+    command: ["bun", "run", "dev", "--webpack", "--hostname", "0.0.0.0"]
     environment:
       NODE_ENV: development
       PORT: 3000
-      NEXT_PUBLIC_APP_NAME: Bezum World Frontend
+      NEXT_PUBLIC_APP_NAME: Bezum World
       NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api
+      WATCHPACK_POLLING: "500"
     ports:
       - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
     depends_on:
       backend:
         condition: service_started
 
 volumes:
-  postgres_data:
-  redis_data:
+  postgres_local_data:
+  redis_local_data:
+  backend_local_uploads:
