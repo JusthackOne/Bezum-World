@@ -109,6 +109,17 @@ export class AccountRepository {
     return result.count > 0;
   }
 
+  async incrementBalance(id: string, amount: number, tx: Prisma.TransactionClient): Promise<void> {
+    await this.getClient(tx).account.update({
+      where: { id },
+      data: {
+        balance: {
+          increment: amount,
+        },
+      },
+    });
+  }
+
   async applyTaskRewards(
     id: string,
     input: ApplyTaskRewardsInput,

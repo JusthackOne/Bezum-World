@@ -1,6 +1,6 @@
 "use client";
 
-import { CoinsIcon } from "lucide-react";
+import { ArrowDownIcon, CoinsIcon } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
 import { formatBalance, getItemAttributeRows, resolveAssetUrl } from "@/shared/lib/item-display";
@@ -68,8 +68,17 @@ interface ItemDisplayCardProps<TItem extends ItemDisplay> {
   actionAriaLabel?: string;
   actionLoadingLabel?: string;
   isActionLoading?: boolean;
+  secondaryActionLabel?: React.ReactNode;
+  onSecondaryAction?: (item: TItem) => void;
+  secondaryActionDisabled?: boolean;
+  secondaryActionAriaLabel?: string;
+  isSecondaryActionLoading?: boolean;
+  secondaryActionLoadingLabel?: string;
   isShopCard?: boolean;
   showPrice?: boolean;
+  originalPrice?: number;
+  pricePosition?: "center" | "left";
+  priceAccessory?: React.ReactNode;
 }
 
 export function ItemDisplayCard<TItem extends ItemDisplay>({
@@ -82,8 +91,17 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
   actionAriaLabel,
   actionLoadingLabel,
   isActionLoading = false,
+  secondaryActionLabel,
+  onSecondaryAction,
+  secondaryActionDisabled = false,
+  secondaryActionAriaLabel,
+  isSecondaryActionLoading = false,
+  secondaryActionLoadingLabel,
   isShopCard = false,
   showPrice = true,
+  originalPrice,
+  pricePosition = "center",
+  priceAccessory,
 }: ItemDisplayCardProps<TItem>) {
   const rarityStyle = inventoryRarityStyles[item.rarity] ?? {
     borderClassName: "border-border",
@@ -92,6 +110,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
   const itemAttributes = getItemAttributeRows(item);
   const imageUrl = item.image_url ? resolveAssetUrl(item.image_url) : null;
   const hasAction = Boolean(actionLabel) && Boolean(onAction);
+  const hasSecondaryAction = Boolean(secondaryActionLabel) && Boolean(onSecondaryAction);
   const isNew = isCreatedWithinLastDay(item.created_at);
 
   return (
@@ -134,16 +153,44 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
       <div className="absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_center,rgba(2,6,23,0.1)_0%,rgba(2,6,23,0.46)_72%,rgba(2,6,23,0.74)_100%)]" />
       <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(2,6,23,0.16)_0%,rgba(2,6,23,0.04)_38%,rgba(2,6,23,0.74)_100%)]" />
 
-      {isNew ? <NewBadge className="absolute top-3 right-3 z-30" /> : null}
+      {isNew && !priceAccessory ? <NewBadge className="absolute top-3 right-3 z-30" /> : null}
 
       {showPrice ? (
-        <div className="absolute top-3 left-1/2 z-20 -translate-x-1/2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.2),rgba(251,191,36,0.12))] px-2.5 py-0.5 shadow-[0_0_0_1px_rgba(245,158,11,0.24),0_0_16px_rgba(245,158,11,0.18)]">
-            <CoinsIcon className="size-3.5 text-amber-300" />
-            <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-[10px] font-semibold tabular-nums text-transparent">
-              {formatBalance(item.price)}
+        <div
+          className={cn(
+            "absolute top-3 z-20",
+            priceAccessory
+              ? "inset-x-3 flex items-center justify-between gap-2"
+              : pricePosition === "left"
+                ? "left-3"
+                : "left-1/2 -translate-x-1/2",
+          )}
+        >
+          <div className={cn("flex items-center", originalPrice !== undefined && "flex-col gap-0.5")}>
+            {originalPrice !== undefined ? (
+              <>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-400/60 bg-slate-950/70 px-2.5 py-0.5 shadow-sm">
+                  <CoinsIcon className="size-3.5 text-slate-300" />
+                  <span className="text-[10px] font-semibold text-slate-200 tabular-nums">
+                    {formatBalance(originalPrice)}
+                  </span>
+                </span>
+                <ArrowDownIcon className="size-3.5 text-slate-300" aria-hidden="true" />
+              </>
+            ) : null}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.2),rgba(251,191,36,0.12))] px-2.5 py-0.5 shadow-[0_0_0_1px_rgba(245,158,11,0.24),0_0_16px_rgba(245,158,11,0.18)]">
+              <CoinsIcon className="size-3.5 text-amber-300" />
+              <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-[10px] font-semibold tabular-nums text-transparent">
+                {formatBalance(item.price)}
+              </span>
             </span>
-          </span>
+          </div>
+          {priceAccessory ? (
+            <div className="flex flex-col items-end gap-2">
+              {priceAccessory}
+              {isNew ? <NewBadge /> : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -154,21 +201,48 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
         )}
       >
         <div className="flex flex-col-reverse gap-2.5">
-          {hasAction ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              disabled={actionDisabled || isActionLoading}
-              className="h-7 w-full rounded-md border-none bg-white/12 px-2 text-[8px] text-white shadow-none ring-0 outline-none hover:bg-white/20 hover:text-white focus-visible:ring-0 focus-visible:outline-none"
-              onClick={(event) => {
-                event.stopPropagation();
-                onAction?.(item);
-              }}
-              aria-label={actionAriaLabel ?? `${actionLabel} ${item.name}`}
-            >
-              {isActionLoading && actionLoadingLabel ? actionLoadingLabel : actionLabel}
-            </Button>
+          {hasAction || hasSecondaryAction ? (
+            <div className="space-y-1.5">
+              {hasAction ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={actionDisabled || isActionLoading}
+                  className="h-7 w-full rounded-md border-none bg-white/12 px-2 text-[8px] text-white shadow-none ring-0 outline-none hover:bg-white/20 hover:text-white focus-visible:ring-0 focus-visible:outline-none"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAction?.(item);
+                  }}
+                  aria-label={actionAriaLabel ?? `${actionLabel} ${item.name}`}
+                >
+                  {isActionLoading && actionLoadingLabel ? actionLoadingLabel : actionLabel}
+                </Button>
+              ) : null}
+              {hasSecondaryAction ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={secondaryActionDisabled || isSecondaryActionLoading}
+                  className="h-7 w-full rounded-md border-none bg-white/12 px-2 text-[8px] text-white shadow-none ring-0 outline-none hover:bg-white/20 hover:text-white focus-visible:ring-0 focus-visible:outline-none"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSecondaryAction?.(item);
+                  }}
+                  aria-label={
+                    secondaryActionAriaLabel ??
+                    (typeof secondaryActionLabel === "string"
+                      ? `${secondaryActionLabel} ${item.name}`
+                      : `Item action for ${item.name}`)
+                  }
+                >
+                  {isSecondaryActionLoading && secondaryActionLoadingLabel
+                    ? secondaryActionLoadingLabel
+                    : secondaryActionLabel}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
 
           {itemAttributes.length > 0 ? (

@@ -157,6 +157,8 @@ export class UsersService {
         },
         data: {
           ownerUserId: null,
+          isListedForSale: false,
+          listingPrice: null,
         },
       });
 
@@ -370,6 +372,8 @@ export class UsersService {
     agility: number | null;
     intelligence: number | null;
     price: number;
+    isListedForSale: boolean;
+    listingPrice: number | null;
     rarity: UserOwnedItemDto['rarity'];
     durability: number | null;
     createdAt: Date;
@@ -386,6 +390,8 @@ export class UsersService {
       agility: item.agility,
       intelligence: item.intelligence,
       price: item.price,
+      isListedForSale: item.isListedForSale,
+      listingPrice: item.listingPrice,
       rarity: item.rarity,
       durability: item.durability,
       created_at: item.createdAt.toISOString(),

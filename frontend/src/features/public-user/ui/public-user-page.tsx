@@ -15,8 +15,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import {
   useEquipUserItemMutation,
+  useListUserItemForSaleMutation,
   usePublicUserItemsQuery,
   usePublicUserProfileQuery,
+  useRemoveUserItemFromSaleMutation,
   useUnequipUserItemMutation,
   useUserEquipmentQuery,
 } from "@/features/public-user/api";
@@ -43,6 +45,8 @@ import {
 } from "@/shared/ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
 import { Separator } from "@/shared/ui/8bit";
+
+import { ItemMarketplaceDialogs } from "./item-marketplace-dialogs";
 
 interface PublicUserPageProps {
   username: string;
@@ -265,7 +269,10 @@ function UserItemsCard({
   equipment,
   canEquip,
   isEquipmentActionPending,
+  isMarketplaceActionPending,
   onEquipmentAction,
+  onListForSale,
+  onRemoveFromSale,
   isPending,
 }: {
   profileUsername: string;
@@ -273,10 +280,15 @@ function UserItemsCard({
   equipment: PublicUserEquipment;
   canEquip: boolean;
   isEquipmentActionPending: boolean;
+  isMarketplaceActionPending: boolean;
   onEquipmentAction: (itemId: string, isEquipped: boolean) => void;
+  onListForSale: (itemId: string, price: number) => Promise<void>;
+  onRemoveFromSale: (itemId: string) => Promise<void>;
   isPending: boolean;
 }) {
   const [selectedItem, setSelectedItem] = useState<ItemDisplay | null>(null);
+  const [itemToList, setItemToList] = useState<PublicUserItem | null>(null);
+  const [itemToRemove, setItemToRemove] = useState<PublicUserItem | null>(null);
   const equippedItemIds = useMemo(() => {
     return new Set(
       [
@@ -309,7 +321,7 @@ function UserItemsCard({
           ) : items.length === 0 ? (
             <p className="text-muted-foreground text-sm">No items found for this user.</p>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2">
               {items.map((item) => {
                 const isEquipped = equippedItemIds.has(item.id);
                 const actionLabel = isEquipped ? "Unequip" : "Equip";
@@ -319,6 +331,7 @@ function UserItemsCard({
                     key={item.id}
                     item={item}
                     onOpenDetails={setSelectedItem}
+                    pricePosition="left"
                     actionLabel={canEquip ? actionLabel : undefined}
                     onAction={
                       canEquip
@@ -327,6 +340,42 @@ function UserItemsCard({
                     }
                     actionDisabled={isEquipmentActionPending}
                     actionAriaLabel={`${actionLabel} ${item.name}`}
+                    secondaryActionLabel={
+                      canEquip
+                        ? item.isListedForSale
+                          ? (
+                              <span className="inline-flex items-center justify-center gap-1">
+                                <span>Remove from Sale</span>
+                                <span aria-hidden="true">(</span>
+                                <span className="inline-flex items-center gap-1">
+                                  <CoinsIcon className="size-3 text-amber-300" />
+                                  <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text font-semibold tabular-nums text-transparent">
+                                    {formatBalance(item.listingPrice ?? 0)}
+                                  </span>
+                                </span>
+                                <span aria-hidden="true">)</span>
+                              </span>
+                            )
+                          : "List for Sale"
+                        : undefined
+                    }
+                    onSecondaryAction={
+                      canEquip
+                        ? () => {
+                            if (item.isListedForSale) {
+                              setItemToRemove(item);
+                            } else {
+                              setItemToList(item);
+                            }
+                          }
+                        : undefined
+                    }
+                    secondaryActionDisabled={isMarketplaceActionPending}
+                    secondaryActionAriaLabel={
+                      item.isListedForSale
+                        ? `Remove ${item.name} from sale`
+                        : `List ${item.name} for sale`
+                    }
                   />
                 );
               })}
@@ -339,6 +388,15 @@ function UserItemsCard({
         item={selectedItem}
         open={selectedItem !== null}
         onOpenChange={(open) => !open && setSelectedItem(null)}
+      />
+      <ItemMarketplaceDialogs
+        itemToList={itemToList}
+        itemToRemove={itemToRemove}
+        isPending={isMarketplaceActionPending}
+        onListOpenChange={(open) => !open && setItemToList(null)}
+        onRemoveOpenChange={(open) => !open && setItemToRemove(null)}
+        onList={onListForSale}
+        onRemove={onRemoveFromSale}
       />
     </>
   );
@@ -382,6 +440,8 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
   );
   const equipMutation = useEquipUserItemMutation();
   const unequipMutation = useUnequipUserItemMutation();
+  const listForSaleMutation = useListUserItemForSaleMutation(username);
+  const removeFromSaleMutation = useRemoveUserItemFromSaleMutation(username);
 
   const isOwnProfile =
     isSessionInitialized &&
@@ -493,6 +553,9 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
               equipment={equipmentQuery.data ?? {}}
               canEquip={isOwnProfile}
               isEquipmentActionPending={equipMutation.isPending || unequipMutation.isPending}
+              isMarketplaceActionPending={
+                listForSaleMutation.isPending || removeFromSaleMutation.isPending
+              }
               onEquipmentAction={(itemId, isEquipped) => {
                 if (!profileQuery.data) {
                   return;
@@ -505,6 +568,12 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
                       ? updateEquipmentCache(queryClient, profileQuery.data, response)
                       : undefined,
                 });
+              }}
+              onListForSale={async (itemId, price) => {
+                await listForSaleMutation.mutateAsync({ itemId, price });
+              }}
+              onRemoveFromSale={async (itemId) => {
+                await removeFromSaleMutation.mutateAsync(itemId);
               }}
               isPending={itemsQuery.isPending}
             />

@@ -14,6 +14,8 @@ export interface UserOwnedItemRecord {
   agility: number | null;
   intelligence: number | null;
   price: number;
+  isListedForSale: boolean;
+  listingPrice: number | null;
   rarity: ItemRarity;
   durability: number | null;
   createdAt: Date;
@@ -46,6 +48,8 @@ export class UserItemsRepository {
             agility: true,
             intelligence: true,
             price: true,
+            isListedForSale: true,
+            listingPrice: true,
             rarity: true,
             durability: true,
             createdAt: true,

@@ -205,7 +205,7 @@ export function AdminItemEditForm({ itemId }: AdminItemEditFormProps) {
                 queryClient.invalidateQueries({ queryKey: queryKeys.adminItems("all") }),
                 queryClient.invalidateQueries({ queryKey: queryKeys.adminItems("shop") }),
                 queryClient.invalidateQueries({ queryKey: queryKeys.adminItems("inventory") }),
-                queryClient.invalidateQueries({ queryKey: queryKeys.shopItems }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.shopItemsPrefix }),
               ]);
             }}
           />

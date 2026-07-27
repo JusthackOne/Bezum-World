@@ -1,6 +1,8 @@
 import { EquipmentSlotType, ItemRarity } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { ItemSellerDto } from './item-seller.dto';
+
 export class CreateItemResponseDto {
   @ApiProperty({
     description: 'Unique item identifier',
@@ -13,6 +15,27 @@ export class CreateItemResponseDto {
     nullable: true,
   })
   owner_user_id!: string | null;
+
+  @ApiProperty({
+    description: 'Whether the owner currently lists this item on the player marketplace',
+    example: false,
+  })
+  isListedForSale!: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Player listing price in Gold',
+    nullable: true,
+    minimum: 0,
+    example: 250,
+  })
+  listingPrice!: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Seller information for a player marketplace listing',
+    nullable: true,
+    type: ItemSellerDto,
+  })
+  seller!: ItemSellerDto | null;
 
   @ApiProperty({
     description: 'Item name',

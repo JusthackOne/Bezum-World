@@ -11,7 +11,9 @@ export const queryKeys = {
   adminTaskById: (taskId: string) => ["admin", "tasks", "by-id", taskId] as const,
   adminBossBattles: ["admin", "boss-battles"] as const,
   adminBossBattleById: (id: string) => ["admin", "boss-battles", "by-id", id] as const,
-  shopItems: ["shop", "items"] as const,
+  shopItemsPrefix: ["shop", "items"] as const,
+  shopItems: (playerListingsOnly: boolean) =>
+    ["shop", "items", playerListingsOnly ? "players" : "all"] as const,
   clientTasksPrefix: ["client", "tasks"] as const,
   clientTasks: (filters: { search: string; type: "all" | "daily" | "weekly" | "event" }) =>
     ["client", "tasks", filters.search, filters.type] as const,

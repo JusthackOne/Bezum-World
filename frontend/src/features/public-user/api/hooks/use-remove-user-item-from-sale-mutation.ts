@@ -2,20 +2,18 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { refreshCurrentUserProfile } from "@/features/auth/api";
 import { queryKeys } from "@/shared/config/query-keys";
 
-import { purchaseShopItem } from "../requests/purchase-shop-item";
+import { removeUserItemFromSale } from "../requests/remove-user-item-from-sale";
 
-export function usePurchaseShopItemMutation() {
+export function useRemoveUserItemFromSaleMutation(username: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: purchaseShopItem,
+    mutationFn: removeUserItemFromSale,
     onSuccess: async () => {
       await Promise.all([
-        refreshCurrentUserProfile(queryClient),
-        queryClient.invalidateQueries({ queryKey: queryKeys.eventsPrefix }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.publicUserItems(username) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.shopItemsPrefix }),
       ]);
     },

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -14,10 +15,12 @@ import {
   type AdminDeleteItemResponseDto,
   CreateItemDto,
   CreateItemResponseDto,
+  ListItemForSaleDto,
   PurchaseItemResponseDto,
 } from './dto';
-import { ItemRepository } from './repositories';
+import { ItemRepository, type ItemWithSeller } from './repositories';
 import type { ItemLocation } from './types/item-location.type';
+import type { ItemSaleSource } from './types/item-sale-source.type';
 
 @Injectable()
 export class ItemsService {
@@ -47,8 +50,11 @@ export class ItemsService {
     return this.toItemResponse(item);
   }
 
-  async getItems(location?: ItemLocation): Promise<CreateItemResponseDto[]> {
-    const items = await this.itemRepository.findAll(location);
+  async getItems(
+    location?: ItemLocation,
+    saleSource?: ItemSaleSource,
+  ): Promise<CreateItemResponseDto[]> {
+    const items = await this.itemRepository.findAll(location, saleSource);
 
     return items.map((item) => this.toItemResponse(item));
   }
@@ -93,13 +99,24 @@ export class ItemsService {
         throw new NotFoundException('Item is not found');
       }
 
-      if (item.ownerUserId !== null) {
+      const isPlayerListing = item.ownerUserId !== null && item.isListedForSale;
+      const purchasePrice = isPlayerListing ? item.listingPrice : item.price;
+
+      if (item.ownerUserId !== null && !isPlayerListing) {
         throw new ConflictException('Item is not available for purchase');
+      }
+
+      if (item.ownerUserId === account.id) {
+        throw new BadRequestException('You cannot purchase your own listing');
+      }
+
+      if (purchasePrice === null) {
+        throw new ConflictException('Item listing price is not available');
       }
 
       const wasBalanceUpdated = await this.accountRepository.decrementBalanceIfEnough(
         account.id,
-        item.price,
+        purchasePrice,
         tx,
       );
 
@@ -107,14 +124,25 @@ export class ItemsService {
         throw new BadRequestException('Insufficient balance');
       }
 
-      const wasItemAssigned = await this.itemRepository.assignOwnerIfUnowned(
-        item.id,
-        account.id,
-        tx,
-      );
+      const wasItemAssigned = isPlayerListing
+        ? await this.itemRepository.transferListedItem(
+            item.id,
+            item.ownerUserId as string,
+            account.id,
+            purchasePrice,
+            tx,
+          )
+        : await this.itemRepository.assignOwnerIfUnowned(item.id, account.id, tx);
 
       if (!wasItemAssigned) {
         throw new ConflictException('Item is not available for purchase');
+      }
+
+      if (isPlayerListing && item.ownerUserId) {
+        await Promise.all([
+          this.itemRepository.clearEquipmentReference(item.id, tx),
+          this.accountRepository.incrementBalance(item.ownerUserId, purchasePrice, tx),
+        ]);
       }
 
       const [purchasedItem, updatedAccount] = await Promise.all([
@@ -141,6 +169,86 @@ export class ItemsService {
     });
   }
 
+  async listForSaleByUser(
+    itemId: string,
+    accountId: string,
+    payload: ListItemForSaleDto,
+  ): Promise<CreateItemResponseDto> {
+    return this.prisma.$transaction(async (tx) => {
+      const item = await this.itemRepository.findById(itemId, tx);
+
+      if (!item) {
+        throw new NotFoundException('Item is not found');
+      }
+
+      if (item.ownerUserId !== accountId) {
+        throw new ForbiddenException('Item does not belong to user');
+      }
+
+      if (item.isListedForSale) {
+        throw new ConflictException('Item is already listed for sale');
+      }
+
+      const wasListed = await this.itemRepository.setListingIfOwned(
+        item.id,
+        accountId,
+        false,
+        payload.price,
+        tx,
+      );
+
+      if (!wasListed) {
+        throw new ConflictException('Item listing state changed');
+      }
+
+      const listedItem = await this.itemRepository.findById(item.id, tx);
+
+      if (!listedItem) {
+        throw new NotFoundException('Listed item is not found');
+      }
+
+      return this.toItemResponse(listedItem);
+    });
+  }
+
+  async removeFromSaleByUser(itemId: string, accountId: string): Promise<CreateItemResponseDto> {
+    return this.prisma.$transaction(async (tx) => {
+      const item = await this.itemRepository.findById(itemId, tx);
+
+      if (!item) {
+        throw new NotFoundException('Item is not found');
+      }
+
+      if (item.ownerUserId !== accountId) {
+        throw new ForbiddenException('Item does not belong to user');
+      }
+
+      if (!item.isListedForSale) {
+        throw new ConflictException('Item is not listed for sale');
+      }
+
+      const wasRemoved = await this.itemRepository.setListingIfOwned(
+        item.id,
+        accountId,
+        true,
+        null,
+        tx,
+      );
+
+      if (!wasRemoved) {
+        throw new ConflictException('Item listing state changed');
+      }
+
+      const updatedItem = await this.itemRepository.findById(item.id, tx);
+
+      if (!updatedItem) {
+        throw new NotFoundException('Updated item is not found');
+      }
+
+      return this.toItemResponse(updatedItem);
+    });
+  }
+
   async deleteByAdmin(itemId: string): Promise<AdminDeleteItemResponseDto> {
     const wasDeleted = await this.itemRepository.deleteById(itemId);
 
@@ -154,10 +262,21 @@ export class ItemsService {
     };
   }
 
-  private toItemResponse(item: Item): CreateItemResponseDto {
+  private toItemResponse(item: Item | ItemWithSeller): CreateItemResponseDto {
+    const seller = 'owner' in item && item.isListedForSale ? item.owner : null;
+
     return {
       id: item.id,
       owner_user_id: item.ownerUserId,
+      isListedForSale: item.isListedForSale,
+      listingPrice: item.listingPrice,
+      seller: seller
+        ? {
+            id: seller.id,
+            nickname: seller.username,
+            avatarUrl: seller.avatarUrl,
+          }
+        : null,
       name: item.name,
       description: item.description,
       image_url: item.imageUrl,

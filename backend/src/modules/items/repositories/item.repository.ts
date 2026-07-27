@@ -3,6 +3,19 @@ import { EquipmentSlotType, ItemRarity, type Item, type Prisma } from '@prisma/c
 
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import type { ItemLocation } from '../types/item-location.type';
+import type { ItemSaleSource } from '../types/item-sale-source.type';
+
+export type ItemWithSeller = Prisma.ItemGetPayload<{
+  include: {
+    owner: {
+      select: {
+        id: true;
+        username: true;
+        avatarUrl: true;
+      };
+    };
+  };
+}>;
 
 export interface CreateItemInput {
   ownerUserId: string | null;
@@ -56,9 +69,18 @@ export class ItemRepository {
     });
   }
 
-  async findById(id: string, tx?: Prisma.TransactionClient): Promise<Item | null> {
+  async findById(id: string, tx?: Prisma.TransactionClient): Promise<ItemWithSeller | null> {
     return this.getClient(tx).item.findUnique({
       where: { id },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+          },
+        },
+      },
     });
   }
 
@@ -99,24 +121,19 @@ export class ItemRepository {
     return this.findById(id);
   }
 
-  async findAll(location?: ItemLocation): Promise<Item[]> {
-    const where: Prisma.ItemWhereInput | undefined =
-      location === 'shop'
-        ? { ownerUserId: null }
-        : location === 'inventory'
-          ? { ownerUserId: { not: null } }
-          : undefined;
-
-    if (where) {
-      return this.prisma.item.findMany({
-        where,
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
-    }
-
+  async findAll(location?: ItemLocation, saleSource?: ItemSaleSource): Promise<ItemWithSeller[]> {
+    const where = this.buildItemsWhere(location, saleSource);
     return this.prisma.item.findMany({
+      ...(where ? { where } : {}),
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+          },
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -135,10 +152,102 @@ export class ItemRepository {
       },
       data: {
         ownerUserId,
+        isListedForSale: false,
+        listingPrice: null,
       },
     });
 
     return result.count > 0;
+  }
+
+  async setListingIfOwned(
+    id: string,
+    ownerUserId: string,
+    expectedListingState: boolean,
+    listingPrice: number | null,
+    tx: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const result = await this.getClient(tx).item.updateMany({
+      where: {
+        id,
+        ownerUserId,
+        isListedForSale: expectedListingState,
+      },
+      data: {
+        isListedForSale: !expectedListingState,
+        listingPrice,
+      },
+    });
+
+    return result.count > 0;
+  }
+
+  async transferListedItem(
+    id: string,
+    sellerUserId: string,
+    buyerUserId: string,
+    listingPrice: number,
+    tx: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const result = await this.getClient(tx).item.updateMany({
+      where: {
+        id,
+        ownerUserId: sellerUserId,
+        isListedForSale: true,
+        listingPrice,
+      },
+      data: {
+        ownerUserId: buyerUserId,
+        isListedForSale: false,
+        listingPrice: null,
+      },
+    });
+
+    return result.count > 0;
+  }
+
+  async clearEquipmentReference(id: string, tx: Prisma.TransactionClient): Promise<void> {
+    await this.getClient(tx).userEquipmentSlot.deleteMany({
+      where: {
+        itemId: id,
+      },
+    });
+  }
+
+  private buildItemsWhere(
+    location?: ItemLocation,
+    saleSource?: ItemSaleSource,
+  ): Prisma.ItemWhereInput | undefined {
+    if (saleSource === 'players') {
+      return {
+        ownerUserId: { not: null },
+        isListedForSale: true,
+        listingPrice: { not: null },
+      };
+    }
+
+    if (saleSource === 'all') {
+      return {
+        OR: [
+          { ownerUserId: null },
+          {
+            ownerUserId: { not: null },
+            isListedForSale: true,
+            listingPrice: { not: null },
+          },
+        ],
+      };
+    }
+
+    if (saleSource === 'system' || location === 'shop') {
+      return { ownerUserId: null };
+    }
+
+    if (location === 'inventory') {
+      return { ownerUserId: { not: null } };
+    }
+
+    return undefined;
   }
 
   private getClient(tx?: Prisma.TransactionClient): PrismaService | Prisma.TransactionClient {

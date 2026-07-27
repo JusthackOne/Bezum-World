@@ -45,6 +45,7 @@ import {
   CreateItemDto,
   CreateItemResponseDto,
   GetItemsQueryDto,
+  ListItemForSaleDto,
   PurchaseItemParamsDto,
   PurchaseItemResponseDto,
 } from './dto';
@@ -86,7 +87,7 @@ export class ItemsController {
   })
   @ApiOkResponse({ type: CreateItemResponseDto, isArray: true })
   async getItems(@Query() query: GetItemsQueryDto): Promise<CreateItemResponseDto[]> {
-    return this.itemsService.getItems(query.location);
+    return this.itemsService.getItems(query.location, query.saleSource);
   }
 
   @Post('admin/items')
@@ -246,6 +247,62 @@ export class ItemsController {
     }
 
     return this.itemsService.purchaseByUser(params.itemId, request.user.sub);
+  }
+
+  @Patch('items/:itemId/listing')
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({
+    summary: 'List an owned item for sale',
+    description: 'Lists an inventory item on the player marketplace at the provided Gold price.',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiParam({
+    name: 'itemId',
+    description: 'Unique owned item identifier',
+    example: '2df8c39f-3255-4b40-9cb2-7f236c0b62e3',
+  })
+  @ApiOkResponse({ type: CreateItemResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Only the item owner can list it for sale' })
+  @ApiNotFoundResponse({ description: 'Item is not found' })
+  @ApiConflictResponse({ description: 'Item is already listed for sale' })
+  async listItemForSale(
+    @Param() params: PurchaseItemParamsDto,
+    @Body() body: ListItemForSaleDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<CreateItemResponseDto> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can list items for sale');
+    }
+
+    return this.itemsService.listForSaleByUser(params.itemId, request.user.sub, body);
+  }
+
+  @Delete('items/:itemId/listing')
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({
+    summary: 'Remove an owned item from sale',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiParam({
+    name: 'itemId',
+    description: 'Unique owned item identifier',
+    example: '2df8c39f-3255-4b40-9cb2-7f236c0b62e3',
+  })
+  @ApiOkResponse({ type: CreateItemResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Only the item owner can remove it from sale' })
+  @ApiNotFoundResponse({ description: 'Item is not found' })
+  @ApiConflictResponse({ description: 'Item is not listed for sale' })
+  async removeItemFromSale(
+    @Param() params: PurchaseItemParamsDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<CreateItemResponseDto> {
+    if (!request.user?.sub || request.user.actorType !== 'user') {
+      throw new ForbiddenException('Only user accounts can remove item listings');
+    }
+
+    return this.itemsService.removeFromSaleByUser(params.itemId, request.user.sub);
   }
 
   private async storeItemImage(file: UploadedItemImageFile): Promise<string> {

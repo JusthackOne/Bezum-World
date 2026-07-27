@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { SparklesIcon } from "lucide-react";
+import Link from "next/link";
 
+import { publicUserRoutes } from "@/features/public-user/routes";
 import { usePurchaseShopItemMutation, useShopItemsQuery } from "@/features/shop/api";
 import type { ShopItem } from "@/features/shop/model/shop-item.types";
 import { queryKeys } from "@/shared/config/query-keys";
@@ -21,6 +23,7 @@ import {
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import { Checkbox } from "@/shared/ui/checkbox";
+import { AvatarImage } from "@/shared/ui/avatar-image";
 import { ItemDetailsModal } from "@/shared/ui";
 import { ItemDisplayCard } from "@/shared/ui";
 import {
@@ -83,7 +86,8 @@ const rarityQualityRank: Record<RarityFilterValue, number> = {
 
 export function ShopPage() {
   const queryClient = useQueryClient();
-  const itemsQuery = useShopItemsQuery();
+  const [playerListingsOnly, setPlayerListingsOnly] = useState(false);
+  const itemsQuery = useShopItemsQuery(playerListingsOnly);
   const purchaseMutation = usePurchaseShopItemMutation();
 
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
@@ -211,7 +215,7 @@ export function ShopPage() {
 
     try {
       await purchaseMutation.mutateAsync(itemId);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.shopItems });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.shopItemsPrefix });
       showToast("Purchase successful", "Item was added to your inventory.");
 
       if (selectedItem?.id === itemId) {
@@ -328,6 +332,15 @@ export function ShopPage() {
               ) : null}
             </div>
 
+            <label className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-md border px-2 sm:w-auto">
+              <Checkbox
+                checked={playerListingsOnly}
+                onCheckedChange={(checked) => setPlayerListingsOnly(checked === true)}
+                aria-label="Player Listings"
+              />
+              <span className="text-xs font-medium">Player Listings</span>
+            </label>
+
             <div ref={sortDropdownRef} className="relative w-full sm:w-[230px]">
               <Button
                 type="button"
@@ -399,6 +412,26 @@ export function ShopPage() {
                       setPendingPurchaseItem(clickedItem);
                     }}
                     actionAriaLabel={`Buy ${item.name}`}
+                    originalPrice={item.originalPrice}
+                    priceAccessory={
+                      item.seller ? (
+                        <Link
+                          href={publicUserRoutes.profile(item.seller.nickname)}
+                          className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-white/30 bg-slate-950/65 py-0.5 pr-2 pl-1 text-white hover:bg-slate-900/80"
+                          onClick={(event) => event.stopPropagation()}
+                          aria-label={`View ${item.seller.nickname} profile`}
+                        >
+                          <AvatarImage
+                            avatarUrl={item.seller.avatarUrl}
+                            alt={`${item.seller.nickname} avatar`}
+                            sizeClassName="size-6"
+                          />
+                          <span className="max-w-24 truncate text-[10px] font-medium">
+                            {item.seller.nickname}
+                          </span>
+                        </Link>
+                      ) : undefined
+                    }
                   />
                 );
               })}
@@ -425,7 +458,7 @@ export function ShopPage() {
             <AlertDialogTitle>Confirm purchase</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingPurchaseItem
-                ? `Buy "${pendingPurchaseItem.name}" for ${pendingPurchaseItem.price} coins?`
+                ? `Buy "${pendingPurchaseItem.name}" for ${pendingPurchaseItem.price} Gold?`
                 : "Buy this item?"}
             </AlertDialogDescription>
           </AlertDialogHeader>

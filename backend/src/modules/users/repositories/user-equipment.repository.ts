@@ -17,6 +17,8 @@ export interface UserEquipment {
     imageUrl: string | null;
     agility: number | null;
     price: number;
+    isListedForSale: boolean;
+    listingPrice: number | null;
     rarity: ItemRarity;
     durability: number | null;
   } | null;

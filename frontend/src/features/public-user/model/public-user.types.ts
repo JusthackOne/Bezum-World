@@ -28,6 +28,8 @@ export interface PublicUserItem {
   agility: number | null;
   intelligence: number | null;
   price: number;
+  isListedForSale: boolean;
+  listingPrice: number | null;
   rarity: PublicItemRarity | (string & {});
   durability: number | null;
   created_at: string;
@@ -59,4 +61,10 @@ export interface PublicUserEquipment {
 
 export interface EquipItemResponse {
   equipped: PublicUserEquipment;
+}
+
+export interface ItemListingResponse {
+  id: string;
+  isListedForSale: boolean;
+  listingPrice: number | null;
 }

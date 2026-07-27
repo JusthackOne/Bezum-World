@@ -31,6 +31,20 @@ Core mechanics:
 - PostgreSQL
 - Redis (cache, rate limit, queues)
 
+### Database schema workflow
+- Every change to `backend/prisma/schema.prisma` must include a matching Prisma migration in `backend/prisma/migrations/`.
+- After changing the Prisma schema, regenerate the Prisma Client in the host backend environment.
+- If the local backend from `docker-compose.local.yml` is running, the agent must also:
+  1. regenerate the Prisma Client inside the backend container;
+  2. apply pending migrations to the local Docker database;
+  3. restart the backend container;
+  4. verify `/api/health` and the affected API endpoint.
+- Use these commands for the running local Docker environment:
+  - `docker compose -f docker-compose.local.yml exec -T backend bun run prisma:generate`
+  - `docker compose -f docker-compose.local.yml exec -T backend bunx --bun prisma migrate deploy`
+  - `docker compose -f docker-compose.local.yml restart backend`
+- If the local containers are unavailable, report that the Docker migration/client refresh was not performed and provide the exact commands required. Do not silently skip this workflow.
+
 ---
 
 ## Architecture

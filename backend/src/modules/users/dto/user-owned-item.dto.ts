@@ -89,6 +89,20 @@ export class UserOwnedItemDto {
   price!: number;
 
   @ApiProperty({
+    description: 'Whether this item is listed on the player marketplace',
+    example: false,
+  })
+  isListedForSale!: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Current player listing price in Gold',
+    nullable: true,
+    minimum: 0,
+    example: 250,
+  })
+  listingPrice!: number | null;
+
+  @ApiProperty({
     description: 'Item rarity level',
     enum: ItemRarity,
     example: ItemRarity.sigma,

@@ -11,6 +11,14 @@ export interface ShopItem {
   agility: number | null;
   intelligence: number | null;
   price: number;
+  originalPrice?: number;
+  isListedForSale: boolean;
+  listingPrice: number | null;
+  seller: {
+    id: string;
+    nickname: string;
+    avatarUrl: string | null;
+  } | null;
   rarity: ItemDisplayRarity;
   durability: number | null;
   created_at: string;
