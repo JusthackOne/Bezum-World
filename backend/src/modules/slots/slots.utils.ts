@@ -7,6 +7,18 @@ import {
   type SlotSymbolId,
 } from './slots.constants';
 
+export interface SlotStatisticChange {
+  winnings: number;
+  losses: number;
+}
+
+export function getSlotStatisticChange(netChange: number): SlotStatisticChange {
+  return {
+    winnings: Math.max(netChange, 0),
+    losses: Math.max(-netChange, 0),
+  };
+}
+
 export interface SlotOutcome {
   result: [SlotSymbolId, SlotSymbolId, SlotSymbolId];
   payoutMultiplier: number;

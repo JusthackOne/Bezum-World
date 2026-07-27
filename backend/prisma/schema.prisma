@@ -82,6 +82,17 @@ model Account {
   bossParticipants    BossBattleParticipant[]
   bossResults         BossBattleResult[]
   bossRewardClaims    BossRewardClaim[]
+  slotStatistics      SlotStatistics?
+}
+
+model SlotStatistics {
+  userId        String   @id @map("user_id")
+  totalWinnings Int      @default(0) @map("total_winnings")
+  totalLosses   Int      @default(0) @map("total_losses")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          Account  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("slot_statistics")
 }
 
 model BossBattle {

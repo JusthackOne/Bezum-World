@@ -222,8 +222,12 @@ export function PixiSlotMachine({ request, onSpinFinished }: PixiSlotMachineProp
 
       function playResultEffect(spinRequest: SlotSpinAnimation) {
         const effectStart = performance.now();
-        const effectDuration = spinRequest.isWin ? 2_100 : 850;
+        const winIntensity = spinRequest.isWin
+          ? Math.min(1, 0.35 + (Math.log2(spinRequest.payout / 10 + 1) / Math.log2(51)) * 0.65)
+          : 0;
+        const effectDuration = spinRequest.isWin ? 1_800 + winIntensity * 1_400 : 850;
         const centerSprites = reelSprites.map((sprites) => sprites[2]!);
+        let winAura: Graphics | null = null;
         const particleData: Array<{
           graphic: Graphics;
           velocityX: number;
@@ -235,12 +239,17 @@ export function PixiSlotMachine({ request, onSpinFinished }: PixiSlotMachineProp
           text: spinRequest.isWin ? `+${spinRequest.payout} GOLD` : "NO MATCH",
           style: {
             fontFamily: "monospace",
-            fontSize: spinRequest.isWin ? 34 : 25,
+            fontSize: spinRequest.isWin ? 42 + Math.round(winIntensity * 16) : 25,
             fontWeight: "900",
             fill: spinRequest.isWin ? 0xfef08a : 0x94a3b8,
             stroke: { color: 0x020617, width: 7 },
             dropShadow: spinRequest.isWin
-              ? { color: 0xf59e0b, blur: 14, distance: 0, alpha: 1 }
+              ? {
+                  color: 0xf59e0b,
+                  blur: 12 + winIntensity * 24,
+                  distance: 0,
+                  alpha: 1,
+                }
               : undefined,
             letterSpacing: 3,
           },
@@ -253,10 +262,20 @@ export function PixiSlotMachine({ request, onSpinFinished }: PixiSlotMachineProp
         if (spinRequest.isWin) {
           const winningSymbol = SLOT_SYMBOL_VISUAL_BY_ID[spinRequest.result[0]];
           const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          const particleCount = reducedMotion ? 12 : 58;
+          const particleCount = reducedMotion
+            ? 12 + Math.round(winIntensity * 8)
+            : 38 + Math.round(winIntensity * 72);
+
+          winAura = new Graphics()
+            .circle(0, 0, 115)
+            .fill({ color: winningSymbol.accent, alpha: 0.08 + winIntensity * 0.08 })
+            .stroke({ color: 0xfde047, width: 3 + winIntensity * 5, alpha: 0.75 });
+          winAura.position.set(CANVAS_WIDTH / 2, 232);
+          winAura.scale.set(0.45);
+          fxLayer.addChildAt(winAura, 0);
 
           for (let index = 0; index < particleCount; index += 1) {
-            const size = 3 + Math.random() * 6;
+            const size = 3 + Math.random() * (5 + winIntensity * 5);
             const particle = new Graphics()
               .rect(-size / 2, -size / 2, size, size)
               .fill(index % 3 === 0 ? 0xfde047 : winningSymbol.accent);
@@ -264,8 +283,8 @@ export function PixiSlotMachine({ request, onSpinFinished }: PixiSlotMachineProp
             fxLayer.addChild(particle);
             particleData.push({
               graphic: particle,
-              velocityX: (Math.random() - 0.5) * 9,
-              velocityY: -4 - Math.random() * 8,
+              velocityX: (Math.random() - 0.5) * (8 + winIntensity * 8),
+              velocityY: -4 - Math.random() * (7 + winIntensity * 7),
               rotationSpeed: (Math.random() - 0.5) * 0.35,
             });
           }
@@ -277,12 +296,28 @@ export function PixiSlotMachine({ request, onSpinFinished }: PixiSlotMachineProp
           banner.scale.set(0.65 + Math.min(progress * 3, 1) * 0.35);
 
           if (spinRequest.isWin) {
-            const pulse = 1 + Math.sin(progress * Math.PI * 10) * 0.08 * (1 - progress);
+            const pulse =
+              1 +
+              Math.sin(progress * Math.PI * (10 + winIntensity * 6)) *
+                (0.06 + winIntensity * 0.1) *
+                (1 - progress);
             centerSprites.forEach((sprite) =>
               sprite.scale.set(pulse * (SYMBOL_SIZE / 406), pulse * (SYMBOL_SIZE / 440)),
             );
-            paylineGlow.alpha = 0.7 + Math.sin(progress * Math.PI * 12) * 0.25;
-            app.stage.position.x = Math.sin(progress * Math.PI * 18) * 3 * (1 - progress);
+            paylineGlow.alpha =
+              0.65 +
+              Math.sin(progress * Math.PI * (12 + winIntensity * 8)) * (0.2 + winIntensity * 0.12);
+            app.stage.position.x =
+              Math.sin(progress * Math.PI * (18 + winIntensity * 8)) *
+              (2 + winIntensity * 6) *
+              (1 - progress);
+
+            if (winAura) {
+              const auraProgress = Math.sin(progress * Math.PI);
+              winAura.scale.set(0.45 + progress * (1.15 + winIntensity * 0.65));
+              winAura.alpha = auraProgress * (0.45 + winIntensity * 0.45);
+              winAura.rotation = progress * Math.PI * winIntensity;
+            }
 
             particleData.forEach((particle) => {
               particle.velocityY += 0.24;

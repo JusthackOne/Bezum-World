@@ -27,3 +27,19 @@ export interface SlotSpinResult {
 export interface SlotSpinAnimation extends SlotSpinResult {
   id: number;
 }
+
+export type SlotLeaderboardType = "winnings" | "losses";
+
+export interface SlotLeaderboardEntry {
+  userId: string;
+  username: string;
+  avatar: string | null;
+  rank: number;
+  totalWinnings: number;
+  totalLosses: number;
+}
+
+export interface SlotLeaderboardResponse {
+  type: SlotLeaderboardType;
+  leaders: SlotLeaderboardEntry[];
+}

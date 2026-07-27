@@ -1,11 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { refreshCurrentUserProfile } from "@/features/auth/api";
+import type { SlotLeaderboardType } from "@/features/slots/model";
 import { queryKeys } from "@/shared/config/query-keys";
 
-import { getSlotsConfig, spinSlots } from "./requests";
+import { getSlotsConfig, getSlotsLeaderboard, spinSlots } from "./requests";
 
 export function useSlotsConfigQuery() {
   return useQuery({
@@ -16,12 +16,14 @@ export function useSlotsConfigQuery() {
 }
 
 export function useSpinSlotsMutation() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: spinSlots,
-    onSuccess: async () => {
-      await refreshCurrentUserProfile(queryClient);
-    },
+  });
+}
+
+export function useSlotsLeaderboardQuery(type: SlotLeaderboardType) {
+  return useQuery({
+    queryKey: queryKeys.slotsLeaderboard(type),
+    queryFn: () => getSlotsLeaderboard(type),
   });
 }

@@ -1,18 +1,25 @@
-import { Controller, ForbiddenException, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import type { RequestWithAuthUser } from '../auth/types/request-with-auth-user.type';
-import { SlotsConfigResponseDto, SpinSlotResponseDto } from './dto';
+import {
+  GetSlotLeaderboardQueryDto,
+  SlotLeaderboardResponseDto,
+  SlotsConfigResponseDto,
+  SpinSlotResponseDto,
+} from './dto';
 import { SlotsService } from './slots.service';
+import { SlotLeaderboardType } from './types';
 
 @ApiTags('slots')
 @ApiBearerAuth('access-token')
@@ -29,6 +36,20 @@ export class SlotsController {
   getConfig(@Req() request: RequestWithAuthUser): SlotsConfigResponseDto {
     this.assertUser(request);
     return this.slotsService.getConfig();
+  }
+
+  @Get('leaderboard')
+  @ApiOperation({ summary: 'Get all users ranked by slot winnings or losses' })
+  @ApiQuery({ name: 'type', required: false, enum: SlotLeaderboardType })
+  @ApiOkResponse({ type: SlotLeaderboardResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Access token is invalid' })
+  @ApiForbiddenResponse({ description: 'Only user accounts can access slots' })
+  getLeaderboard(
+    @Query() query: GetSlotLeaderboardQueryDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<SlotLeaderboardResponseDto> {
+    this.assertUser(request);
+    return this.slotsService.getLeaderboard(query.type ?? SlotLeaderboardType.winnings);
   }
 
   @Post('spin')

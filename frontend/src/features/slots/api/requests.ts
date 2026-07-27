@@ -1,4 +1,9 @@
-import type { SlotSpinResult, SlotsConfig } from "@/features/slots/model";
+import type {
+  SlotLeaderboardResponse,
+  SlotLeaderboardType,
+  SlotSpinResult,
+  SlotsConfig,
+} from "@/features/slots/model";
 import { clientHttpClient } from "@/shared/lib/client-http-client";
 import { requestApiData } from "@/shared/lib/api-request";
 import type { ApiSuccessResponse } from "@/shared/types/backend-api-response";
@@ -16,5 +21,15 @@ export function spinSlots(): Promise<SlotSpinResult> {
   return requestApiData(
     () => clientHttpClient.post<ApiSuccessResponse<SlotSpinResult>>(slotsEndpoints.spin),
     "Unable to complete the spin.",
+  );
+}
+
+export function getSlotsLeaderboard(type: SlotLeaderboardType): Promise<SlotLeaderboardResponse> {
+  return requestApiData(
+    () =>
+      clientHttpClient.get<ApiSuccessResponse<SlotLeaderboardResponse>>(
+        slotsEndpoints.leaderboard(type),
+      ),
+    "Unable to load the slots leaderboard.",
   );
 }

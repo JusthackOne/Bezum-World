@@ -6,7 +6,7 @@ import {
   SLOT_PAYTABLE,
   SLOT_RTP_BPS,
 } from '../src/modules/slots/slots.constants';
-import { resolveWinningEntry } from '../src/modules/slots/slots.utils';
+import { getSlotStatisticChange, resolveWinningEntry } from '../src/modules/slots/slots.utils';
 
 describe('slot paytable', () => {
   test('has the configured 97% RTP', () => {
@@ -38,5 +38,15 @@ describe('slot paytable', () => {
     expect(() => resolveWinningEntry(-1)).toThrow(RangeError);
     expect(() => resolveWinningEntry(SLOT_CHANCE_SCALE)).toThrow(RangeError);
     expect(() => resolveWinningEntry(1.5)).toThrow(RangeError);
+  });
+});
+
+describe('slot aggregate statistics', () => {
+  test('records only net winnings for a profitable spin', () => {
+    expect(getSlotStatisticChange(15)).toEqual({ winnings: 15, losses: 0 });
+  });
+
+  test('records only the lost stake for a losing spin', () => {
+    expect(getSlotStatisticChange(-5)).toEqual({ winnings: 0, losses: 5 });
   });
 });

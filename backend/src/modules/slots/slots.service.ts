@@ -1,10 +1,15 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
-import { type SlotsConfigResponseDto, type SpinSlotResponseDto } from './dto';
-import { SlotsRepository } from './repositories';
+import {
+  type SlotLeaderboardResponseDto,
+  type SlotsConfigResponseDto,
+  type SpinSlotResponseDto,
+} from './dto';
+import { SlotsRepository, type SlotLeaderboardUserRecord } from './repositories';
 import { SLOT_BET, SLOT_HIT_RATE_BPS, SLOT_PAYTABLE, SLOT_RTP_BPS } from './slots.constants';
-import { generateSlotOutcome } from './slots.utils';
+import { SlotLeaderboardType } from './types';
+import { generateSlotOutcome, getSlotStatisticChange } from './slots.utils';
 
 @Injectable()
 export class SlotsService {
@@ -21,6 +26,19 @@ export class SlotsService {
       symbols: SLOT_PAYTABLE.map((entry) => ({
         ...entry,
         payout: SLOT_BET * entry.payoutMultiplier,
+      })),
+    };
+  }
+
+  async getLeaderboard(type: SlotLeaderboardType): Promise<SlotLeaderboardResponseDto> {
+    const users = await this.slotsRepository.findUsersForLeaderboard();
+    const sortedUsers = this.sortLeaderboard(users, type);
+
+    return {
+      type,
+      leaders: sortedUsers.map((user, index) => ({
+        ...user,
+        rank: index + 1,
       })),
     };
   }
@@ -46,13 +64,39 @@ export class SlotsService {
         throw new BadRequestException('Insufficient balance');
       }
 
+      const netChange = payout - SLOT_BET;
+      const statisticChange = getSlotStatisticChange(netChange);
+      await this.slotsRepository.incrementStatistics(
+        accountId,
+        statisticChange.winnings,
+        statisticChange.losses,
+        tx,
+      );
+
       return {
         result: outcome.result,
         bet: SLOT_BET,
         payout,
-        netChange: payout - SLOT_BET,
+        netChange,
         isWin: payout > 0,
       };
+    });
+  }
+
+  private sortLeaderboard(
+    users: SlotLeaderboardUserRecord[],
+    type: SlotLeaderboardType,
+  ): SlotLeaderboardUserRecord[] {
+    const scoreKey =
+      type === SlotLeaderboardType.losses ? ('totalLosses' as const) : ('totalWinnings' as const);
+
+    return [...users].sort((left, right) => {
+      const scoreDifference = right[scoreKey] - left[scoreKey];
+      if (scoreDifference !== 0) {
+        return scoreDifference;
+      }
+
+      return left.username.localeCompare(right.username);
     });
   }
 }
