@@ -17,7 +17,7 @@ export interface BossRewardItem {
   name: string;
   description?: string;
   imageUrl?: string;
-  slotType: "HELMET" | "ARMOR" | "PANTS" | "BOOTS" | "LEFT_HAND" | "RIGHT_HAND";
+  slotType: "HELMET" | "ARMOR" | "PANTS" | "BOOTS" | "LEFT_HAND" | "RIGHT_HAND" | "ACCESSORY";
   rarity: "unterlyanskiy" | "basic_minimum" | "sigma" | "bezumnyy";
   durability?: number;
   price: number;

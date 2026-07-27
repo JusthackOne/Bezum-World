@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { EquipmentSlotType, ItemRarity, type Item, type Prisma } from '@prisma/client';
+import { EquipmentSlotType, ItemRarity, Prisma, type Item } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import type { ItemLocation } from '../types/item-location.type';
@@ -84,8 +84,8 @@ export class ItemRepository {
     });
   }
 
-  async deleteById(id: string): Promise<boolean> {
-    const result = await this.prisma.item.deleteMany({
+  async deleteById(id: string, tx?: Prisma.TransactionClient): Promise<boolean> {
+    const result = await this.getClient(tx).item.deleteMany({
       where: {
         id,
       },
@@ -94,8 +94,12 @@ export class ItemRepository {
     return result.count > 0;
   }
 
-  async updateById(id: string, input: UpdateItemInput): Promise<Item | null> {
-    const result = await this.prisma.item.updateMany({
+  async updateById(
+    id: string,
+    input: UpdateItemInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<Item | null> {
+    const result = await this.getClient(tx).item.updateMany({
       where: {
         id,
       },
@@ -118,7 +122,7 @@ export class ItemRepository {
       return null;
     }
 
-    return this.findById(id);
+    return this.findById(id, tx);
   }
 
   async findAll(location?: ItemLocation, saleSource?: ItemSaleSource): Promise<ItemWithSeller[]> {
@@ -207,11 +211,71 @@ export class ItemRepository {
   }
 
   async clearEquipmentReference(id: string, tx: Prisma.TransactionClient): Promise<void> {
-    await this.getClient(tx).userEquipmentSlot.deleteMany({
+    const equipmentReference = await tx.userEquipmentSlot.findUnique({
       where: {
         itemId: id,
       },
+      select: {
+        userId: true,
+      },
     });
+
+    if (!equipmentReference) {
+      return;
+    }
+
+    await tx.$queryRaw(Prisma.sql`
+      SELECT "id"
+      FROM "Account"
+      WHERE "id" = ${equipmentReference.userId}
+      FOR UPDATE
+    `);
+
+    const equippedSlot = await tx.userEquipmentSlot.findUnique({
+      where: {
+        itemId: id,
+      },
+      select: {
+        id: true,
+        userId: true,
+        slotType: true,
+        position: true,
+      },
+    });
+
+    if (!equippedSlot) {
+      return;
+    }
+
+    await tx.userEquipmentSlot.deleteMany({
+      where: {
+        id: equippedSlot.id,
+        itemId: id,
+      },
+    });
+
+    if (equippedSlot.slotType === EquipmentSlotType.ACCESSORY) {
+      const laterAccessories = await tx.userEquipmentSlot.findMany({
+        where: {
+          userId: equippedSlot.userId,
+          slotType: EquipmentSlotType.ACCESSORY,
+          position: { gt: equippedSlot.position },
+        },
+        select: {
+          id: true,
+        },
+        orderBy: {
+          position: 'asc',
+        },
+      });
+
+      for (const accessory of laterAccessories) {
+        await tx.userEquipmentSlot.update({
+          where: { id: accessory.id },
+          data: { position: { decrement: 1 } },
+        });
+      }
+    }
   }
 
   private buildItemsWhere(

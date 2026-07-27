@@ -86,6 +86,7 @@ const itemSlotLabels: Record<string, string> = {
   BOOTS: "Boots",
   LEFT_HAND: "Left hand",
   RIGHT_HAND: "Right hand",
+  ACCESSORY: "Accessory",
 };
 
 const hiddenScrollbarClass =

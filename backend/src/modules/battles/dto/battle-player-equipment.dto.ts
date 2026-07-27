@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { BattleEquipmentItemDto } from './battle-equipment-item.dto';
 
@@ -38,4 +38,10 @@ export class BattlePlayerEquipmentDto {
     type: BattleEquipmentItemDto,
   })
   rightWeapon?: BattleEquipmentItemDto;
+
+  @ApiProperty({
+    description: 'Equipped accessories in display order',
+    type: [BattleEquipmentItemDto],
+  })
+  accessories!: BattleEquipmentItemDto[];
 }

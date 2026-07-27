@@ -5,7 +5,7 @@ import { PrismaService } from '../../../database/prisma/prisma.service';
 
 export interface BattleEquippedItemRecord {
   id: string;
-  slotType: 'HELMET' | 'ARMOR' | 'PANTS' | 'BOOTS' | 'LEFT_HAND' | 'RIGHT_HAND';
+  slotType: 'HELMET' | 'ARMOR' | 'PANTS' | 'BOOTS' | 'LEFT_HAND' | 'RIGHT_HAND' | 'ACCESSORY';
   name: string;
   description: string | null;
   imageUrl: string | null;
@@ -20,7 +20,8 @@ export interface BattleEquippedItemRecord {
 }
 
 export interface BattleEquipmentSlotRecord {
-  slotType: 'HELMET' | 'ARMOR' | 'PANTS' | 'BOOTS' | 'LEFT_HAND' | 'RIGHT_HAND';
+  slotType: 'HELMET' | 'ARMOR' | 'PANTS' | 'BOOTS' | 'LEFT_HAND' | 'RIGHT_HAND' | 'ACCESSORY';
+  position: number;
   item: BattleEquippedItemRecord | null;
 }
 
@@ -71,8 +72,12 @@ export class BattleRepository {
         endurance: true,
         intelligence: true,
         equipment: {
+          orderBy: {
+            position: 'asc',
+          },
           select: {
             slotType: true,
+            position: true,
             item: {
               select: {
                 id: true,
@@ -115,8 +120,12 @@ export class BattleRepository {
         endurance: true,
         intelligence: true,
         equipment: {
+          orderBy: {
+            position: 'asc',
+          },
           select: {
             slotType: true,
+            position: true,
             item: {
               select: {
                 id: true,

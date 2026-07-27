@@ -35,7 +35,7 @@ const itemFormSchema = z.object({
   description: z.string().trim().min(1, "Description is required").max(4096),
   price: z.number().int().min(0).max(ITEM_PRICE_MAX),
   rarity: z.enum(["unterlyanskiy", "basic_minimum", "sigma", "bezumnyy"]),
-  slotType: z.enum(["HELMET", "ARMOR", "PANTS", "BOOTS", "LEFT_HAND", "RIGHT_HAND"]),
+  slotType: z.enum(["HELMET", "ARMOR", "PANTS", "BOOTS", "LEFT_HAND", "RIGHT_HAND", "ACCESSORY"]),
   strength: optionalMinIntField(0, "Strength"),
   charisma: optionalMinIntField(0, "Charisma"),
   agility: optionalMinIntField(0, "Agility"),
@@ -301,6 +301,7 @@ export function AdminItemForm({
             <option value="BOOTS">BOOTS</option>
             <option value="LEFT_HAND">LEFT_HAND</option>
             <option value="RIGHT_HAND">RIGHT_HAND</option>
+            <option value="ACCESSORY">ACCESSORY</option>
           </select>
           {form.formState.errors.slotType ? (
             <p className="text-xs text-destructive">{form.formState.errors.slotType.message}</p>

@@ -13,6 +13,7 @@ enum EquipmentSlotType {
   BOOTS
   LEFT_HAND
   RIGHT_HAND
+  ACCESSORY
 }
 
 enum GameEventType {
@@ -341,11 +342,12 @@ model UserEquipmentSlot {
   user   Account @relation(fields: [userId], references: [id])
 
   slotType EquipmentSlotType
+  position Int               @default(0)
 
   itemId String? @unique
   item   Item?   @relation(fields: [itemId], references: [id])
 
-  @@unique([userId, slotType])
+  @@unique([userId, slotType, position])
 }
 
 enum TaskType {

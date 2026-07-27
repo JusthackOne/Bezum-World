@@ -18,7 +18,14 @@ export interface AdminItem {
 export type AdminItemLocationFilter = "shop" | "inventory" | "all";
 
 export type AdminItemRarity = "unterlyanskiy" | "basic_minimum" | "sigma" | "bezumnyy";
-export type AdminItemSlotType = "HELMET" | "ARMOR" | "PANTS" | "BOOTS" | "LEFT_HAND" | "RIGHT_HAND";
+export type AdminItemSlotType =
+  | "HELMET"
+  | "ARMOR"
+  | "PANTS"
+  | "BOOTS"
+  | "LEFT_HAND"
+  | "RIGHT_HAND"
+  | "ACCESSORY";
 
 export interface GetAdminItemsInput {
   location?: Exclude<AdminItemLocationFilter, "all">;

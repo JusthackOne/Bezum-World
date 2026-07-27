@@ -12,6 +12,7 @@ export type ItemDisplaySlotType =
   | "BOOTS"
   | "LEFT_HAND"
   | "RIGHT_HAND"
+  | "ACCESSORY"
   | (string & {});
 
 export interface ItemDisplay {

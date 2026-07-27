@@ -45,7 +45,7 @@ const item = z.object({
   name: z.string().trim().max(128),
   description: z.string().trim().max(4096),
   imageUrl: z.string(),
-  slotType: z.enum(["HELMET", "ARMOR", "PANTS", "BOOTS", "LEFT_HAND", "RIGHT_HAND"]),
+  slotType: z.enum(["HELMET", "ARMOR", "PANTS", "BOOTS", "LEFT_HAND", "RIGHT_HAND", "ACCESSORY"]),
   rarity: z.enum(["unterlyanskiy", "basic_minimum", "sigma", "bezumnyy"]),
   price: itemPriceSchema,
   durability: itemDurabilitySchema,
@@ -527,11 +527,17 @@ export function BossBattleForm({ battle }: { battle?: BossBattle }) {
                           className="h-9 w-full rounded-md border bg-transparent px-3"
                           {...form.register(`rewards.${i}.item.slotType`)}
                         >
-                          {["HELMET", "ARMOR", "PANTS", "BOOTS", "LEFT_HAND", "RIGHT_HAND"].map(
-                            (x) => (
-                              <option key={x}>{x}</option>
-                            ),
-                          )}
+                          {[
+                            "HELMET",
+                            "ARMOR",
+                            "PANTS",
+                            "BOOTS",
+                            "LEFT_HAND",
+                            "RIGHT_HAND",
+                            "ACCESSORY",
+                          ].map((x) => (
+                            <option key={x}>{x}</option>
+                          ))}
                         </select>
                       </Field>
                       <Field label="Rarity">

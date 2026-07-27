@@ -146,7 +146,10 @@ export class BattlesService {
 
       const currentUserPower = this.calculatePower(currentUserStats);
       const opponentPower = this.calculatePower(opponentStats);
-      const currentUserWinProbability = this.calculateWinProbability(currentUserPower, opponentPower);
+      const currentUserWinProbability = this.calculateWinProbability(
+        currentUserPower,
+        opponentPower,
+      );
       const noisyCurrentUserPower = this.applyPowerNoise(currentUserPower);
       const noisyOpponentPower = this.applyPowerNoise(opponentPower);
       const delta = noisyCurrentUserPower - noisyOpponentPower;
@@ -296,33 +299,45 @@ export class BattlesService {
   }
 
   private toBattleEquipment(player: BattlePlayerRecord): BattlePlayerEquipmentDto {
-    return player.equipment.reduce<BattlePlayerEquipmentDto>((accumulator, equipmentSlot) => {
-      if (!equipmentSlot.item) {
+    return player.equipment.reduce<BattlePlayerEquipmentDto>(
+      (accumulator, equipmentSlot) => {
+        if (!equipmentSlot.item) {
+          return accumulator;
+        }
+
+        const equippedItem = {
+          id: equipmentSlot.item.id,
+          name: equipmentSlot.item.name,
+          slot_type: equipmentSlot.item.slotType,
+          description: equipmentSlot.item.description,
+          image_url: equipmentSlot.item.imageUrl,
+          strength: equipmentSlot.item.strength,
+          charisma: equipmentSlot.item.charisma,
+          agility: equipmentSlot.item.agility,
+          intelligence: equipmentSlot.item.intelligence,
+          price: equipmentSlot.item.price,
+          rarity: equipmentSlot.item.rarity,
+          durability: equipmentSlot.item.durability,
+          created_at: equipmentSlot.item.createdAt.toISOString(),
+        };
+
+        if (equipmentSlot.slotType === EquipmentSlotType.ACCESSORY) {
+          accumulator.accessories.push(equippedItem);
+          return accumulator;
+        }
+
+        const mappedSlot = this.mapEquipmentSlot(equipmentSlot.slotType);
+        accumulator[mappedSlot] = equippedItem;
+
         return accumulator;
-      }
-
-      const mappedSlot = this.mapEquipmentSlot(equipmentSlot.slotType);
-      accumulator[mappedSlot] = {
-        id: equipmentSlot.item.id,
-        name: equipmentSlot.item.name,
-        slot_type: equipmentSlot.item.slotType,
-        description: equipmentSlot.item.description,
-        image_url: equipmentSlot.item.imageUrl,
-        strength: equipmentSlot.item.strength,
-        charisma: equipmentSlot.item.charisma,
-        agility: equipmentSlot.item.agility,
-        intelligence: equipmentSlot.item.intelligence,
-        price: equipmentSlot.item.price,
-        rarity: equipmentSlot.item.rarity,
-        durability: equipmentSlot.item.durability,
-        created_at: equipmentSlot.item.createdAt.toISOString(),
-      };
-
-      return accumulator;
-    }, {});
+      },
+      { accessories: [] },
+    );
   }
 
-  private mapEquipmentSlot(slotType: EquipmentSlotType): keyof BattlePlayerEquipmentDto {
+  private mapEquipmentSlot(
+    slotType: Exclude<EquipmentSlotType, 'ACCESSORY'>,
+  ): Exclude<keyof BattlePlayerEquipmentDto, 'accessories'> {
     switch (slotType) {
       case EquipmentSlotType.HELMET:
         return 'helmet';
@@ -340,5 +355,4 @@ export class BattlesService {
         throw new BadRequestException(`Unsupported equipment slot: ${slotType}`);
     }
   }
-
 }

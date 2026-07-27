@@ -8,7 +8,11 @@ import {
 import { EquipmentSlotType, Prisma, type Account } from '@prisma/client';
 
 import { AuthenticatedUserDto } from '../auth/dto';
-import { AccountRepository, AuthCodeRepository, type UpdateAccountInput } from '../auth/repositories';
+import {
+  AccountRepository,
+  AuthCodeRepository,
+  type UpdateAccountInput,
+} from '../auth/repositories';
 import {
   AdminDeleteUserResponseDto,
   AdminUpdateUserDto,
@@ -203,12 +207,24 @@ export class UsersService {
         throw new BadRequestException('Item slot type is not supported for equipment');
       }
 
-      await this.userEquipmentRepository.setEquipmentByItemIdForUser(
-        itemId,
-        item.slotType,
-        accountId,
-        tx,
-      );
+      if (item.slotType === EquipmentSlotType.ACCESSORY) {
+        const wasEquipped = await this.userEquipmentRepository.addAccessoryByItemIdForUser(
+          itemId,
+          accountId,
+          tx,
+        );
+
+        if (!wasEquipped) {
+          throw new BadRequestException('All four accessory slots are occupied');
+        }
+      } else {
+        await this.userEquipmentRepository.setEquipmentByItemIdForUser(
+          itemId,
+          item.slotType,
+          accountId,
+          tx,
+        );
+      }
 
       return {
         equipped: await this.getUserEquipmentByUserId(accountId, tx),
@@ -238,12 +254,16 @@ export class UsersService {
         throw new BadRequestException('Item slot type is not supported for equipment');
       }
 
-      await this.userEquipmentRepository.clearEquipmentByItemIdForUser(
-        itemId,
-        item.slotType,
-        accountId,
-        tx,
-      );
+      if (item.slotType === EquipmentSlotType.ACCESSORY) {
+        await this.userEquipmentRepository.removeAccessoryByItemIdForUser(itemId, accountId, tx);
+      } else {
+        await this.userEquipmentRepository.clearEquipmentByItemIdForUser(
+          itemId,
+          item.slotType,
+          accountId,
+          tx,
+        );
+      }
 
       return {
         equipped: await this.getUserEquipmentByUserId(accountId, tx),
@@ -265,16 +285,27 @@ export class UsersService {
 
     const equipments = await this.userEquipmentRepository.getEquipmentByUserId(userId, tx);
 
-    return equipments.reduce<UserEquipmentDto>((accumulator, equipment) => {
-      if (!equipment.item) {
+    return equipments.reduce<UserEquipmentDto>(
+      (accumulator, equipment) => {
+        if (!equipment.item) {
+          return accumulator;
+        }
+
+        const equippedItem = this.toUserOwnedItem(equipment.item);
+
+        if (equipment.slotType === EquipmentSlotType.ACCESSORY) {
+          accumulator.accessories ??= [];
+          accumulator.accessories.push(equippedItem);
+          return accumulator;
+        }
+
+        const equipmentSlot = this.toEquipmentResponseSlot(equipment.slotType);
+        accumulator[equipmentSlot] = equippedItem;
+
         return accumulator;
-      }
-
-      const equipmentSlot = this.toEquipmentResponseSlot(equipment.slotType);
-      accumulator[equipmentSlot] = this.toUserOwnedItem(equipment.item);
-
-      return accumulator;
-    }, {});
+      },
+      { accessories: [] },
+    );
   }
 
   private toAuthenticatedUser(account: Account): AuthenticatedUserDto {
@@ -355,9 +386,7 @@ export class UsersService {
 
     const target = error.meta?.target;
     return Array.isArray(target)
-      ? target.some(
-          (field) => typeof field === 'string' && field.toLowerCase().includes('code'),
-        )
+      ? target.some((field) => typeof field === 'string' && field.toLowerCase().includes('code'))
       : typeof target === 'string' && target.toLowerCase().includes('code');
   }
 
@@ -411,12 +440,16 @@ export class UsersService {
       case EquipmentSlotType.LEFT_HAND:
       case EquipmentSlotType.RIGHT_HAND:
         return 'weapon';
+      case EquipmentSlotType.ACCESSORY:
+        return 'accessory';
       default:
         throw new BadRequestException(`Unsupported slot type: ${slotType}`);
     }
   }
 
-  private toEquipmentResponseSlot(slotType: EquipmentSlotType): keyof UserEquipmentDto {
+  private toEquipmentResponseSlot(
+    slotType: Exclude<EquipmentSlotType, 'ACCESSORY'>,
+  ): Exclude<keyof UserEquipmentDto, 'accessories'> {
     switch (slotType) {
       case EquipmentSlotType.HELMET:
         return 'helmet';
@@ -442,7 +475,8 @@ export class UsersService {
       slotType === EquipmentSlotType.PANTS ||
       slotType === EquipmentSlotType.BOOTS ||
       slotType === EquipmentSlotType.LEFT_HAND ||
-      slotType === EquipmentSlotType.RIGHT_HAND
+      slotType === EquipmentSlotType.RIGHT_HAND ||
+      slotType === EquipmentSlotType.ACCESSORY
     );
   }
 }

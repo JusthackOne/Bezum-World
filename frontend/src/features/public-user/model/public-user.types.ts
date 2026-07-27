@@ -40,7 +40,7 @@ export interface PublicUserItemsResponse {
   items: PublicUserItem[];
 }
 
-export type PublicUserItemType = "helmet" | "chest" | "pants" | "boots" | "weapon";
+export type PublicUserItemType = "helmet" | "chest" | "pants" | "boots" | "weapon" | "accessory";
 
 export type PublicEquipmentSlotType =
   | "HELMET"
@@ -48,7 +48,8 @@ export type PublicEquipmentSlotType =
   | "PANTS"
   | "BOOTS"
   | "LEFT_HAND"
-  | "RIGHT_HAND";
+  | "RIGHT_HAND"
+  | "ACCESSORY";
 
 export interface PublicUserEquipment {
   helmet?: PublicUserItem;
@@ -57,6 +58,7 @@ export interface PublicUserEquipment {
   boots?: PublicUserItem;
   leftWeapon?: PublicUserItem;
   rightWeapon?: PublicUserItem;
+  accessories?: PublicUserItem[];
 }
 
 export interface EquipItemResponse {

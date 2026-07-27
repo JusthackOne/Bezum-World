@@ -22,7 +22,10 @@ interface SeedUserEquipment {
   boots?: string;
   leftWeapon?: string;
   rightWeapon?: string;
+  accessories?: string[];
 }
+
+type SeedSingleEquipmentKey = Exclude<keyof SeedUserEquipment, 'accessories'>;
 
 interface SeedUser {
   id: string;
@@ -100,7 +103,7 @@ const SEED_DATA_DIR = join(SEED_ROOT_DIR, 'data');
 const SEED_ASSETS_DIR = join(SEED_ROOT_DIR, 'assets');
 const UPLOADS_DIR = join(ROOT_DIR, 'uploads');
 
-const SLOT_MAP: Record<keyof SeedUserEquipment, EquipmentSlotTypeValue> = {
+const SLOT_MAP: Record<SeedSingleEquipmentKey, EquipmentSlotTypeValue> = {
   helmet: EquipmentSlotType.HELMET,
   chest: EquipmentSlotType.ARMOR,
   pants: EquipmentSlotType.PANTS,
@@ -276,10 +279,7 @@ async function main(): Promise<void> {
         throw new Error(`Cannot resolve user for equipment: ${user.username}`);
       }
 
-      const equipmentEntries = Object.entries(user.equipment) as Array<
-        [keyof SeedUserEquipment, string]
-      >;
-      for (const [slotKey, itemCode] of equipmentEntries) {
+      for (const { slotType, itemCode, position } of getSeedEquipmentEntries(user.equipment)) {
         if (!itemCode) {
           continue;
         }
@@ -291,9 +291,10 @@ async function main(): Promise<void> {
 
         await tx.userEquipmentSlot.upsert({
           where: {
-            userId_slotType: {
+            userId_slotType_position: {
               userId,
-              slotType: SLOT_MAP[slotKey],
+              slotType,
+              position,
             },
           },
           update: {
@@ -301,7 +302,8 @@ async function main(): Promise<void> {
           },
           create: {
             userId,
-            slotType: SLOT_MAP[slotKey],
+            slotType,
+            position,
             itemId,
           },
         });
@@ -368,11 +370,7 @@ function validateSeedConsistency(users: SeedUser[], items: SeedItem[]): void {
       continue;
     }
 
-    const equipmentEntries = Object.entries(user.equipment) as Array<
-      [keyof SeedUserEquipment, string]
-    >;
-
-    for (const [slotKey, itemCode] of equipmentEntries) {
+    for (const { slotType, itemCode } of getSeedEquipmentEntries(user.equipment)) {
       const item = itemByCode.get(itemCode);
 
       if (!item) {
@@ -385,13 +383,40 @@ function validateSeedConsistency(users: SeedUser[], items: SeedItem[]): void {
         );
       }
 
-      if (item.slotType !== SLOT_MAP[slotKey]) {
+      if (item.slotType !== slotType) {
         throw new Error(
-          `User ${user.username} equips ${itemCode} into ${slotKey}, but item slot is ${item.slotType}`,
+          `User ${user.username} equips ${itemCode} into ${slotType}, but item slot is ${item.slotType}`,
         );
       }
     }
   }
+}
+
+function getSeedEquipmentEntries(equipment: SeedUserEquipment): Array<{
+  itemCode: string;
+  slotType: EquipmentSlotTypeValue;
+  position: number;
+}> {
+  const singleSlotEntries = (
+    Object.entries(equipment) as Array<[keyof SeedUserEquipment, string | string[]]>
+  )
+    .filter((entry): entry is [SeedSingleEquipmentKey, string] => entry[0] !== 'accessories')
+    .map(([slotKey, itemCode]) => ({
+      itemCode,
+      slotType: SLOT_MAP[slotKey],
+      position: 0,
+    }));
+  const accessoryEntries = (equipment.accessories ?? []).map((itemCode, position) => ({
+    itemCode,
+    slotType: EquipmentSlotType.ACCESSORY,
+    position,
+  }));
+
+  if (accessoryEntries.length > 4) {
+    throw new Error('Seed user equipment cannot contain more than four accessories');
+  }
+
+  return [...singleSlotEntries, ...accessoryEntries];
 }
 
 async function copySeedAssetToUploads(

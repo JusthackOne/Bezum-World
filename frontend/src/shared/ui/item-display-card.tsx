@@ -77,7 +77,7 @@ interface ItemDisplayCardProps<TItem extends ItemDisplay> {
   isShopCard?: boolean;
   showPrice?: boolean;
   originalPrice?: number;
-  pricePosition?: "center" | "left";
+  pricePosition?: "center" | "left" | "left-when-new";
   priceAccessory?: React.ReactNode;
 }
 
@@ -161,7 +161,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
             "absolute top-3 z-20",
             priceAccessory
               ? "inset-x-3 flex items-center justify-between gap-2"
-              : pricePosition === "left"
+              : pricePosition === "left" || (pricePosition === "left-when-new" && isNew)
                 ? "left-3"
                 : "left-1/2 -translate-x-1/2",
           )}

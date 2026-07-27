@@ -133,12 +133,19 @@ export function ItemTooltip({ item }: { item: ItemDisplay }) {
 
 interface ProfileItemSlotProps {
   label: string;
+  displayLabel?: string;
   item?: ItemDisplay;
   icon: ComponentType<{ className?: string }>;
   className?: string;
 }
 
-export function ProfileItemSlot({ label, item, icon: Icon, className }: ProfileItemSlotProps) {
+export function ProfileItemSlot({
+  label,
+  displayLabel,
+  item,
+  icon: Icon,
+  className,
+}: ProfileItemSlotProps) {
   const imageUrl = item?.image_url ? resolveAssetUrl(item.image_url) : null;
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const tooltip = useTemporaryTooltip();
@@ -172,7 +179,7 @@ export function ProfileItemSlot({ label, item, icon: Icon, className }: ProfileI
         <>
           <Icon className="text-muted-foreground/45 size-9" />
           <span className="bg-background/90 absolute right-1 bottom-1 rounded px-1 py-0.5 text-[10px] leading-none">
-            {label}
+            {displayLabel ?? label}
           </span>
         </>
       )}

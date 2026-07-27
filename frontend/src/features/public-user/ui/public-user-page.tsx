@@ -3,6 +3,7 @@
 import {
   CoinsIcon,
   FootprintsIcon,
+  GemIcon,
   HardHatIcon,
   PersonStandingIcon,
   ShieldIcon,
@@ -87,34 +88,47 @@ function UserEquipmentSection({
 
   return (
     <TooltipProvider>
-      <div
-        className="mx-auto inline-grid grid-cols-[repeat(3,5rem)] grid-rows-[repeat(4,5rem)] place-items-center gap-x-3 gap-y-2.5"
-        style={{
-          gridTemplateAreas: `
-            ". helmet ."
-            "left chest right"
-            ". pants ."
-            ". boots ."
-          `,
-        }}
-      >
-        <div className="flex justify-center" style={{ gridArea: "helmet" }}>
-          <ProfileItemSlot label="Helmet" icon={HardHatIcon} item={equipment.helmet} />
+      <div className="mx-auto flex flex-col items-center gap-2.5">
+        <div
+          className="inline-grid grid-cols-[repeat(3,5rem)] grid-rows-[repeat(4,5rem)] place-items-center gap-x-3 gap-y-2.5"
+          style={{
+            gridTemplateAreas: `
+              ". helmet ."
+              "left chest right"
+              ". pants ."
+              ". boots ."
+            `,
+          }}
+        >
+          <div className="flex justify-center" style={{ gridArea: "helmet" }}>
+            <ProfileItemSlot label="Helmet" icon={HardHatIcon} item={equipment.helmet} />
+          </div>
+          <div className="flex items-center justify-center" style={{ gridArea: "left" }}>
+            <ProfileItemSlot label="Left" icon={ShieldIcon} item={equipment.leftWeapon} />
+          </div>
+          <div className="flex justify-center" style={{ gridArea: "chest" }}>
+            <ProfileItemSlot label="Chest" icon={ShirtIcon} item={equipment.chest} />
+          </div>
+          <div className="flex items-center justify-center" style={{ gridArea: "right" }}>
+            <ProfileItemSlot label="Right" icon={SwordIcon} item={equipment.rightWeapon} />
+          </div>
+          <div className="flex justify-center" style={{ gridArea: "pants" }}>
+            <ProfileItemSlot label="Pants" icon={PersonStandingIcon} item={equipment.pants} />
+          </div>
+          <div className="flex justify-center" style={{ gridArea: "boots" }}>
+            <ProfileItemSlot label="Boots" icon={FootprintsIcon} item={equipment.boots} />
+          </div>
         </div>
-        <div className="flex items-center justify-center" style={{ gridArea: "left" }}>
-          <ProfileItemSlot label="Left" icon={ShieldIcon} item={equipment.leftWeapon} />
-        </div>
-        <div className="flex justify-center" style={{ gridArea: "chest" }}>
-          <ProfileItemSlot label="Chest" icon={ShirtIcon} item={equipment.chest} />
-        </div>
-        <div className="flex items-center justify-center" style={{ gridArea: "right" }}>
-          <ProfileItemSlot label="Right" icon={SwordIcon} item={equipment.rightWeapon} />
-        </div>
-        <div className="flex justify-center" style={{ gridArea: "pants" }}>
-          <ProfileItemSlot label="Pants" icon={PersonStandingIcon} item={equipment.pants} />
-        </div>
-        <div className="flex justify-center" style={{ gridArea: "boots" }}>
-          <ProfileItemSlot label="Boots" icon={FootprintsIcon} item={equipment.boots} />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <ProfileItemSlot
+              key={index}
+              label={`Accessory ${index + 1}`}
+              displayLabel={`Acc. ${index + 1}`}
+              icon={GemIcon}
+              item={equipment.accessories?.[index]}
+            />
+          ))}
         </div>
       </div>
     </TooltipProvider>
@@ -270,6 +284,7 @@ function UserItemsCard({
   canEquip,
   isEquipmentActionPending,
   isMarketplaceActionPending,
+  equipmentActionError,
   onEquipmentAction,
   onListForSale,
   onRemoveFromSale,
@@ -281,6 +296,7 @@ function UserItemsCard({
   canEquip: boolean;
   isEquipmentActionPending: boolean;
   isMarketplaceActionPending: boolean;
+  equipmentActionError: string | null;
   onEquipmentAction: (itemId: string, isEquipped: boolean) => void;
   onListForSale: (itemId: string, price: number) => Promise<void>;
   onRemoveFromSale: (itemId: string) => Promise<void>;
@@ -298,6 +314,7 @@ function UserItemsCard({
         equipment.boots?.id,
         equipment.leftWeapon?.id,
         equipment.rightWeapon?.id,
+        ...(equipment.accessories ?? []).map((accessory) => accessory.id),
       ].filter((itemId): itemId is string => Boolean(itemId)),
     );
   }, [equipment]);
@@ -316,6 +333,11 @@ function UserItemsCard({
         <CardContent
           className={cn("min-h-0 flex-1 space-y-4 overflow-x-hidden pr-4", hiddenScrollbarClass)}
         >
+          {equipmentActionError ? (
+            <p role="alert" className="text-destructive text-sm">
+              {equipmentActionError}
+            </p>
+          ) : null}
           {isPending ? (
             <p className="text-muted-foreground text-sm">Loading items...</p>
           ) : items.length === 0 ? (
@@ -331,7 +353,7 @@ function UserItemsCard({
                     key={item.id}
                     item={item}
                     onOpenDetails={setSelectedItem}
-                    pricePosition="left"
+                    pricePosition="left-when-new"
                     actionLabel={canEquip ? actionLabel : undefined}
                     onAction={
                       canEquip
@@ -341,23 +363,23 @@ function UserItemsCard({
                     actionDisabled={isEquipmentActionPending}
                     actionAriaLabel={`${actionLabel} ${item.name}`}
                     secondaryActionLabel={
-                      canEquip
-                        ? item.isListedForSale
-                          ? (
-                              <span className="inline-flex items-center justify-center gap-1">
-                                <span>Remove from Sale</span>
-                                <span aria-hidden="true">(</span>
-                                <span className="inline-flex items-center gap-1">
-                                  <CoinsIcon className="size-3 text-amber-300" />
-                                  <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text font-semibold tabular-nums text-transparent">
-                                    {formatBalance(item.listingPrice ?? 0)}
-                                  </span>
-                                </span>
-                                <span aria-hidden="true">)</span>
+                      canEquip ? (
+                        item.isListedForSale ? (
+                          <span className="inline-flex items-center justify-center gap-1">
+                            <span>Remove from Sale</span>
+                            <span aria-hidden="true">(</span>
+                            <span className="inline-flex items-center gap-1">
+                              <CoinsIcon className="size-3 text-amber-300" />
+                              <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text font-semibold tabular-nums text-transparent">
+                                {formatBalance(item.listingPrice ?? 0)}
                               </span>
-                            )
-                          : "List for Sale"
-                        : undefined
+                            </span>
+                            <span aria-hidden="true">)</span>
+                          </span>
+                        ) : (
+                          "List for Sale"
+                        )
+                      ) : undefined
                     }
                     onSecondaryAction={
                       canEquip
@@ -434,6 +456,7 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
   const profileQuery = usePublicUserProfileQuery(username);
   const itemsQuery = usePublicUserItemsQuery(username);
   const [activeMobileSection, setActiveMobileSection] = useState<MobileProfileSection>("profile");
+  const [equipmentActionError, setEquipmentActionError] = useState<string | null>(null);
   const equipmentQuery = useUserEquipmentQuery(
     profileQuery.data?.id ?? "",
     Boolean(profileQuery.data?.id),
@@ -486,7 +509,7 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
 
   return (
     <section className="min-h-screen overflow-x-hidden p-4 sm:p-6 lg:h-[100dvh] lg:overflow-hidden lg:p-8">
-      <div className="mx-auto grid w-full max-w-[110rem] gap-6 lg:h-full lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="mx-auto grid w-full max-w-[110rem] gap-6 lg:h-full lg:grid-cols-[26rem_minmax(0,1fr)]">
         <div className="lg:hidden">
           <div className="grid grid-cols-2 gap-2">
             <Button
@@ -556,17 +579,23 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
               isMarketplaceActionPending={
                 listForSaleMutation.isPending || removeFromSaleMutation.isPending
               }
+              equipmentActionError={equipmentActionError}
               onEquipmentAction={(itemId, isEquipped) => {
                 if (!profileQuery.data) {
                   return;
                 }
 
                 const mutation = isEquipped ? unequipMutation : equipMutation;
+                setEquipmentActionError(null);
                 mutation.mutate(itemId, {
                   onSuccess: (response) =>
                     profileQuery.data
                       ? updateEquipmentCache(queryClient, profileQuery.data, response)
                       : undefined,
+                  onError: (error) =>
+                    setEquipmentActionError(
+                      error instanceof Error ? error.message : "Failed to update equipment.",
+                    ),
                 });
               }}
               onListForSale={async (itemId, price) => {

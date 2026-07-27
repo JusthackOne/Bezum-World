@@ -1,7 +1,7 @@
 export interface BattleEquipmentItem {
   id: string;
   name: string;
-  slot_type: "HELMET" | "ARMOR" | "PANTS" | "BOOTS" | "LEFT_HAND" | "RIGHT_HAND";
+  slot_type: "HELMET" | "ARMOR" | "PANTS" | "BOOTS" | "LEFT_HAND" | "RIGHT_HAND" | "ACCESSORY";
   description: string | null;
   image_url: string | null;
   strength: number | null;
@@ -21,6 +21,7 @@ export interface BattlePlayerEquipment {
   boots?: BattleEquipmentItem;
   leftWeapon?: BattleEquipmentItem;
   rightWeapon?: BattleEquipmentItem;
+  accessories: BattleEquipmentItem[];
 }
 
 export interface BattlePlayerStats {

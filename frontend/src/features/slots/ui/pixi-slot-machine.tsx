@@ -443,7 +443,7 @@ export function PixiSlotMachine({ request, onSpinFinished }: PixiSlotMachineProp
   return (
     <div
       ref={hostRef}
-      className="aspect-[760/470] w-full max-w-full overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_50%_45%,rgba(109,40,217,.22),transparent_60%)] sm:rounded-[1.25rem]"
+      className="aspect-760/470 w-full max-w-full overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_50%_45%,rgba(109,40,217,.22),transparent_60%)] sm:rounded-[1.25rem]"
     >
       <div className="flex h-full items-center justify-center text-xs tracking-[0.22em] text-violet-200/60">
         LOADING RELICS...

@@ -64,18 +64,34 @@ export class ItemsService {
     payload: CreateItemDto,
     imageUrl?: string,
   ): Promise<CreateItemResponseDto> {
-    const item = await this.itemRepository.updateById(itemId, {
-      name: payload.name,
-      description: payload.description ?? null,
-      ...(imageUrl !== undefined ? { imageUrl } : {}),
-      strength: payload.strength ?? null,
-      charisma: payload.charisma ?? null,
-      agility: payload.agility ?? null,
-      intelligence: payload.intelligence ?? null,
-      price: payload.price,
-      rarity: payload.rarity,
-      slotType: payload.slotType,
-      durability: payload.durability ?? null,
+    const item = await this.prisma.$transaction(async (tx) => {
+      const existingItem = await this.itemRepository.findById(itemId, tx);
+
+      if (!existingItem) {
+        return null;
+      }
+
+      if (existingItem.slotType !== payload.slotType) {
+        await this.itemRepository.clearEquipmentReference(itemId, tx);
+      }
+
+      return this.itemRepository.updateById(
+        itemId,
+        {
+          name: payload.name,
+          description: payload.description ?? null,
+          ...(imageUrl !== undefined ? { imageUrl } : {}),
+          strength: payload.strength ?? null,
+          charisma: payload.charisma ?? null,
+          agility: payload.agility ?? null,
+          intelligence: payload.intelligence ?? null,
+          price: payload.price,
+          rarity: payload.rarity,
+          slotType: payload.slotType,
+          durability: payload.durability ?? null,
+        },
+        tx,
+      );
     });
 
     if (!item) {
@@ -250,7 +266,10 @@ export class ItemsService {
   }
 
   async deleteByAdmin(itemId: string): Promise<AdminDeleteItemResponseDto> {
-    const wasDeleted = await this.itemRepository.deleteById(itemId);
+    const wasDeleted = await this.prisma.$transaction(async (tx) => {
+      await this.itemRepository.clearEquipmentReference(itemId, tx);
+      return this.itemRepository.deleteById(itemId, tx);
+    });
 
     if (!wasDeleted) {
       throw new NotFoundException('Item is not found');

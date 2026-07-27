@@ -38,6 +38,12 @@ export class UserEquipmentDto {
     type: UserOwnedItemDto,
   })
   rightWeapon?: UserOwnedItemDto;
+
+  @ApiProperty({
+    description: 'Equipped accessories in display order (maximum four)',
+    type: [UserOwnedItemDto],
+  })
+  accessories!: UserOwnedItemDto[];
 }
 
 export class EquipItemByUserResponse {

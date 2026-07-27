@@ -1,7 +1,7 @@
 import { EquipmentSlotType, ItemRarity } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export type UserItemType = 'helmet' | 'chest' | 'pants' | 'boots' | 'weapon';
+export type UserItemType = 'helmet' | 'chest' | 'pants' | 'boots' | 'weapon' | 'accessory';
 
 export class UserOwnedItemDto {
   @ApiProperty({
@@ -18,7 +18,7 @@ export class UserOwnedItemDto {
 
   @ApiProperty({
     description: 'Logical item type used by equipment UI',
-    enum: ['helmet', 'chest', 'pants', 'boots', 'weapon'],
+    enum: ['helmet', 'chest', 'pants', 'boots', 'weapon', 'accessory'],
     example: 'weapon',
   })
   type!: UserItemType;
