@@ -4,11 +4,14 @@
 
 | Parameter                     | Coefficient |
 | ----------------------------- | ----------: |
-| Strength                      |      `0.35` |
+| Strength                      |      `0.25` |
 | Agility                       |      `0.25` |
-| Intelligence                  |      `0.20` |
-| Charisma                      |      `0.20` |
+| Intelligence                  |      `0.25` |
+| Charisma                      |      `0.25` |
 | Gold per Effective Item Power |         `4` |
+
+All four item attributes deliberately have the same economic-value coefficient, and their
+coefficients sum to `1`. This does not change the separate Battle Power formula.
 
 In the current Battle logic, an item's `Agility` increases the player's `Endurance`.
 
@@ -16,10 +19,10 @@ In the current Battle logic, an item's `Agility` increases the player's `Enduran
 
 ```text
 ItemPower =
-  0.35 × Strength
+  0.25 × Strength
   + 0.25 × Agility
-  + 0.20 × Intelligence
-  + 0.20 × Charisma
+  + 0.25 × Intelligence
+  + 0.25 × Charisma
 ```
 
 Durability modifies the item's economic value:
@@ -44,7 +47,7 @@ Complete formula:
 ItemBalancePercent =
   ActualPrice
   / (
-      (0.35STR + 0.25AGI + 0.20INT + 0.20CHA)
+      (0.25STR + 0.25AGI + 0.25INT + 0.25CHA)
       × (0.5 + 0.5 × Durability / 100)
       × 4
     )
@@ -71,10 +74,10 @@ Intelligence = 9
 Charisma = 5
 Durability = 41
 
-ItemPower = 12.5
+ItemPower = 12
 DurabilityMultiplier = 0.705
-ExpectedPriceGold = 12.5 × 0.705 × 4 = 35.25
-ItemBalancePercent = 870 / 35.25 × 100 = 2,468.09%
+ExpectedPriceGold = 12 × 0.705 × 4 = 33.84
+ItemBalancePercent = 870 / 33.84 × 100 = 2,570.92%
 ```
 
 Result: the item is much too expensive.

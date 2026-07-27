@@ -6,24 +6,24 @@ This model converts Gold, Game Score, and permanent player attributes into a sha
 
 The model is intended for an initial balance check. It does not replace analysis of actual player progression data.
 
-## Attribute Weight Source
+## Attribute Weights
 
-The attribute weights come from Battle Power formula version 1:
+Task reward attributes use the same equal weighting as Item Value Balancing:
 
 ```text
-Battle Power =
-    Strength × 0.35
+Task Attribute Value =
+    Strength × 0.25
   + Endurance × 0.25
-  + Intelligence × 0.20
-  + Charisma × 0.20
+  + Intelligence × 0.25
+  + Charisma × 0.25
 ```
 
-Source: `backend/src/modules/battles/battle-power.ts`.
+These task-economy weights are independent from the separate Battle Power formula.
 
 The following scale is used to keep the calculations in whole numbers:
 
 ```text
-1 Battle Power = 1000 RV
+1 normalized reward-value unit = 1000 RV
 ```
 
 This scale does not change the relative attribute weights.
@@ -32,31 +32,32 @@ This scale does not change the relative attribute weights.
 
 | Reward component | RV coefficient | Basis                                       |
 | ---------------- | -------------: | ------------------------------------------- |
-| Gold             |            250 | Configured economy weight                   |
+| Gold             |            100 | `0.10 × 1,000` configured economy weight    |
 | Game Score       |            250 | Configured economy weight                   |
-| Strength         |            350 | `0.35 × 1,000`                              |
+| Strength         |            250 | `0.25 × 1,000`                              |
 | Endurance        |            250 | `0.25 × 1,000`                              |
-| Intelligence     |            200 | `0.20 × 1,000`                              |
-| Charisma         |            200 | `0.20 × 1,000`                              |
+| Intelligence     |            250 | `0.25 × 1,000`                              |
+| Charisma         |            250 | `0.25 × 1,000`                              |
 
-One point of Strength is worth `1.75` times one point of Intelligence or Charisma because that ratio is used by the Battle formula.
+The four attribute coefficients sum to `1,000 RV`, so every permanent attribute point has the
+same task reward value.
 
 ## Actual Reward Value Formula
 
 ```text
 ActualRV =
-    Gold × 250
+    Gold × 100
   + GameScore × 250
-  + Strength × 350
+  + Strength × 250
   + Endurance × 250
-  + Intelligence × 200
-  + Charisma × 200
+  + Intelligence × 250
+  + Charisma × 250
 ```
 
 Short form:
 
 ```text
-ActualRV = 250G + 250GS + 350STR + 250END + 200INT + 200CHA
+ActualRV = 100G + 250GS + 250STR + 250END + 250INT + 250CHA
 ```
 
 Every missing reward component is treated as zero.
@@ -107,7 +108,7 @@ Complete expression:
 
 ```text
 BalancePercent =
-  (250G + 250GS + 350STR + 250END + 200INT + 200CHA)
+  (100G + 250GS + 250STR + 250END + 250INT + 250CHA)
   / (DailyBaseRV × TaskTypeMultiplier)
   × 100
 ```
@@ -137,8 +138,8 @@ Reward:
 Actual value:
 
 ```text
-ActualRV = 4×250 + 28×250 + 8×350 + 4×200 + 4×250
-ActualRV = 12,600 RV
+ActualRV = 4×100 + 28×250 + 8×250 + 4×250 + 4×250
+ActualRV = 11,400 RV
 ```
 
 Weekly target value:
@@ -150,16 +151,18 @@ TargetRV = 2,000 × 7 = 14,000 RV
 Balance result:
 
 ```text
-BalancePercent = 12,600 / 14,000 × 100 = 90%
+BalancePercent = 11,400 / 14,000 × 100 = 81.43%
 ```
 
-The result is within the `90–110%` range, so the reward is balanced.
+The result is within the `75–89%` range, so the reward is slightly too low.
 
 ## Model Maintenance
 
-Attribute weights must be updated whenever the Battle Power formula changes. If `BATTLES_FORMULA_VERSION` changes, review this document as well.
+Task attribute weights are intentionally aligned with `docs/item-value-balancing.md`. If those
+economic weights change, review this document and the task balance indicator together.
 
-The Gold, Game Score, and `DailyBaseRV` coefficients do not come from Battle Power. They are configurable economy parameters and should be adjusted using:
+Gold, Game Score, attribute weights, and `DailyBaseRV` are configurable economy parameters and
+should be adjusted using:
 
 - average rewards per completed task;
 - average tasks completed per day;

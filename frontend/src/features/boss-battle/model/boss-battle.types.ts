@@ -26,6 +26,7 @@ export interface BossRewardItem {
   charisma: number | null;
   agility: number | null;
   intelligence: number | null;
+  price: number;
   rarity: ItemDisplayRarity;
   slotType: ItemDisplaySlotType;
   durability: number | null;

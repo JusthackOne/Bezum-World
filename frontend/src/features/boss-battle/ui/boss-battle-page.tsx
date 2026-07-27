@@ -36,7 +36,13 @@ import type {
 import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { formatBalance, resolveAssetUrl } from "@/shared/lib/item-display";
 import { cn } from "@/shared/lib/utils";
-import { AttributeBadge, AvatarImage, GameScoreIcon, ItemDisplayCard } from "@/shared/ui";
+import {
+  AttributeBadge,
+  AvatarImage,
+  GameScoreIcon,
+  ItemDetailsModal,
+  ItemDisplayCard,
+} from "@/shared/ui";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import {
@@ -389,6 +395,7 @@ function BossAttackControl({
 }
 
 function RewardCard({ reward, place }: { reward: BossReward; place: number }) {
+  const [isItemDetailsOpen, setIsItemDetailsOpen] = useState(false);
   const placeStyle = getTopPlaceStyle(place);
   const item = reward.itemTemplate
     ? {
@@ -400,7 +407,7 @@ function RewardCard({ reward, place }: { reward: BossReward; place: number }) {
         charisma: reward.itemTemplate.charisma,
         agility: reward.itemTemplate.agility,
         intelligence: reward.itemTemplate.intelligence,
-        price: 0,
+        price: reward.itemTemplate.price,
         rarity: reward.itemTemplate.rarity,
         slotType: reward.itemTemplate.slotType,
         durability: reward.itemTemplate.durability,
@@ -439,7 +446,19 @@ function RewardCard({ reward, place }: { reward: BossReward; place: number }) {
       </CardHeader>
       <CardContent className="space-y-2 p-3">
         {item ? (
-          <ItemDisplayCard item={item} showPrice={false} className="mx-auto min-h-44 max-w-48" />
+          <>
+            <ItemDisplayCard
+              item={item}
+              showPrice={false}
+              className="mx-auto min-h-72 w-full max-w-64"
+              onOpenDetails={() => setIsItemDetailsOpen(true)}
+            />
+            <ItemDetailsModal
+              item={item}
+              open={isItemDetailsOpen}
+              onOpenChange={setIsItemDetailsOpen}
+            />
+          </>
         ) : null}
         <div className="flex flex-wrap justify-center gap-1.5">
           {reward.goldAmount > 0 ? <RewardResource type="gold" value={reward.goldAmount} /> : null}
@@ -510,7 +529,7 @@ function RewardReceivedModal({
         charisma: reward.item.charisma,
         agility: reward.item.agility,
         intelligence: reward.item.intelligence,
-        price: 0,
+        price: reward.item.price,
         rarity: reward.item.rarity,
         slotType: reward.item.slotType,
         durability: reward.item.durability,

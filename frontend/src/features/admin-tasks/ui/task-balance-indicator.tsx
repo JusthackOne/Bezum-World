@@ -18,6 +18,16 @@ const taskTypeMultipliers: Record<TaskType, number> = {
   event: 14,
 };
 
+const REWARD_VALUE_SCALE = 1_000;
+const rewardCoefficients = {
+  gold: 0.1,
+  gameScore: 0.25,
+  strength: 0.25,
+  endurance: 0.25,
+  intelligence: 0.25,
+  charisma: 0.25,
+} as const;
+
 function rewardValue(value: unknown): number {
   const parsed = typeof value === "number" || typeof value === "string" ? Number(value) : 0;
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
@@ -41,12 +51,13 @@ export function TaskBalanceIndicator({
   rewardCharisma,
 }: TaskBalanceIndicatorProps) {
   const actualRewardValue =
-    rewardValue(rewardMoney) * 250 +
-    rewardValue(rewardGameScore) * 250 +
-    rewardValue(rewardStrength) * 350 +
-    rewardValue(rewardEndurance) * 250 +
-    rewardValue(rewardIntelligence) * 200 +
-    rewardValue(rewardCharisma) * 200;
+    (rewardValue(rewardMoney) * rewardCoefficients.gold +
+      rewardValue(rewardGameScore) * rewardCoefficients.gameScore +
+      rewardValue(rewardStrength) * rewardCoefficients.strength +
+      rewardValue(rewardEndurance) * rewardCoefficients.endurance +
+      rewardValue(rewardIntelligence) * rewardCoefficients.intelligence +
+      rewardValue(rewardCharisma) * rewardCoefficients.charisma) *
+    REWARD_VALUE_SCALE;
   const targetRewardValue = 2_000 * taskTypeMultipliers[type];
   const balancePercent = (actualRewardValue / targetRewardValue) * 100;
   const description = getBalanceDescription(balancePercent);
