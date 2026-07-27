@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { refreshCurrentUserProfile } from "@/features/auth/api";
 import { queryKeys } from "@/shared/config/query-keys";
 import {
   attackBoss,
@@ -51,6 +52,7 @@ export function useClaimBossRewardMutation(battleId: string | undefined) {
     mutationFn: () => claimBossReward(battleId!),
     onSuccess: async () => {
       await Promise.all([
+        refreshCurrentUserProfile(queryClient),
         queryClient.invalidateQueries({ queryKey: queryKeys.currentBossBattle }),
         queryClient.invalidateQueries({ queryKey: queryKeys.bossBattleById(battleId!) }),
         queryClient.invalidateQueries({ queryKey: ["boss-battles", battleId, "leaderboard"] }),

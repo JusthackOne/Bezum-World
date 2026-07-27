@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { UserCircle2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import { useBattlePlayersQuery, useStartBattleMutation } from "@/features/battles/api";
 import type { BattlePlayer } from "@/features/battles/model/battles.types";
 import { publicUserRoutes } from "@/features/public-user/routes";
@@ -113,8 +112,6 @@ function PlayerRow({
 export function BattlesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const session = useClientAuthStore((state) => state.session);
-  const setSession = useClientAuthStore((state) => state.setSession);
 
   const playersQuery = useBattlePlayersQuery();
   const startBattleMutation = useStartBattleMutation();
@@ -158,17 +155,6 @@ export function BattlesPage() {
 
     try {
       const response = await startBattleMutation.mutateAsync(player.userId);
-
-      if (session) {
-        setSession({
-          ...session,
-          user: {
-            ...session.user,
-            balance: response.updatedCurrentUserBalance,
-            gameScore: response.updatedCurrentUserGameScore,
-          },
-        });
-      }
 
       queryClient.setQueryData(
         queryKeys.battlesPlayers,

@@ -634,8 +634,6 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
   const [trailHp, setTrailHp] = useState<number | null>(null);
   const [claimedReward, setClaimedReward] = useState<BossClaimRewardResult | null>(null);
   const [showDefeatEffect, setShowDefeatEffect] = useState(false);
-  const setSession = useClientAuthStore((state) => state.setSession);
-  const session = useClientAuthStore((state) => state.session);
   const damageTimer = useRef<number | null>(null),
     trailTimer = useRef<number | null>(null),
     defeatTimer = useRef<number | null>(null);
@@ -772,20 +770,6 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
               onClick={async () => {
                 try {
                   const reward = await claim.mutateAsync();
-                  if (session) {
-                    setSession({
-                      ...session,
-                      user: {
-                        ...session.user,
-                        balance: session.user.balance + reward.gold,
-                        gameScore: session.user.gameScore + reward.gameScore,
-                        strength: session.user.strength + reward.attributes.strength,
-                        charisma: session.user.charisma + reward.attributes.charisma,
-                        endurance: session.user.endurance + reward.attributes.endurance,
-                        intelligence: session.user.intelligence + reward.attributes.intelligence,
-                      },
-                    });
-                  }
                   setClaimedReward(reward);
                   toast.success("Reward claimed");
                 } catch (e) {
