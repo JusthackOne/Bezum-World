@@ -46,7 +46,6 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 const DEFAULT_ADMIN_TASKS_PAGE = 1;
 const DEFAULT_ADMIN_TASKS_LIMIT = 20;
 const DEFAULT_DAILY_SUBMISSION_LIMIT = 1;
-const EVENT_COMPLETION_FEED_VISIBILITY_MS = 3 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class TasksService {
@@ -370,10 +369,6 @@ export class TasksService {
     const dailyRange = this.getUtcDayRange(now);
     const weeklyRange = this.getUtcIsoWeekRange(now);
 
-    const completedEventVisibleAfter = new Date(
-      now.getTime() - EVENT_COMPLETION_FEED_VISIBILITY_MS,
-    );
-
     const [tasks, completedEventSubmissions, dailySubmissionCounts, weeklySubmissionCounts] =
       await Promise.all([
         this.taskRepository.findManyForClient({
@@ -395,22 +390,18 @@ export class TasksService {
     const completedEventSubmissionsByTaskId = this.toCompletedEventSubmissionsByTaskId(
       completedEventSubmissions,
     );
-    const visibleTasks = tasks.filter((task) =>
-      this.shouldShowClientTask(
+    const clientTasks = tasks.map((task) =>
+      this.toClientTaskResponse(
         task,
         completedEventSubmissionsByTaskId,
-        completedEventVisibleAfter,
+        dailySubmissionCounts,
+        weeklySubmissionCounts,
       ),
     );
 
     return {
-      items: visibleTasks.map((task) =>
-        this.toClientTaskResponse(
-          task,
-          completedEventSubmissionsByTaskId,
-          dailySubmissionCounts,
-          weeklySubmissionCounts,
-        ),
+      items: clientTasks.sort(
+        (firstTask, secondTask) => Number(secondTask.isAvailable) - Number(firstTask.isAvailable),
       ),
     };
   }
@@ -922,26 +913,5 @@ export class TasksService {
     submissions: CompletedEventTaskSubmission[],
   ): Map<string, CompletedEventTaskSubmission> {
     return new Map(submissions.map((submission) => [submission.taskId, submission]));
-  }
-
-  private shouldShowClientTask(
-    task: Task,
-    completedEventSubmissionsByTaskId: Map<string, CompletedEventTaskSubmission>,
-    completedEventVisibleAfter: Date,
-  ): boolean {
-    if (task.type !== TaskType.event) {
-      return true;
-    }
-
-    const completedEventSubmission = completedEventSubmissionsByTaskId.get(task.id);
-
-    if (!completedEventSubmission) {
-      return true;
-    }
-
-    return (
-      completedEventSubmission.proofImage !== null &&
-      completedEventSubmission.createdAt >= completedEventVisibleAfter
-    );
   }
 }

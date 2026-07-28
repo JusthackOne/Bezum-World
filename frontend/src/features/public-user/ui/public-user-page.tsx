@@ -30,7 +30,7 @@ import type {
 } from "@/features/public-user/model/public-user.types";
 import { queryKeys } from "@/shared/config/query-keys";
 import { formatBalance } from "@/shared/lib/item-display";
-import { useTemporaryTooltip } from "@/shared/lib/use-temporary-tooltip";
+import { useClickTooltip } from "@/shared/lib/use-click-tooltip";
 import type { ItemDisplay } from "@/shared/model/item-display.types";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
@@ -148,27 +148,24 @@ function TappableProfileMetric({
   className: string;
   valueClassName: string;
 }) {
-  const tooltip = useTemporaryTooltip();
+  const tooltip = useClickTooltip();
 
   return (
-    <Tooltip open={tooltip.isOpen} onOpenChange={tooltip.setIsOpen}>
+    <Tooltip open={tooltip.isOpen} onOpenChange={tooltip.handleOpenChange}>
       <TooltipTrigger asChild>
         <button
           type="button"
           className={cn(
-            "w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "w-full touch-manipulation text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             className,
           )}
           aria-label={label}
-          onPointerUp={(event) => {
-            if (event.pointerType !== "mouse") {
-              tooltip.showTemporarily();
-            }
-          }}
+          data-click-tooltip-boundary={tooltip.boundaryId}
+          onClick={tooltip.pinOpen}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
-              tooltip.showTemporarily();
+              tooltip.pinOpen();
             }
           }}
         >
@@ -182,7 +179,7 @@ function TappableProfileMetric({
         </button>
       </TooltipTrigger>
 
-      <TooltipContent side="top" sideOffset={6}>
+      <TooltipContent data-click-tooltip-boundary={tooltip.boundaryId} side="top" sideOffset={6}>
         {label}
       </TooltipContent>
     </Tooltip>

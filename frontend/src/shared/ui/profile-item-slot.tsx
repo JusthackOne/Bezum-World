@@ -3,7 +3,7 @@
 import { type ComponentType, useState } from "react";
 
 import { getItemAttributeRows, resolveAssetUrl } from "@/shared/lib/item-display";
-import { useTemporaryTooltip } from "@/shared/lib/use-temporary-tooltip";
+import { useClickTooltip } from "@/shared/lib/use-click-tooltip";
 import { type ItemDisplay } from "@/shared/model/item-display.types";
 import { cn } from "@/shared/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
@@ -148,7 +148,7 @@ export function ProfileItemSlot({
 }: ProfileItemSlotProps) {
   const imageUrl = item?.image_url ? resolveAssetUrl(item.image_url) : null;
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
-  const tooltip = useTemporaryTooltip();
+  const tooltip = useClickTooltip();
   const hasImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
   const rarityStyle = item
     ? (equipmentRarityStyles[item.rarity] ?? {
@@ -204,24 +204,21 @@ export function ProfileItemSlot({
   const tooltipBorderClassName = rarityStyle?.tooltipBorderClassName ?? "border-border shadow-sm";
 
   return (
-    <Tooltip open={tooltip.isOpen} onOpenChange={tooltip.setIsOpen}>
+    <Tooltip open={tooltip.isOpen} onOpenChange={tooltip.handleOpenChange}>
       <TooltipTrigger asChild>
         <button
           type="button"
           className={cn(
             triggerClassName,
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           )}
           aria-label={item.name}
-          onPointerUp={(event) => {
-            if (event.pointerType !== "mouse") {
-              tooltip.showTemporarily();
-            }
-          }}
+          data-click-tooltip-boundary={tooltip.boundaryId}
+          onClick={tooltip.pinOpen}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
-              tooltip.showTemporarily();
+              tooltip.pinOpen();
             }
           }}
         >
@@ -229,6 +226,7 @@ export function ProfileItemSlot({
         </button>
       </TooltipTrigger>
       <TooltipContent
+        data-click-tooltip-boundary={tooltip.boundaryId}
         className={cn("border-2 bg-card text-foreground w-64 p-3", tooltipBorderClassName)}
         sideOffset={8}
       >

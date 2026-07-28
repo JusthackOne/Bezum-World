@@ -4,6 +4,7 @@ import { BrainIcon, CoinsIcon, DumbbellIcon, ShieldIcon, SparklesIcon } from "lu
 import { type ComponentType } from "react";
 
 import { formatBalance } from "@/shared/lib/item-display";
+import { useClickTooltip } from "@/shared/lib/use-click-tooltip";
 import { cn } from "@/shared/lib/utils";
 import { GameScoreIcon } from "@/shared/ui/game-score-icon";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
@@ -98,16 +99,32 @@ export function RewardBadge({ reward, showPlusSign = true, className }: RewardBa
   const visual = rewardVisuals[reward.kind];
   const Icon = visual.icon;
   const formattedValue = visual.formatValue(reward.value);
+  const tooltip = useClickTooltip();
 
   return (
-    <Tooltip>
+    <Tooltip open={tooltip.isOpen} onOpenChange={tooltip.handleOpenChange}>
       <TooltipTrigger asChild>
         <span
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-semibold tabular-nums",
+            "inline-flex touch-manipulation items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-semibold tabular-nums",
             visual.containerClassName,
             className,
           )}
+          role="button"
+          tabIndex={0}
+          aria-label={`${visual.label}: ${formattedValue}`}
+          data-click-tooltip-boundary={tooltip.boundaryId}
+          onClick={(event) => {
+            event.stopPropagation();
+            tooltip.pinOpen();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              event.stopPropagation();
+              tooltip.pinOpen();
+            }
+          }}
         >
           <Icon className={cn("size-4 shrink-0", visual.iconClassName)} />
           <span className={visual.valueClassName}>
@@ -116,7 +133,7 @@ export function RewardBadge({ reward, showPlusSign = true, className }: RewardBa
           </span>
         </span>
       </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={6}>
+      <TooltipContent data-click-tooltip-boundary={tooltip.boundaryId} side="top" sideOffset={6}>
         {visual.label}
       </TooltipContent>
     </Tooltip>
