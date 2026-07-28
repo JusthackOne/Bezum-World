@@ -9,6 +9,11 @@ export interface EnvironmentVariables {
   REDIS_DB: number;
   REDIS_PASSWORD?: string;
   QUEUE_DEFAULT_NAME: string;
+  TELEGRAM_NOTIFICATIONS_ENABLED: boolean;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHAT_ID?: string;
+  TELEGRAM_PROXY_URL?: string;
+  TELEGRAM_REQUEST_TIMEOUT_MS: number;
   AUTH_JWT_ACCESS_SECRET: string;
   AUTH_JWT_REFRESH_SECRET: string;
   AUTH_ACCESS_TOKEN_TTL_SECONDS: number;

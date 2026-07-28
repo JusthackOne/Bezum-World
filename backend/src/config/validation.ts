@@ -46,14 +46,9 @@ export const envValidationSchema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
-    APP_TIME_ZONE: z
-      .string()
-      .trim()
-      .min(1)
-      .default('UTC')
-      .refine(isValidTimeZone, {
-        message: 'APP_TIME_ZONE must be a valid IANA time zone',
-      }),
+    APP_TIME_ZONE: z.string().trim().min(1).default('UTC').refine(isValidTimeZone, {
+      message: 'APP_TIME_ZONE must be a valid IANA time zone',
+    }),
     DATABASE_URL: postgresUrlSchema,
     REDIS_HOST: z
       .string()
@@ -65,6 +60,21 @@ export const envValidationSchema = z
     REDIS_DB: z.coerce.number().int().min(0).default(0),
     REDIS_PASSWORD: z.string().optional(),
     QUEUE_DEFAULT_NAME: z.string().min(1).default('default'),
+    TELEGRAM_NOTIFICATIONS_ENABLED: booleanFromEnv.default(false),
+    TELEGRAM_BOT_TOKEN: z.string().trim().optional(),
+    TELEGRAM_CHAT_ID: z
+      .string()
+      .trim()
+      .regex(/^-?\d+$/)
+      .optional(),
+    TELEGRAM_PROXY_URL: z
+      .string()
+      .url()
+      .refine((value) => ['http:', 'https:'].includes(new URL(value).protocol), {
+        message: 'TELEGRAM_PROXY_URL must use http:// or https:// protocol',
+      })
+      .optional(),
+    TELEGRAM_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(10_000),
     AUTH_JWT_ACCESS_SECRET: z.string().min(16),
     AUTH_JWT_REFRESH_SECRET: z.string().min(16),
     AUTH_ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
@@ -74,7 +84,22 @@ export const envValidationSchema = z
     AUTH_ADMIN_USERNAME: z.string().trim().min(3).max(64),
     AUTH_ADMIN_PASSWORD: z.string().min(8),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((config, context) => {
+    if (!config.TELEGRAM_NOTIFICATIONS_ENABLED) {
+      return;
+    }
+
+    for (const key of ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'TELEGRAM_PROXY_URL'] as const) {
+      if (!config[key]) {
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} is required when Telegram notifications are enabled`,
+        });
+      }
+    }
+  });
 
 export const validateEnvironment = (config: Record<string, unknown>): Record<string, unknown> => {
   const parsedConfig = envValidationSchema.safeParse(config);

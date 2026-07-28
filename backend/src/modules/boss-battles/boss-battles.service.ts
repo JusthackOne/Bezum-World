@@ -5,9 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { BossBattleStatus, BossRewardClaimStatus, Prisma } from '@prisma/client';
+import {
+  BossBattleStatus,
+  BossRewardClaimStatus,
+  NotificationEventType,
+  Prisma,
+} from '@prisma/client';
 import type { Queue } from 'bullmq';
 import { BATTLES_FORMULA_IDENTIFIER, BATTLES_FORMULA_VERSION } from '../battles/battle-power';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   BOSS_BATTLES_QUEUE,
   ACTIVATE_JOB,
@@ -28,6 +34,7 @@ import {
 export class BossBattlesService {
   constructor(
     private readonly repository: BossBattlesRepository,
+    private readonly notificationsService: NotificationsService,
     @InjectQueue(BOSS_BATTLES_QUEUE) private readonly queue: Queue,
   ) {}
 
@@ -40,8 +47,8 @@ export class BossBattlesService {
         ? BossBattleStatus.ACTIVE
         : BossBattleStatus.SCHEDULED
       : BossBattleStatus.DRAFT;
-    const battle = await this.repository.transaction(async (tx) =>
-      this.repository.create(
+    const battle = await this.repository.transaction(async (tx) => {
+      const createdBattle = await this.repository.create(
         {
           name: input.name,
           description: input.description ?? null,
@@ -59,8 +66,14 @@ export class BossBattlesService {
           },
         },
         tx,
-      ),
-    );
+      );
+
+      if (createdBattle.status === BossBattleStatus.ACTIVE) {
+        await this.enqueueBossActivated(createdBattle, tx);
+      }
+
+      return createdBattle;
+    });
     if (input.publish) await this.schedule(battle.id, battle.startsAt, battle.endsAt);
     return battle;
   }
@@ -302,6 +315,25 @@ export class BossBattlesService {
         },
         tx,
       );
+      const topPlayers = await this.repository.findTopFinalLeaderboard(id, 3, tx);
+      await this.notificationsService.enqueue(
+        {
+          type: NotificationEventType.BOSS_DEFEATED,
+          payload: {
+            battleId: battle.id,
+            name: battle.name,
+            imageUrl: battle.imageUrl,
+            defeatedAt: (battle.defeatedAt ?? battle.finishedAt ?? new Date()).toISOString(),
+            topPlayers: topPlayers.map((player) => ({
+              place: player.place,
+              username: player.user.username,
+              totalDamage: player.totalDamage,
+            })),
+          },
+        },
+        `boss-defeated:${battle.id}`,
+        tx,
+      );
     });
   }
 
@@ -312,8 +344,14 @@ export class BossBattlesService {
         battle?.status === BossBattleStatus.SCHEDULED &&
         battle.startsAt <= new Date() &&
         battle.endsAt > new Date()
-      )
-        await this.repository.update(id, { status: BossBattleStatus.ACTIVE }, tx);
+      ) {
+        const activatedBattle = await this.repository.update(
+          id,
+          { status: BossBattleStatus.ACTIVE },
+          tx,
+        );
+        await this.enqueueBossActivated(activatedBattle, tx);
+      }
     });
   }
   async expire(id: string) {
@@ -433,6 +471,9 @@ export class BossBattlesService {
           ),
           tx,
         );
+      if (before.status !== BossBattleStatus.ACTIVE && after.status === BossBattleStatus.ACTIVE) {
+        await this.enqueueBossActivated(after, tx);
+      }
       return after;
     });
     if (result.status === BossBattleStatus.DRAFT) await this.unschedule(id);
@@ -508,6 +549,34 @@ export class BossBattlesService {
         attempts: 5,
         backoff: { type: 'exponential', delay: 1000 },
       },
+    );
+  }
+
+  private enqueueBossActivated(
+    battle: {
+      id: string;
+      name: string;
+      description: string | null;
+      imageUrl: string | null;
+      startsAt: Date;
+      endsAt: Date;
+    },
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    return this.notificationsService.enqueue(
+      {
+        type: NotificationEventType.BOSS_ACTIVATED,
+        payload: {
+          battleId: battle.id,
+          name: battle.name,
+          description: battle.description,
+          imageUrl: battle.imageUrl,
+          startsAt: battle.startsAt.toISOString(),
+          endsAt: battle.endsAt.toISOString(),
+        },
+      },
+      `boss-activated:${battle.id}`,
+      tx,
     );
   }
   private async reconcileOverdueBattles() {

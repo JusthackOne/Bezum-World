@@ -6,12 +6,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, TaskType, type Task, type TaskSubmission } from '@prisma/client';
+import {
+  NotificationEventType,
+  Prisma,
+  TaskType,
+  type Task,
+  type TaskSubmission,
+} from '@prisma/client';
 import { randomInt } from 'node:crypto';
 
 import type { AccessTokenPayload } from '../auth/types/access-token-payload.type';
 import { AccountRepository } from '../auth/repositories';
 import { EventsService } from '../events/events.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type {
   AdminDeleteTaskResponseDto,
   AdminTasksListResponseDto,
@@ -57,6 +64,7 @@ export class TasksService {
     private readonly taskSubmissionRepository: TaskSubmissionRepository,
     private readonly accountRepository: AccountRepository,
     private readonly eventsService: EventsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createTaskByAdmin(payload: CreateTaskDto): Promise<TaskResponseDto> {
@@ -99,18 +107,46 @@ export class TasksService {
     const suggestedForDate = this.getConfiguredDateKey(new Date());
 
     try {
-      const suggestion = await this.taskSuggestionRepository.create({
-        creatorUserId: userId,
-        suggestedForDate,
-        type: payload.type,
-        title: payload.title,
-        description: this.normalizeNullableString(payload.description),
-        image: this.normalizeNullableString(uploadedImageUrl ?? payload.image),
-        rewardMoney: payload.rewardMoney,
-        rewardGameScore: payload.rewardGameScore ?? null,
-        rewardAttributes: this.toRewardAttributesJson(payload.rewardAttributes),
-        requiresProofImage: payload.requiresProofImage,
-        submissionLimit: this.resolveSubmissionLimit(payload.type, payload.submissionLimit, null),
+      const suggestion = await this.prisma.$transaction(async (tx) => {
+        const createdSuggestion = await this.taskSuggestionRepository.create(
+          {
+            creatorUserId: userId,
+            suggestedForDate,
+            type: payload.type,
+            title: payload.title,
+            description: this.normalizeNullableString(payload.description),
+            image: this.normalizeNullableString(uploadedImageUrl ?? payload.image),
+            rewardMoney: payload.rewardMoney,
+            rewardGameScore: payload.rewardGameScore ?? null,
+            rewardAttributes: this.toRewardAttributesJson(payload.rewardAttributes),
+            requiresProofImage: payload.requiresProofImage,
+            submissionLimit: this.resolveSubmissionLimit(
+              payload.type,
+              payload.submissionLimit,
+              null,
+            ),
+          },
+          tx,
+        );
+
+        await this.notificationsService.enqueue(
+          {
+            type: NotificationEventType.TASK_SUGGESTED,
+            payload: {
+              suggestionId: createdSuggestion.id,
+              title: createdSuggestion.title,
+              description: createdSuggestion.description,
+              image: createdSuggestion.image,
+              creatorUsername: createdSuggestion.creator.username,
+              taskType: createdSuggestion.type,
+              createdAt: createdSuggestion.createdAt.toISOString(),
+            },
+          },
+          `task-suggested:${createdSuggestion.id}`,
+          tx,
+        );
+
+        return createdSuggestion;
       });
 
       return this.toTaskSuggestionResponse(suggestion, userId);

@@ -52,6 +52,21 @@ enum BossRewardClaimStatus {
   FAILED
 }
 
+enum NotificationEventType {
+  TASK_SUGGESTED
+  BOSS_ACTIVATED
+  BOSS_DEFEATED
+  DAILY_DIGEST
+}
+
+enum NotificationOutboxStatus {
+  PENDING
+  PROCESSING
+  QUEUED
+  SENT
+  FAILED
+}
+
 model Account {
   id                  String                  @id @default(uuid())
   username            String                  @unique
@@ -498,4 +513,25 @@ model GameEvent {
   @@index([taskCompletedUserId])
   @@index([taskId])
   @@map("game_events")
+}
+
+model NotificationOutbox {
+  id                 String                   @id @default(uuid())
+  eventType          NotificationEventType    @map("event_type")
+  schemaVersion      Int                      @default(1) @map("schema_version")
+  payload            Json
+  deduplicationKey   String                   @unique @map("deduplication_key")
+  status             NotificationOutboxStatus @default(PENDING)
+  availableAt        DateTime                 @default(now()) @map("available_at")
+  lockedUntil        DateTime?                @map("locked_until")
+  dispatchAttempts   Int                      @default(0) @map("dispatch_attempts")
+  deliveryAttempts   Int                      @default(0) @map("delivery_attempts")
+  telegramMessageIds Json?                    @map("telegram_message_ids")
+  sentAt             DateTime?                @map("sent_at")
+  lastError          String?                  @map("last_error")
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+
+  @@index([status, availableAt])
+  @@map("notification_outbox")
 }
