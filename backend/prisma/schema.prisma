@@ -62,8 +62,8 @@ model Account {
   charisma            Int                     @default(0)
   endurance           Int                     @default(0)
   intelligence        Int                     @default(0)
-  lastTimeLoggedIn    DateTime?
-  createdAt           DateTime                @default(now())
+  lastTimeLoggedIn    DateTime?               @db.Timestamptz(3)
+  createdAt           DateTime                @default(now()) @db.Timestamptz(3)
   authCode            AuthCode?
   items               Item[]
   equipment           UserEquipmentSlot[]
@@ -90,7 +90,7 @@ model SlotStatistics {
   userId        String   @id @map("user_id")
   totalWinnings Int      @default(0) @map("total_winnings")
   totalLosses   Int      @default(0) @map("total_losses")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   user          Account  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("slot_statistics")
@@ -101,8 +101,8 @@ model BossBattle {
   name                  String
   description           String?
   imageUrl              String?                 @map("image_url")
-  startsAt              DateTime                @map("starts_at")
-  endsAt                DateTime                @map("ends_at")
+  startsAt              DateTime                @map("starts_at") @db.Timestamptz(3)
+  endsAt                DateTime                @map("ends_at") @db.Timestamptz(3)
   initialHp             Int                     @map("initial_hp")
   currentHp             Int                     @map("current_hp")
   totalAppliedDamage    Int                     @default(0) @map("total_applied_damage")
@@ -112,13 +112,13 @@ model BossBattle {
   intelligence          Int
   attackCooldownSeconds Int                     @map("attack_cooldown_seconds")
   status                BossBattleStatus        @default(DRAFT)
-  defeatedAt            DateTime?               @map("defeated_at")
-  finishedAt            DateTime?               @map("finished_at")
-  resultsFinalizedAt    DateTime?               @map("results_finalized_at")
+  defeatedAt            DateTime?               @map("defeated_at") @db.Timestamptz(3)
+  finishedAt            DateTime?               @map("finished_at") @db.Timestamptz(3)
+  resultsFinalizedAt    DateTime?               @map("results_finalized_at") @db.Timestamptz(3)
   version               Int                     @default(1)
   rewardsEnabled        Boolean                 @default(true) @map("rewards_enabled")
-  createdAt             DateTime                @default(now()) @map("created_at")
-  updatedAt             DateTime                @updatedAt @map("updated_at")
+  createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
   rewards               BossBattleReward[]
   attacks               BossAttack[]
   participants          BossBattleParticipant[]
@@ -142,8 +142,8 @@ model BossBattleReward {
   charisma        Int                     @default(0)
   endurance       Int                     @default(0)
   intelligence    Int                     @default(0)
-  createdAt       DateTime                @default(now()) @map("created_at")
-  updatedAt       DateTime                @updatedAt @map("updated_at")
+  createdAt       DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
   battle          BossBattle              @relation(fields: [bossBattleId], references: [id], onDelete: Cascade)
   itemTemplate    BossRewardItemTemplate?
   results         BossBattleResult[]
@@ -168,7 +168,7 @@ model BossRewardItemTemplate {
   agility            Int?
   intelligence       Int?
   metadata           Json?
-  createdAt          DateTime          @default(now()) @map("created_at")
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   reward             BossBattleReward  @relation(fields: [bossBattleRewardId], references: [id], onDelete: Cascade)
 
   @@map("boss_reward_item_templates")
@@ -187,9 +187,9 @@ model BossAttack {
   bossAttributesSnapshot Json       @map("boss_attributes_snapshot")
   formulaIdentifier      String     @map("formula_identifier")
   formulaVersion         Int        @map("formula_version")
-  attackedAt             DateTime   @map("attacked_at")
-  cooldownSlot           DateTime   @map("cooldown_slot")
-  createdAt              DateTime   @default(now()) @map("created_at")
+  attackedAt             DateTime   @map("attacked_at") @db.Timestamptz(3)
+  cooldownSlot           DateTime   @map("cooldown_slot") @db.Timestamptz(3)
+  createdAt              DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   battle                 BossBattle @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
   user                   Account    @relation(fields: [userId], references: [id], onDelete: Restrict)
 
@@ -205,12 +205,12 @@ model BossBattleParticipant {
   userId           String     @map("user_id")
   totalDamage      Int        @default(0) @map("total_damage")
   attacksCount     Int        @default(0) @map("attacks_count")
-  firstAttackAt    DateTime   @map("first_attack_at")
-  lastAttackAt     DateTime   @map("last_attack_at")
-  lastCooldownSlot DateTime   @map("last_cooldown_slot")
-  nextAttackAt     DateTime   @map("next_attack_at")
-  createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
+  firstAttackAt    DateTime   @map("first_attack_at") @db.Timestamptz(3)
+  lastAttackAt     DateTime   @map("last_attack_at") @db.Timestamptz(3)
+  lastCooldownSlot DateTime   @map("last_cooldown_slot") @db.Timestamptz(3)
+  nextAttackAt     DateTime   @map("next_attack_at") @db.Timestamptz(3)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
   battle           BossBattle @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
   user             Account    @relation(fields: [userId], references: [id], onDelete: Restrict)
 
@@ -226,12 +226,12 @@ model BossBattleResult {
   place             Int
   totalDamage       Int                   @map("total_damage")
   attacksCount      Int                   @map("attacks_count")
-  firstAttackAt     DateTime              @map("first_attack_at")
-  lastAttackAt      DateTime              @map("last_attack_at")
+  firstAttackAt     DateTime              @map("first_attack_at") @db.Timestamptz(3)
+  lastAttackAt      DateTime              @map("last_attack_at") @db.Timestamptz(3)
   rewardId          String?               @map("reward_id")
   rewardClaimStatus BossRewardClaimStatus @map("reward_claim_status")
-  createdAt         DateTime              @default(now()) @map("created_at")
-  updatedAt         DateTime              @updatedAt @map("updated_at")
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
   battle            BossBattle            @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
   user              Account               @relation(fields: [userId], references: [id], onDelete: Restrict)
   reward            BossBattleReward?     @relation(fields: [rewardId], references: [id], onDelete: Restrict)
@@ -255,9 +255,9 @@ model BossRewardClaim {
   rewardSnapshot     Json                  @map("reward_snapshot")
   attemptCount       Int                   @default(1) @map("attempt_count")
   lastError          String?               @map("last_error")
-  claimedAt          DateTime?             @map("claimed_at")
-  createdAt          DateTime              @default(now()) @map("created_at")
-  updatedAt          DateTime              @updatedAt @map("updated_at")
+  claimedAt          DateTime?             @map("claimed_at") @db.Timestamptz(3)
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
   battle             BossBattle            @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
   result             BossBattleResult      @relation(fields: [bossBattleResultId], references: [id], onDelete: Restrict)
   reward             BossBattleReward      @relation(fields: [bossBattleRewardId], references: [id], onDelete: Restrict)
@@ -276,7 +276,7 @@ model BossBattleAuditLog {
   action       String
   beforeData   Json?      @map("before_data")
   afterData    Json?      @map("after_data")
-  createdAt    DateTime   @default(now()) @map("created_at")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   battle       BossBattle @relation(fields: [bossBattleId], references: [id], onDelete: Restrict)
 
   @@index([bossBattleId, createdAt(sort: Desc)])
@@ -288,7 +288,7 @@ model AuthCode {
   code      String   @unique @db.VarChar(6)
   accountId String   @unique
   account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 }
 
 model Admin {
@@ -296,9 +296,9 @@ model Admin {
   singletonKey     String    @unique @default("singleton")
   username         String    @unique
   passwordHash     String
-  lastTimeLoggedIn DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  lastTimeLoggedIn DateTime? @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
 }
 
 enum ItemRarity {
@@ -328,7 +328,7 @@ model Item {
   slotType       EquipmentSlotType
   equippedSlot   UserEquipmentSlot?
   purchaseEvents GameEvent[]        @relation("GameEventItem")
-  createdAt      DateTime           @default(now()) @map("created_at")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([ownerUserId])
   @@index([isListedForSale, createdAt])
@@ -367,8 +367,8 @@ model Task {
   rewardAttributes   Json?            @map("reward_attributes")
   requiresProofImage Boolean          @default(false) @map("requires_proof_image")
   submissionLimit    Int?             @map("submission_limit")
-  createdAt          DateTime         @default(now()) @map("created_at")
-  updatedAt          DateTime         @updatedAt @map("updated_at")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
   submissions        TaskSubmission[]
   completedEvents    GameEvent[]      @relation("GameEventCompletedTask")
 
@@ -392,8 +392,8 @@ model TaskSuggestion {
   rewardAttributes   Json?                @map("reward_attributes")
   requiresProofImage Boolean              @default(false) @map("requires_proof_image")
   submissionLimit    Int?                 @map("submission_limit")
-  createdAt          DateTime             @default(now()) @map("created_at")
-  processedAt        DateTime?            @map("processed_at")
+  createdAt          DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  processedAt        DateTime?            @map("processed_at") @db.Timestamptz(3)
 
   creator Account              @relation("TaskSuggestionCreator", fields: [creatorUserId], references: [id], onDelete: Cascade)
   votes   TaskSuggestionVote[]
@@ -409,7 +409,7 @@ model TaskSuggestionVote {
   suggestionId     String   @map("suggestion_id")
   voterUserId      String   @map("voter_user_id")
   suggestedForDate DateTime @map("suggested_for_date") @db.Date
-  createdAt        DateTime @default(now()) @map("created_at")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   suggestion TaskSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
   voter      Account        @relation("TaskSuggestionVoter", fields: [voterUserId], references: [id], onDelete: Cascade)
@@ -426,7 +426,7 @@ model TaskSubmission {
   userId           String   @map("user_id")
   proofImage       String?  @map("proof_image")
   grantedGameScore Int      @default(0) @map("granted_game_score")
-  createdAt        DateTime @default(now()) @map("created_at")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   task           Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user           Account    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -449,7 +449,7 @@ model BattleLog {
   loserUserId            String   @map("loser_user_id")
   transferredCoins       Int      @map("transferred_coins")
   gameScoreReward        Int      @map("game_score_reward")
-  createdAt              DateTime @default(now()) @map("created_at")
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   attacker Account @relation("BattleAttacker", fields: [attackerUserId], references: [id], onDelete: Cascade)
   defender Account @relation("BattleDefender", fields: [defenderUserId], references: [id], onDelete: Cascade)
@@ -477,7 +477,7 @@ model GameEvent {
   battleResult        BattleEventResult? @map("battle_result")
   gameScoreReward     Int?               @map("game_score_reward")
   goldReward          Int?               @map("gold_reward")
-  createdAt           DateTime           @default(now()) @map("created_at")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
 
   purchaseUser      Account?        @relation("GameEventPurchaseUser", fields: [purchaseUserId], references: [id], onDelete: Cascade)
   item              Item?           @relation("GameEventItem", fields: [itemId], references: [id], onDelete: Restrict)

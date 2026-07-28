@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { EquipmentSlotType, Prisma } from '@prisma/client';
 
+import { getMoscowDayRange } from '../../common/time/moscow-time';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { EventsService } from '../events/events.service';
 import { calculateBattlesPower } from './battle-power';
@@ -49,7 +50,7 @@ export class BattlesService {
 
     const currentUserStats = this.getFinalStats(currentUser);
     const currentUserPower = this.calculatePower(currentUserStats);
-    const dayRange = this.getUtcDayRange(new Date());
+    const dayRange = getMoscowDayRange(new Date());
     const battledDefenderIds = await this.battleRepository.findBattledDefenderIdsInRange(
       currentUserId,
       dayRange.start,
@@ -128,7 +129,7 @@ export class BattlesService {
         throw new NotFoundException('Opponent is not found');
       }
 
-      const dayRange = this.getUtcDayRange(new Date());
+      const dayRange = getMoscowDayRange(new Date());
       const hasBattleToday = await this.battleRepository.hasBattleForPairInRange(
         currentUserId,
         opponentUserId,
@@ -286,16 +287,6 @@ export class BattlesService {
 
   private clamp(value: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, value));
-  }
-
-  private getUtcDayRange(value: Date): { start: Date; end: Date } {
-    const start = new Date(
-      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 0, 0, 0, 0),
-    );
-    const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 1);
-
-    return { start, end };
   }
 
   private toBattleEquipment(player: BattlePlayerRecord): BattlePlayerEquipmentDto {
