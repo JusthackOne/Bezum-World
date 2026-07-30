@@ -10,7 +10,13 @@ import type { BattlePlayer } from "@/features/battles/model/battles.types";
 import { publicUserRoutes } from "@/features/public-user/routes";
 import { queryKeys } from "@/shared/config/query-keys";
 import { resolveAssetUrl } from "@/shared/lib/item-display";
-import { AttributeBadge, RewardBadgesList, type RewardBadgeItem } from "@/shared/ui";
+import { cn } from "@/shared/lib/utils";
+import {
+  AttributeBadge,
+  attributeVisuals,
+  RewardBadgesList,
+  type RewardBadgeItem,
+} from "@/shared/ui";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
 import {
@@ -46,6 +52,8 @@ function PlayerRow({
   onOpenProfile: () => void;
 }) {
   const avatarUrl = player.avatar ? resolveAssetUrl(player.avatar) : null;
+  const featuredAttributeVisual = attributeVisuals[player.featuredAttribute];
+  const FeaturedAttributeIcon = featuredAttributeVisual.icon;
 
   return (
     <article className="grid gap-4 rounded-xl border bg-card p-4 xl:grid-cols-5 xl:items-center">
@@ -94,8 +102,29 @@ function PlayerRow({
       </TooltipProvider>
 
       <div className="rounded-lg border bg-muted/10 px-3 py-2 text-center">
-        <p className="text-muted-foreground text-xs">Win Chance</p>
-        <p className="font-semibold tabular-nums">{player.winChancePercent.toFixed(2)}%</p>
+        <p className="text-muted-foreground text-xs uppercase">Featured Attribute</p>
+        <div
+          className={cn(
+            "mx-auto mt-2 flex w-full min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-2",
+            featuredAttributeVisual.accentClassName,
+          )}
+        >
+          <FeaturedAttributeIcon
+            className={cn("size-4", featuredAttributeVisual.iconClassName)}
+            aria-hidden="true"
+          />
+          <p className="flex max-w-full min-w-0 flex-wrap items-center justify-center gap-x-1 text-center text-xs leading-tight font-semibold">
+            <span className="break-words">{featuredAttributeVisual.label}</span>
+            <span className="shrink-0 tabular-nums">
+              ×{player.featuredAttributeMultiplier.toFixed(1)}
+            </span>
+          </p>
+        </div>
+
+        <div className="mt-3 border-t pt-3">
+          <p className="text-muted-foreground text-xs">Win Chance</p>
+          <p className="font-semibold tabular-nums">{player.winChancePercent.toFixed(2)}%</p>
+        </div>
       </div>
 
       <Button

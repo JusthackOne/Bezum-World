@@ -134,6 +134,18 @@ Core mechanics:
 
 ---
 
+## Git and Commit Rules
+
+- Use Conventional Commits with the format `type(scope): imperative summary`.
+- Keep each commit focused on one logical change.
+- Before committing, review the staged diff and stage only files or hunks related to the requested change.
+- Preserve unrelated tracked and untracked changes in the working tree.
+- When the user asks to commit changes, create a local commit only.
+- Do not push, open or update a pull request, publish a branch, or perform any other remote Git action unless the user explicitly requests it.
+- Do not amend, squash, rebase, or otherwise rewrite existing commits unless the user explicitly requests it.
+
+---
+
 ## Task Files Rules
 
 - Every new task must be created in the `tasks/` directory.

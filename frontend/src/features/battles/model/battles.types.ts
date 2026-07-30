@@ -37,6 +37,8 @@ export interface BattlePlayer {
   avatar: string | null;
   equipment: BattlePlayerEquipment;
   stats: BattlePlayerStats;
+  featuredAttribute: keyof BattlePlayerStats;
+  featuredAttributeMultiplier: number;
   winChancePercent: number;
   winGameScoreReward: number;
   winGoldReward: number;

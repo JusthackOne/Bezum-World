@@ -6,13 +6,32 @@ export interface BattleAttributes {
 }
 
 export const BATTLES_FORMULA_IDENTIFIER = 'BATTLES';
-export const BATTLES_FORMULA_VERSION = 1;
+export const BATTLES_FORMULA_VERSION = 2;
+export const FEATURED_ATTRIBUTE_MULTIPLIER = 1.6;
 
-export function calculateBattlesPower(attributes: BattleAttributes): number {
+export type FeaturedBattleAttribute = keyof BattleAttributes;
+
+export function calculateBattlesPower(
+  attributes: BattleAttributes,
+  featuredAttribute: FeaturedBattleAttribute,
+): number {
+  const basePower =
+    attributes.strength +
+    attributes.endurance +
+    attributes.intelligence +
+    attributes.charisma;
+
   return (
-    attributes.strength * 0.35 +
-    attributes.endurance * 0.25 +
-    attributes.intelligence * 0.2 +
-    attributes.charisma * 0.2
+    basePower +
+    attributes[featuredAttribute] * (FEATURED_ATTRIBUTE_MULTIPLIER - 1)
   );
+}
+
+export function calculateBattleWinProbability(
+  playerPower: number,
+  opponentPower: number,
+): number {
+  const delta = playerPower - opponentPower;
+
+  return 1 / (1 + Math.exp(-delta / 20));
 }

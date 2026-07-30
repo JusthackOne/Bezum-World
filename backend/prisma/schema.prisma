@@ -33,6 +33,13 @@ enum BattleEventResult {
   LOSE
 }
 
+enum BattleAttribute {
+  strength
+  charisma
+  endurance
+  intelligence
+}
+
 enum BossBattleStatus {
   DRAFT
   SCHEDULED
@@ -74,6 +81,8 @@ model Account {
   defendedBattles     BattleLog[]             @relation("BattleDefender")
   wonBattles          BattleLog[]             @relation("BattleWinner")
   lostBattles         BattleLog[]             @relation("BattleLoser")
+  dailyBattlesAsOne   DailyBattle[]           @relation("DailyBattlePlayerOne")
+  dailyBattlesAsTwo   DailyBattle[]           @relation("DailyBattlePlayerTwo")
   purchaseEvents      GameEvent[]             @relation("GameEventPurchaseUser")
   challengedEvents    GameEvent[]             @relation("GameEventChallenger")
   opponentEvents      GameEvent[]             @relation("GameEventOpponent")
@@ -441,6 +450,7 @@ model TaskSubmission {
 
 model BattleLog {
   id                     String   @id @default(uuid())
+  dailyBattleId          String?  @unique @map("daily_battle_id")
   attackerUserId         String   @map("attacker_user_id")
   defenderUserId         String   @map("defender_user_id")
   attackerPower          Float    @map("attacker_power")
@@ -452,15 +462,35 @@ model BattleLog {
   gameScoreReward        Int      @map("game_score_reward")
   createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  attacker Account @relation("BattleAttacker", fields: [attackerUserId], references: [id], onDelete: Cascade)
-  defender Account @relation("BattleDefender", fields: [defenderUserId], references: [id], onDelete: Cascade)
-  winner   Account @relation("BattleWinner", fields: [winnerUserId], references: [id], onDelete: Cascade)
-  loser    Account @relation("BattleLoser", fields: [loserUserId], references: [id], onDelete: Cascade)
+  dailyBattle DailyBattle? @relation(fields: [dailyBattleId], references: [id], onDelete: SetNull)
+  attacker    Account      @relation("BattleAttacker", fields: [attackerUserId], references: [id], onDelete: Cascade)
+  defender    Account      @relation("BattleDefender", fields: [defenderUserId], references: [id], onDelete: Cascade)
+  winner      Account      @relation("BattleWinner", fields: [winnerUserId], references: [id], onDelete: Cascade)
+  loser       Account      @relation("BattleLoser", fields: [loserUserId], references: [id], onDelete: Cascade)
 
   @@index([attackerUserId, defenderUserId, createdAt])
   @@index([winnerUserId])
   @@index([loserUserId])
   @@map("battle_logs")
+}
+
+model DailyBattle {
+  id                String          @id @default(uuid())
+  playerOneId       String          @map("player_one_id")
+  playerTwoId       String          @map("player_two_id")
+  dayStartsAt       DateTime        @map("day_starts_at") @db.Timestamptz(3)
+  featuredAttribute BattleAttribute @map("featured_attribute")
+  completedAt       DateTime?       @map("completed_at") @db.Timestamptz(3)
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  playerOne Account    @relation("DailyBattlePlayerOne", fields: [playerOneId], references: [id], onDelete: Cascade)
+  playerTwo Account    @relation("DailyBattlePlayerTwo", fields: [playerTwoId], references: [id], onDelete: Cascade)
+  battleLog BattleLog?
+
+  @@unique([playerOneId, playerTwoId, dayStartsAt])
+  @@index([playerOneId, dayStartsAt])
+  @@index([playerTwoId, dayStartsAt])
+  @@map("daily_battles")
 }
 
 model GameEvent {
