@@ -9,6 +9,7 @@ import {
   getBossLeaderboard,
   getCurrentBossBattle,
 } from "./requests";
+import type { BossAttackType } from "../model/boss-battle.types";
 
 export function useCurrentBossBattleQuery() {
   return useQuery({ queryKey: queryKeys.currentBossBattle, queryFn: getCurrentBossBattle });
@@ -37,10 +38,11 @@ export function useBossLeaderboardQuery(battleId: string | undefined) {
 export function useAttackBossMutation(battleId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => attackBoss(battleId!),
+    mutationFn: (attackType: BossAttackType) => attackBoss(battleId!, attackType),
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.currentBossBattle }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.bossBattleById(battleId!) }),
         queryClient.invalidateQueries({ queryKey: ["boss-battles", battleId, "leaderboard"] }),
       ]);
     },

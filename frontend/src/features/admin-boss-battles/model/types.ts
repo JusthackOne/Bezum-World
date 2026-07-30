@@ -58,6 +58,7 @@ export interface BossBattle {
   initialHp: number;
   currentHp: number;
   totalAppliedDamage: number;
+  defaultDamage: number;
   strength: number;
   charisma: number;
   endurance: number;
@@ -76,6 +77,7 @@ export interface BossBattleInput {
   startsAt: string;
   endsAt: string;
   initialHp: number;
+  defaultDamage: number;
   attributes: BossAttributes;
   attackCooldownSeconds: number;
   rewards: BossReward[];

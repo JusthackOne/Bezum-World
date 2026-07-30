@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
   Min,
   ValidateNested,
@@ -59,6 +60,7 @@ export class CreateBossBattleDto {
   @IsDateString() startsAt!: string;
   @IsDateString() endsAt!: string;
   @IsInt() @Min(1) initialHp!: number;
+  @IsInt() @Min(1) @Max(858_993_458) defaultDamage!: number;
   @ValidateNested() @Type(() => BossAttributesDto) attributes!: BossAttributesDto;
   @IsInt() @Min(1) attackCooldownSeconds!: number;
   @IsArray() @ValidateNested({ each: true }) @Type(() => BossRewardDto) rewards!: BossRewardDto[];
@@ -72,6 +74,7 @@ export class UpdateBossBattleDto {
   @IsOptional() @IsDateString() startsAt?: string;
   @IsOptional() @IsDateString() endsAt?: string;
   @IsOptional() @IsInt() @Min(1) initialHp?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(858_993_458) defaultDamage?: number;
   @IsOptional() @ValidateNested() @Type(() => BossAttributesDto) attributes?: BossAttributesDto;
   @IsOptional() @IsInt() @Min(1) attackCooldownSeconds?: number;
   @IsOptional()

@@ -72,6 +72,11 @@ const schema = z
     startsAt: z.string().min(1, "Start date is required"),
     endsAt: z.string().min(1, "End date is required"),
     initialHp: z.coerce.number().int().positive("Initial HP must be greater than 0"),
+    defaultDamage: z.coerce
+      .number()
+      .int()
+      .min(1, "Default Damage must be greater than 0")
+      .max(858_993_458, "Default Damage is too large"),
     attributes: attrs,
     attackCooldownSeconds: z.coerce
       .number()
@@ -169,6 +174,7 @@ function defaults(b?: BossBattle): Values {
         startsAt: toLocal(b.startsAt),
         endsAt: toLocal(b.endsAt),
         initialHp: b.initialHp,
+        defaultDamage: b.defaultDamage,
         attributes: {
           strength: b.strength,
           charisma: b.charisma,
@@ -228,6 +234,7 @@ function defaults(b?: BossBattle): Values {
         startsAt: "",
         endsAt: "",
         initialHp: 10000,
+        defaultDamage: 100,
         attributes: { ...emptyAttrs },
         attackCooldownSeconds: 3600,
         draft: true,
@@ -301,6 +308,7 @@ export function BossBattleForm({ battle }: { battle?: BossBattle }) {
           startsAt: new Date(v.startsAt).toISOString(),
           endsAt: new Date(v.endsAt).toISOString(),
           initialHp: v.initialHp,
+          defaultDamage: v.defaultDamage,
           attributes: v.attributes,
           attackCooldownSeconds: v.attackCooldownSeconds,
           rewards,
@@ -415,11 +423,20 @@ export function BossBattleForm({ battle }: { battle?: BossBattle }) {
         <CardHeader>
           <CardTitle>Battle Settings</CardTitle>
           <CardDescription>
-            Damage uses the existing backend BATTLES formula. Formula limits and random multiplier
-            are backend-controlled.
+            Normal attacks always deal Default Damage. Super Attacks multiply it by a
+            backend-controlled random value.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <Field label="Default Damage *" error={err("defaultDamage")}>
+            <Input
+              className="max-w-xs"
+              type="number"
+              min={1}
+              max={858_993_458}
+              {...form.register("defaultDamage")}
+            />
+          </Field>
           <Field label="Attack cooldown (seconds) *" error={err("attackCooldownSeconds")}>
             <Input
               className="max-w-xs"

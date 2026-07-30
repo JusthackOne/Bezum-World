@@ -1,10 +1,7 @@
-import { calculateBattlesPower, type BattleAttributes } from '../battles/battle-power';
+export type BossAttackType = 'NORMAL' | 'SUPER';
 
-export const MIN_BOSS_DAMAGE = 1;
-export const MAX_BOSS_DAMAGE = 1_000_000;
-export const BOSS_BASE_DAMAGE = 100;
-const MIN_POWER_RATIO = 0.1;
-const MAX_POWER_RATIO = 10;
+export const SUPER_ATTACK_MIN_MULTIPLIER = 1;
+export const SUPER_ATTACK_MAX_MULTIPLIER = 2.5;
 
 export function getCooldownSlot(timestamp: Date, cooldownSeconds: number): Date {
   if (!Number.isInteger(cooldownSeconds) || cooldownSeconds <= 0) {
@@ -14,26 +11,30 @@ export function getCooldownSlot(timestamp: Date, cooldownSeconds: number): Date 
   return new Date(Math.floor(unixSeconds / cooldownSeconds) * cooldownSeconds * 1000);
 }
 
-export function calculateBossDamage(
-  userAttributes: BattleAttributes,
-  bossAttributes: BattleAttributes,
-  randomMultiplier: number,
-): { calculatedDamage: number; userPower: number; bossPower: number } {
-  if (randomMultiplier < 0.9 || randomMultiplier > 1.1) {
-    throw new RangeError('randomMultiplier must be between 0.9 and 1.1');
+export function getBossAttackMultiplier(
+  attackType: BossAttackType,
+  random: () => number = Math.random,
+): number {
+  if (attackType === 'NORMAL') return 1;
+  const randomValue = random();
+  if (!Number.isFinite(randomValue) || randomValue < 0 || randomValue > 1) {
+    throw new RangeError('random must return a number between 0 and 1');
   }
-  const userPower = calculateBattlesPower(userAttributes);
-  const bossPower = calculateBattlesPower(bossAttributes);
-  const ratio = Math.max(
-    MIN_POWER_RATIO,
-    Math.min(MAX_POWER_RATIO, userPower / Math.max(1, bossPower)),
-  );
-  const damage = Math.round(BOSS_BASE_DAMAGE * ratio * randomMultiplier);
-  return {
-    userPower,
-    bossPower,
-    calculatedDamage: Math.max(MIN_BOSS_DAMAGE, Math.min(MAX_BOSS_DAMAGE, damage)),
-  };
+  const minHundredths = SUPER_ATTACK_MIN_MULTIPLIER * 100;
+  const maxHundredths = SUPER_ATTACK_MAX_MULTIPLIER * 100;
+  const possibleValues = maxHundredths - minHundredths + 1;
+  const offset = Math.min(Math.floor(randomValue * possibleValues), possibleValues - 1);
+  return (minHundredths + offset) / 100;
+}
+
+export function calculateBossDamage(defaultDamage: number, multiplier: number): number {
+  if (!Number.isInteger(defaultDamage) || defaultDamage <= 0) {
+    throw new RangeError('defaultDamage must be a positive integer');
+  }
+  if (multiplier < SUPER_ATTACK_MIN_MULTIPLIER || multiplier > SUPER_ATTACK_MAX_MULTIPLIER) {
+    throw new RangeError('multiplier must be between 1 and 2.5');
+  }
+  return Math.round(defaultDamage * multiplier);
 }
 
 export interface RewardRange {

@@ -1,6 +1,7 @@
 import { bossBattleEndpoints } from "./endpoints";
 import type {
   BossAttackResult,
+  BossAttackType,
   BossBattle,
   BossBattleHistory,
   BossClaimRewardResult,
@@ -42,9 +43,14 @@ export function getBossLeaderboard(id: string): Promise<BossLeaderboard> {
   );
 }
 
-export function attackBoss(id: string): Promise<BossAttackResult> {
+export function attackBoss(id: string, attackType: BossAttackType): Promise<BossAttackResult> {
   return requestApiData(
-    () => clientHttpClient.post(bossBattleEndpoints.attack(id)),
+    () =>
+      clientHttpClient.post(
+        attackType === "SUPER"
+          ? bossBattleEndpoints.superAttack(id)
+          : bossBattleEndpoints.attack(id),
+      ),
     "Unable to attack the boss.",
   );
 }

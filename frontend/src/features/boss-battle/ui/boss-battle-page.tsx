@@ -13,6 +13,7 @@ import {
   SkullIcon,
   SwordsIcon,
   TrophyIcon,
+  ZapIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -29,6 +30,7 @@ import {
 import { bossBattleRoutes } from "@/features/boss-battle/routes";
 import type {
   BossBattle,
+  BossAttackType,
   BossClaimRewardResult,
   BossLeaderboardEntry,
   BossReward,
@@ -133,8 +135,8 @@ function BossBattleHelpModal() {
             <div className="space-y-3 pt-2 text-left leading-6">
               <p>Атакуйте босса и наносите ему урон, пока битва не завершилась.</p>
               <p>
-                Сила удара зависит от характеристик вашего персонажа. После атаки дождитесь
-                восстановления следующего удара.
+                Обычная атака наносит фиксированный урон босса. Суператака умножает этот урон на
+                случайное значение. После любой атаки дождитесь восстановления следующего удара.
               </p>
               <p>
                 Чем больше суммарного урона вы нанесёте, тем выше окажетесь в рейтинге. При
@@ -256,7 +258,7 @@ function BossDamageIndicator({
   damage,
   defeated,
 }: {
-  damage: { id: string; value: number } | null;
+  damage: { id: string; value: number; multiplier: number; attackType: BossAttackType } | null;
   defeated: boolean;
 }) {
   if (!damage && !defeated) return null;
@@ -267,12 +269,16 @@ function BossDamageIndicator({
     >
       <div className="flex flex-col items-center gap-3 text-center">
         {damage ? (
-          <span
-            key={damage.id}
-            className="boss-damage-indicator text-4xl font-black text-white sm:text-5xl"
-          >
-            -{formatBalance(damage.value)}
-          </span>
+          <div key={damage.id} className="boss-damage-indicator flex flex-col items-center gap-1">
+            <span className="text-4xl font-black text-white sm:text-5xl">
+              -{formatBalance(damage.value)}
+            </span>
+            {damage.attackType === "SUPER" ? (
+              <span className="rounded-full border border-fuchsia-300 bg-black/70 px-3 py-1 text-lg font-black text-fuchsia-200">
+                ×{damage.multiplier.toFixed(2)}
+              </span>
+            ) : null}
+          </div>
         ) : null}
         {defeated ? (
           <span className="boss-damage-indicator rounded-lg border border-amber-300 bg-black/70 px-4 py-2 text-xl font-black text-amber-300 sm:text-2xl">
@@ -338,11 +344,13 @@ function BossAttackControl({
   pending,
   onAttack,
   onBoundary,
+  lastSuperMultiplier,
 }: {
   battle: BossBattle;
   pending: boolean;
-  onAttack: () => void;
+  onAttack: (attackType: BossAttackType) => void;
   onBoundary: () => void;
+  lastSuperMultiplier: number | null;
 }) {
   const now = useServerNow(battle.serverTime);
   const cooldown = battle.nextAttackAt ? new Date(battle.nextAttackAt).getTime() - now : 0;
@@ -356,12 +364,12 @@ function BossAttackControl({
   }, [active, battle.nextAttackAt, cooldown, onBoundary]);
   const ready = active && battle.canAttack && cooldown <= 0;
   return (
-    <div className="flex justify-center py-3">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-4 py-3">
       <Button
-        className="min-h-14 w-full flex-col sm:min-h-20 sm:max-w-md sm:text-lg"
+        className="min-h-14 w-full flex-col sm:min-h-20 sm:text-lg"
         size="lg"
         disabled={!ready || pending}
-        onClick={onAttack}
+        onClick={() => onAttack("NORMAL")}
         aria-label={cooldown > 0 ? "Attack unavailable during cooldown" : undefined}
       >
         {pending ? (
@@ -381,15 +389,31 @@ function BossAttackControl({
               <SwordsIcon className="size-5" />
               Attack Boss
             </span>
-            {battle.damageRange ? (
-              <span className="text-xs opacity-80">
-                {formatBalance(battle.damageRange.min)}–{formatBalance(battle.damageRange.max)}{" "}
-                damage
-              </span>
-            ) : null}
+            <span className="text-xs opacity-80">{formatBalance(battle.defaultDamage)} damage</span>
           </>
         )}
       </Button>
+      <Button
+        className="min-h-14 w-full flex-col bg-gradient-to-r from-fuchsia-600 via-violet-600 to-rose-600 text-white shadow-[0_0_28px_rgba(192,38,211,0.35)] hover:from-fuchsia-500 hover:via-violet-500 hover:to-rose-500 disabled:from-fuchsia-950 disabled:via-violet-950 disabled:to-rose-950 sm:min-h-20 sm:text-lg"
+        size="lg"
+        disabled={!ready || pending}
+        onClick={() => onAttack("SUPER")}
+        aria-label={cooldown > 0 ? "Super Attack unavailable during cooldown" : undefined}
+      >
+        <span className="flex items-center gap-2">
+          <ZapIcon className="size-5" />
+          {pending ? "Attack in progress..." : "Super Attack"}
+        </span>
+        <span className="text-xs opacity-90">
+          ×{battle.superAttackMultiplierRange.min.toFixed(2)}–×
+          {battle.superAttackMultiplierRange.max.toFixed(2)} damage
+        </span>
+      </Button>
+      {lastSuperMultiplier !== null ? (
+        <p className="text-center text-sm font-semibold text-fuchsia-600 dark:text-fuchsia-300">
+          Last Super Attack: ×{lastSuperMultiplier.toFixed(2)}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -648,7 +672,13 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
   const refetchBattle = query.refetch;
   const attack = useAttackBossMutation(battle?.id),
     claim = useClaimBossRewardMutation(battle?.id);
-  const [damage, setDamage] = useState<{ id: string; value: number } | null>(null);
+  const [damage, setDamage] = useState<{
+    id: string;
+    value: number;
+    multiplier: number;
+    attackType: BossAttackType;
+  } | null>(null);
+  const [lastSuperMultiplier, setLastSuperMultiplier] = useState<number | null>(null);
   const [localHp, setLocalHp] = useState<number | null>(null);
   const [trailHp, setTrailHp] = useState<number | null>(null);
   const [claimedReward, setClaimedReward] = useState<BossClaimRewardResult | null>(null);
@@ -721,13 +751,19 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
     Boolean(battle.resultsFinalizedAt) &&
     battle.rewardsEnabled &&
     claimStatus === "AVAILABLE";
-  const doAttack = async () => {
+  const doAttack = async (attackType: BossAttackType) => {
     try {
       const previous = hp;
-      const result = await attack.mutateAsync();
+      const result = await attack.mutateAsync(attackType);
       setLocalHp(result.currentHp);
       setTrailHp(previous);
-      setDamage({ id: `${Date.now()}-${result.appliedDamage}`, value: result.appliedDamage });
+      setDamage({
+        id: `${Date.now()}-${result.appliedDamage}`,
+        value: result.appliedDamage,
+        multiplier: result.multiplier,
+        attackType: result.attackType,
+      });
+      if (result.attackType === "SUPER") setLastSuperMultiplier(result.multiplier);
       if (damageTimer.current) clearTimeout(damageTimer.current);
       damageTimer.current = window.setTimeout(() => setDamage(null), 800);
       if (trailTimer.current) clearTimeout(trailTimer.current);
@@ -829,8 +865,9 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
         <BossAttackControl
           battle={battle}
           pending={attack.isPending}
-          onAttack={() => void doAttack()}
+          onAttack={(attackType) => void doAttack(attackType)}
           onBoundary={() => void query.refetch()}
+          lastSuperMultiplier={lastSuperMultiplier}
         />
       ) : null}
       <BossLeaderboard battleId={battle.id} />

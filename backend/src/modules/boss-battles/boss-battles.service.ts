@@ -7,7 +7,6 @@ import {
 import { InjectQueue } from '@nestjs/bullmq';
 import { BossBattleStatus, BossRewardClaimStatus, Prisma } from '@prisma/client';
 import type { Queue } from 'bullmq';
-import { BATTLES_FORMULA_IDENTIFIER, BATTLES_FORMULA_VERSION } from '../battles/battle-power';
 import {
   BOSS_BATTLES_QUEUE,
   ACTIVATE_JOB,
@@ -19,8 +18,12 @@ import type { BossRewardDto, CreateBossBattleDto, UpdateBossBattleDto } from './
 import {
   calculateBossDamage,
   denseRank,
+  getBossAttackMultiplier,
   getCooldownSlot,
   resolveReward,
+  SUPER_ATTACK_MAX_MULTIPLIER,
+  SUPER_ATTACK_MIN_MULTIPLIER,
+  type BossAttackType,
   validateRewardRanges,
 } from './boss-battle.utils';
 
@@ -50,6 +53,7 @@ export class BossBattlesService {
           endsAt: new Date(input.endsAt),
           initialHp: input.initialHp,
           currentHp: input.initialHp,
+          defaultDamage: input.defaultDamage,
           ...input.attributes,
           attackCooldownSeconds: input.attackCooldownSeconds,
           status,
@@ -106,17 +110,10 @@ export class BossBattlesService {
       battle = await this.repository.findBattle(id);
       if (!battle) throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
     }
-    const [participant, result, user] = await Promise.all([
+    const [participant, result] = await Promise.all([
       userId ? this.repository.findParticipant(id, userId) : null,
       userId ? this.repository.findResult(id, userId) : null,
-      userId ? this.repository.findUser(userId) : null,
     ]);
-    const damageRange = user
-      ? {
-          min: calculateBossDamage(user, battle, 0.9).calculatedDamage,
-          max: calculateBossDamage(user, battle, 1.1).calculatedDamage,
-        }
-      : null;
     return {
       ...battle,
       serverTime: new Date(),
@@ -134,7 +131,11 @@ export class BossBattlesService {
         new Date() < battle.endsAt &&
         (!participant || participant.nextAttackAt <= new Date()),
       nextAttackAt: participant?.nextAttackAt ?? null,
-      damageRange,
+      damageRange: userId ? { min: battle.defaultDamage, max: battle.defaultDamage } : null,
+      superAttackMultiplierRange: {
+        min: SUPER_ATTACK_MIN_MULTIPLIER,
+        max: SUPER_ATTACK_MAX_MULTIPLIER,
+      },
     };
   }
 
@@ -169,7 +170,13 @@ export class BossBattlesService {
     return { items: mapped, own, page: 1, limit: total, total };
   }
 
-  async attack(id: string, userId: string, now = new Date(), random = Math.random) {
+  async attack(
+    id: string,
+    userId: string,
+    attackType: BossAttackType,
+    now = new Date(),
+    random = Math.random,
+  ) {
     let defeated = false;
     const result = await this.repository.transaction(async (tx) => {
       const battle = await this.repository.lockBattle(id, tx);
@@ -194,23 +201,24 @@ export class BossBattlesService {
         endurance: battle.endurance,
         intelligence: battle.intelligence,
       };
-      const randomMultiplier = 0.9 + random() * 0.2;
-      const damage = calculateBossDamage(userAttributes, bossAttributes, randomMultiplier);
-      const appliedDamage = Math.min(damage.calculatedDamage, battle.currentHp);
+      const randomMultiplier = getBossAttackMultiplier(attackType, random);
+      const calculatedDamage = calculateBossDamage(battle.defaultDamage, randomMultiplier);
+      const appliedDamage = Math.min(calculatedDamage, battle.currentHp);
       try {
         await this.repository.createAttack(
           {
             bossBattleId: id,
             userId,
-            calculatedDamage: damage.calculatedDamage,
+            calculatedDamage,
             appliedDamage,
-            userPower: damage.userPower,
-            bossPower: damage.bossPower,
+            userPower: 0,
+            bossPower: 0,
             randomMultiplier,
             userAttributesSnapshot: userAttributes,
             bossAttributesSnapshot: bossAttributes,
-            formulaIdentifier: BATTLES_FORMULA_IDENTIFIER,
-            formulaVersion: BATTLES_FORMULA_VERSION,
+            formulaIdentifier:
+              attackType === 'SUPER' ? 'BOSS_DEFAULT_DAMAGE_SUPER' : 'BOSS_DEFAULT_DAMAGE_NORMAL',
+            formulaVersion: 1,
             attackedAt: now,
             cooldownSlot: slot,
           },
@@ -246,7 +254,9 @@ export class BossBattlesService {
       );
       return {
         battleId: id,
-        calculatedDamage: damage.calculatedDamage,
+        attackType,
+        multiplier: randomMultiplier,
+        calculatedDamage,
         appliedDamage,
         currentHp: hp,
         initialHp: battle.initialHp,
@@ -407,6 +417,7 @@ export class BossBattlesService {
           ...(input.attackCooldownSeconds !== undefined
             ? { attackCooldownSeconds: input.attackCooldownSeconds }
             : {}),
+          ...(input.defaultDamage !== undefined ? { defaultDamage: input.defaultDamage } : {}),
           ...(input.attributes ?? {}),
           ...(publicationStatus !== undefined ? { status: publicationStatus } : {}),
           version: { increment: 1 },

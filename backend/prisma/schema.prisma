@@ -106,6 +106,7 @@ model BossBattle {
   initialHp             Int                     @map("initial_hp")
   currentHp             Int                     @map("current_hp")
   totalAppliedDamage    Int                     @default(0) @map("total_applied_damage")
+  defaultDamage         Int                     @map("default_damage")
   strength              Int
   charisma              Int
   endurance             Int
