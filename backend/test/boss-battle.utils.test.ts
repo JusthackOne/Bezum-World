@@ -23,11 +23,18 @@ describe('Boss Battle pure rules', () => {
     expect(calculateBossDamage(275, 1)).toBe(275);
   });
 
-  test('Super Attack multiplier includes both edges and is rounded to two decimals', () => {
-    expect(getBossAttackMultiplier('SUPER', () => 0)).toBe(1);
-    expect(getBossAttackMultiplier('SUPER', () => 0.58)).toBe(1.87);
-    expect(getBossAttackMultiplier('SUPER', () => 1)).toBe(2.5);
-    expect(calculateBossDamage(100, 1.87)).toBe(187);
+  test('Super Attack ranges from 0.8x to 1.8x with a 1.3x midpoint', () => {
+    expect(getBossAttackMultiplier('SUPER', () => 0)).toBe(0.8);
+    expect(getBossAttackMultiplier('SUPER', () => 0.5)).toBe(1.3);
+    expect(getBossAttackMultiplier('SUPER', () => 1)).toBe(1.8);
+    expect(calculateBossDamage(100, 0.8)).toBe(80);
+    expect(calculateBossDamage(100, 1.3)).toBe(130);
+    expect(calculateBossDamage(100, 1.8)).toBe(180);
+  });
+
+  test('rejects Super Attack multipliers outside the configured range', () => {
+    expect(() => calculateBossDamage(100, 0.79)).toThrow('between 0.8 and 1.8');
+    expect(() => calculateBossDamage(100, 1.81)).toThrow('between 0.8 and 1.8');
   });
 
   test('dense ranking preserves ties', () => {

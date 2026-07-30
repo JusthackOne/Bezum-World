@@ -218,7 +218,7 @@ export class BossBattlesService {
             bossAttributesSnapshot: bossAttributes,
             formulaIdentifier:
               attackType === 'SUPER' ? 'BOSS_DEFAULT_DAMAGE_SUPER' : 'BOSS_DEFAULT_DAMAGE_NORMAL',
-            formulaVersion: 1,
+            formulaVersion: attackType === 'SUPER' ? 2 : 1,
             attackedAt: now,
             cooldownSlot: slot,
           },
