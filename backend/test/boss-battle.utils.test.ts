@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  ACTIVATE_JOB,
+  EXPIRE_JOB,
+  FINALIZE_JOB,
+  getBossBattleJobId,
+} from '../src/modules/boss-battles/boss-battles.constants';
+import {
   calculateBossDamage,
   denseRank,
   getBossAttackMultiplier,
@@ -9,6 +15,14 @@ import {
 } from '../src/modules/boss-battles/boss-battle.utils';
 
 describe('Boss Battle pure rules', () => {
+  test('uses BullMQ-safe stable job identifiers', () => {
+    const battleId = 'battle-id';
+    expect(getBossBattleJobId(ACTIVATE_JOB, battleId)).toBe('boss-battle-activate-battle-id');
+    expect(getBossBattleJobId(EXPIRE_JOB, battleId)).toBe('boss-battle-expire-battle-id');
+    expect(getBossBattleJobId(FINALIZE_JOB, battleId)).toBe('boss-battle-finalize-battle-id');
+    expect(getBossBattleJobId(ACTIVATE_JOB, battleId)).not.toContain(':');
+  });
+
   test('uses fixed UTC cooldown slots', () => {
     expect(getCooldownSlot(new Date('2026-07-12T12:37:00.000Z'), 3600).toISOString()).toBe(
       '2026-07-12T12:00:00.000Z',

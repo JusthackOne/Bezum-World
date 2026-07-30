@@ -12,6 +12,8 @@ import {
   ACTIVATE_JOB,
   EXPIRE_JOB,
   FINALIZE_JOB,
+  getBossBattleJobId,
+  type BossBattleJobName,
 } from './boss-battles.constants';
 import { BossBattlesRepository } from './boss-battles.repository';
 import type { BossRewardDto, CreateBossBattleDto, UpdateBossBattleDto } from './dto';
@@ -495,30 +497,33 @@ export class BossBattlesService {
 
   private async schedule(id: string, startsAt: Date, endsAt: Date) {
     await Promise.all([
-      this.replaceJob(`boss-battle-activate:${id}`, ACTIVATE_JOB, id, startsAt),
-      this.replaceJob(`boss-battle-expire:${id}`, EXPIRE_JOB, id, endsAt),
+      this.replaceJob(ACTIVATE_JOB, id, startsAt),
+      this.replaceJob(EXPIRE_JOB, id, endsAt),
     ]);
   }
   private async unschedule(id: string) {
-    await Promise.all(
-      [`boss-battle-activate:${id}`, `boss-battle-expire:${id}`].map(async (jobId) => {
-        const job = await this.queue.getJob(jobId);
-        if (job) await job.remove();
-      }),
-    );
+    await Promise.all([this.removeJobs(ACTIVATE_JOB, id), this.removeJobs(EXPIRE_JOB, id)]);
   }
-  private async replaceJob(jobId: string, name: string, id: string, at: Date) {
-    const old = await this.queue.getJob(jobId);
-    if (old) await old.remove();
+  private async replaceJob(name: BossBattleJobName, id: string, at: Date) {
+    await this.removeJobs(name, id);
     await this.queue.add(
       name,
       { battleId: id },
       {
-        jobId,
+        jobId: getBossBattleJobId(name, id),
         delay: Math.max(0, at.getTime() - Date.now()),
         attempts: 5,
         backoff: { type: 'exponential', delay: 1000 },
       },
+    );
+  }
+  private async removeJobs(name: BossBattleJobName, id: string) {
+    const jobIds = [getBossBattleJobId(name, id), `boss-battle-${name}:${id}`];
+    await Promise.all(
+      jobIds.map(async (jobId) => {
+        const job = await this.queue.getJob(jobId);
+        if (job) await job.remove();
+      }),
     );
   }
   private enqueueFinalize(id: string) {
@@ -526,7 +531,7 @@ export class BossBattlesService {
       FINALIZE_JOB,
       { battleId: id },
       {
-        jobId: `boss-battle-finalize:${id}`,
+        jobId: getBossBattleJobId(FINALIZE_JOB, id),
         attempts: 5,
         backoff: { type: 'exponential', delay: 1000 },
       },
