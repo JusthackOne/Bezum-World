@@ -404,9 +404,11 @@ function BossAttackControl({
           <ZapIcon className="size-5" />
           {pending ? "Attack in progress..." : "Super Attack"}
         </span>
-        <span className="text-xs opacity-90">
-          ×{battle.superAttackMultiplierRange.min.toFixed(2)}–×
-          {battle.superAttackMultiplierRange.max.toFixed(2)} damage
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-300 px-2.5 py-1 text-xs font-bold text-amber-950 shadow-sm">
+          <CoinsIcon className="size-3.5" aria-hidden="true" />
+          {battle.superAttackGoldCost} gold · damage ×
+          {battle.superAttackMultiplierRange.min.toFixed(1)}–×
+          {battle.superAttackMultiplierRange.max.toFixed(1)}
         </span>
       </Button>
       {lastSuperMultiplier !== null ? (

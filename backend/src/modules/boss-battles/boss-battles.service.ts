@@ -21,6 +21,7 @@ import {
   getBossAttackMultiplier,
   getCooldownSlot,
   resolveReward,
+  SUPER_ATTACK_GOLD_COST,
   SUPER_ATTACK_MAX_MULTIPLIER,
   SUPER_ATTACK_MIN_MULTIPLIER,
   type BossAttackType,
@@ -136,6 +137,7 @@ export class BossBattlesService {
         min: SUPER_ATTACK_MIN_MULTIPLIER,
         max: SUPER_ATTACK_MAX_MULTIPLIER,
       },
+      superAttackGoldCost: SUPER_ATTACK_GOLD_COST,
     };
   }
 
@@ -218,7 +220,7 @@ export class BossBattlesService {
             bossAttributesSnapshot: bossAttributes,
             formulaIdentifier:
               attackType === 'SUPER' ? 'BOSS_DEFAULT_DAMAGE_SUPER' : 'BOSS_DEFAULT_DAMAGE_NORMAL',
-            formulaVersion: attackType === 'SUPER' ? 2 : 1,
+            formulaVersion: attackType === 'SUPER' ? 3 : 1,
             attackedAt: now,
             cooldownSlot: slot,
           },
@@ -228,6 +230,15 @@ export class BossBattlesService {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
           throw this.error('ATTACK_ALREADY_USED_FOR_CURRENT_SLOT', 409);
         throw error;
+      }
+      if (
+        attackType === 'SUPER' &&
+        !(await this.repository.decrementUserBalanceIfEnough(userId, SUPER_ATTACK_GOLD_COST, tx))
+      ) {
+        throw new BadRequestException({
+          code: 'INSUFFICIENT_GOLD_FOR_SUPER_ATTACK',
+          message: 'Not enough gold for Super Attack',
+        });
       }
       const participant = await this.repository.upsertParticipant(
         id,

@@ -72,6 +72,7 @@ export interface BossBattle extends BossAttributes {
   nextAttackAt: string | null;
   damageRange: { min: number; max: number } | null;
   superAttackMultiplierRange: { min: number; max: number };
+  superAttackGoldCost: number;
 }
 
 export interface BossBattleHistoryItem {

@@ -1,7 +1,8 @@
 export type BossAttackType = 'NORMAL' | 'SUPER';
 
-export const SUPER_ATTACK_MIN_MULTIPLIER = 0.8;
-export const SUPER_ATTACK_MAX_MULTIPLIER = 1.8;
+export const SUPER_ATTACK_MIN_MULTIPLIER = 1;
+export const SUPER_ATTACK_MAX_MULTIPLIER = 2;
+export const SUPER_ATTACK_GOLD_COST = 5;
 
 export function getCooldownSlot(timestamp: Date, cooldownSeconds: number): Date {
   if (!Number.isInteger(cooldownSeconds) || cooldownSeconds <= 0) {
@@ -32,7 +33,7 @@ export function calculateBossDamage(defaultDamage: number, multiplier: number): 
     throw new RangeError('defaultDamage must be a positive integer');
   }
   if (multiplier < SUPER_ATTACK_MIN_MULTIPLIER || multiplier > SUPER_ATTACK_MAX_MULTIPLIER) {
-    throw new RangeError('multiplier must be between 0.8 and 1.8');
+    throw new RangeError('multiplier must be between 1 and 2');
   }
   return Math.round(defaultDamage * multiplier);
 }

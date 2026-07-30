@@ -39,6 +39,9 @@ export function useAttackBossMutation(battleId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (attackType: BossAttackType) => attackBoss(battleId!, attackType),
+    onSuccess: async () => {
+      await refreshCurrentUserProfile(queryClient);
+    },
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.currentBossBattle }),
