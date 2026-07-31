@@ -116,7 +116,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
   return (
     <article
       className={cn(
-        "group isolate relative flex min-h-84 cursor-pointer overflow-hidden rounded-2xl border transition-shadow",
+        "group relative isolate flex min-h-84 cursor-pointer overflow-hidden rounded-2xl border transition-shadow",
         rarityStyle.borderClassName,
         rarityStyle.glowClassName,
         className,
@@ -166,7 +166,9 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
                 : "left-1/2 -translate-x-1/2",
           )}
         >
-          <div className={cn("flex items-center", originalPrice !== undefined && "flex-col gap-0.5")}>
+          <div
+            className={cn("flex items-center", originalPrice !== undefined && "flex-col gap-0.5")}
+          >
             {originalPrice !== undefined ? (
               <>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-400/60 bg-slate-950/70 px-2.5 py-0.5 shadow-sm">
@@ -180,7 +182,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
             ) : null}
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.2),rgba(251,191,36,0.12))] px-2.5 py-0.5 shadow-[0_0_0_1px_rgba(245,158,11,0.24),0_0_16px_rgba(245,158,11,0.18)]">
               <CoinsIcon className="size-3.5 text-amber-300" />
-              <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-[10px] font-semibold tabular-nums text-transparent">
+              <span className="bg-linear-to-r from-amber-200 to-yellow-400 bg-clip-text text-[10px] font-semibold text-transparent tabular-nums">
                 {formatBalance(item.price)}
               </span>
             </span>
@@ -196,7 +198,7 @@ export function ItemDisplayCard<TItem extends ItemDisplay>({
 
       <div
         className={clsx(
-          "absolute inset-x-3 mx-auto bottom-3 z-20 rounded-lg border border-white/20 bg-slate-950/56 p-3 backdrop-blur-[2px]",
+          "absolute inset-x-3 bottom-3 z-20 mx-auto rounded-lg border border-white/20 bg-slate-950/56 p-3 backdrop-blur-[2px]",
           isShopCard && "w-2/3",
         )}
       >

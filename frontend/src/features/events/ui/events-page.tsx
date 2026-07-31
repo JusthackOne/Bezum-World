@@ -50,7 +50,7 @@ function EventDate({ value }: { value: string }) {
 
 function ColumnTitle({ children }: { children: ReactNode }) {
   return (
-    <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <p className="text-center text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
       {children}
     </p>
   );
@@ -67,7 +67,7 @@ function UserLink({ user }: { user: EventUser }) {
         alt={`${user.username} avatar`}
         sizeClassName="h-14 w-14"
       />
-      <span className="w-full min-w-0 text-sm leading-tight break-words [overflow-wrap:anywhere]">
+      <span className="w-full min-w-0 text-sm leading-tight wrap-anywhere wrap-break-word">
         {user.username}
       </span>
     </Link>
@@ -97,7 +97,7 @@ function PurchaseEventRow({ event }: { event: Extract<GameEvent, { type: "PURCHA
         <UserLink user={event.user} />
       </div>
       <div className="flex items-center justify-center">
-        <span className="rounded-full border bg-muted/20 px-3 py-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+        <span className="rounded-full border bg-muted/20 px-3 py-1 text-xs font-bold tracking-wide text-muted-foreground uppercase">
           purchased
         </span>
       </div>
@@ -188,7 +188,7 @@ function TaskCompletedEventRow({
         <UserLink user={event.user} />
       </div>
       <div className="flex items-center justify-center">
-        <span className="rounded-full border bg-muted/20 px-3 py-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+        <span className="rounded-full border bg-muted/20 px-3 py-1 text-xs font-bold tracking-wide text-muted-foreground uppercase">
           completed
         </span>
       </div>
@@ -263,7 +263,7 @@ export function EventsPage() {
           <ActivityIcon className="size-5 text-emerald-500" />
           <h1 className="text-2xl font-semibold">Events</h1>
         </div>
-        <p className="text-muted-foreground text-sm">Latest purchases and completed battles.</p>
+        <p className="text-sm text-muted-foreground">Latest purchases and completed battles.</p>
       </div>
 
       <Card>
@@ -294,9 +294,9 @@ export function EventsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {eventsQuery.isPending ? (
-            <p className="text-muted-foreground text-sm">Loading events...</p>
+            <p className="text-sm text-muted-foreground">Loading events...</p>
           ) : events.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No events found.</p>
+            <p className="text-sm text-muted-foreground">No events found.</p>
           ) : (
             <div className="space-y-3">
               {events.map((event) => (

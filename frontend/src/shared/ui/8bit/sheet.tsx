@@ -53,7 +53,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        "fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
         className,
       )}
       {...props}
@@ -73,15 +73,15 @@ function SheetContent({ className, children, side = "right", font, ...props }: B
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+          "fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
           side === "right" &&
-            "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 sm:max-w-sm",
+            "inset-y-0 right-0 h-full w-3/4 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
           side === "left" &&
-            "data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left inset-y-0 left-0 h-full w-3/4 sm:max-w-sm",
+            "inset-y-0 left-0 h-full w-3/4 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
           side === "top" &&
-            "data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto",
+            "inset-x-0 top-0 h-auto data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
           side === "bottom" &&
-            "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto",
+            "inset-x-0 bottom-0 h-auto data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
           sheetVariants({
             font,
             className,
@@ -89,29 +89,29 @@ function SheetContent({ className, children, side = "right", font, ...props }: B
         )}
         {...props}
       >
-        <div className="w-full h-full relative">
+        <div className="relative h-full w-full">
           {children}
           {/* 8 bit borders */}
           {side !== "top" && (
             <div
-              className="absolute top-0 left-0 w-full h-1.5 bg-foreground dark:bg-ring pointer-events-none"
+              className="pointer-events-none absolute top-0 left-0 h-1.5 w-full bg-foreground dark:bg-ring"
               aria-hidden="true"
             />
           )}
           {side !== "bottom" && (
             <div
-              className="absolute bottom-0 w-full h-1.5 bg-foreground dark:bg-ring pointer-events-none"
+              className="pointer-events-none absolute bottom-0 h-1.5 w-full bg-foreground dark:bg-ring"
               aria-hidden="true"
             />
           )}
           {side !== "left" && (
             <>
               <div
-                className="absolute top-1 -left-1 w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none"
+                className="pointer-events-none absolute top-1 -left-1 h-1/2 w-1.5 bg-foreground dark:bg-ring"
                 aria-hidden="true"
               />
               <div
-                className="absolute bottom-1 -left-1 w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none"
+                className="pointer-events-none absolute bottom-1 -left-1 h-1/2 w-1.5 bg-foreground dark:bg-ring"
                 aria-hidden="true"
               />
             </>
@@ -119,17 +119,17 @@ function SheetContent({ className, children, side = "right", font, ...props }: B
           {side !== "right" && (
             <>
               <div
-                className="absolute top-1 -right-1 w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none"
+                className="pointer-events-none absolute top-1 -right-1 h-1/2 w-1.5 bg-foreground dark:bg-ring"
                 aria-hidden="true"
               />
               <div
-                className="absolute bottom-1 -right-1 w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none"
+                className="pointer-events-none absolute -right-1 bottom-1 h-1/2 w-1.5 bg-foreground dark:bg-ring"
                 aria-hidden="true"
               />
             </>
           )}
         </div>
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <SheetPrimitive.Close className="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
           <svg
             width={50}
             height={50}
@@ -139,7 +139,7 @@ function SheetContent({ className, children, side = "right", font, ...props }: B
             stroke="currentColor"
             strokeWidth={0.25}
             color=""
-            className="w-6 h-6"
+            className="h-6 w-6"
             aria-label="x"
           >
             <rect width={14} height={14} rx={1} transform="matrix(0 -1 -1 0 120 152)" />

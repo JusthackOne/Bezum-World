@@ -76,7 +76,7 @@ export function AdminTasksDataTable() {
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">Tasks</h1>
-          <p className="text-muted-foreground text-sm">Manage quests, rewards, and limits.</p>
+          <p className="text-sm text-muted-foreground">Manage quests, rewards, and limits.</p>
         </div>
 
         <Button type="button" variant="outline" onClick={() => router.push("/admin/tasks/create")}>
@@ -94,7 +94,7 @@ export function AdminTasksDataTable() {
         }}
       >
         <div className="relative flex-1">
-          <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={draftSearch}
             onChange={(event) => setDraftSearch(event.target.value)}
@@ -156,13 +156,13 @@ export function AdminTasksDataTable() {
             <TableBody>
               {tasksQuery.isPending ? (
                 <TableRow>
-                  <TableCell className="text-muted-foreground text-center" colSpan={5}>
+                  <TableCell className="text-center text-muted-foreground" colSpan={5}>
                     Loading tasks...
                   </TableCell>
                 </TableRow>
               ) : tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell className="text-muted-foreground text-center" colSpan={5}>
+                  <TableCell className="text-center text-muted-foreground" colSpan={5}>
                     No tasks found.
                   </TableCell>
                 </TableRow>

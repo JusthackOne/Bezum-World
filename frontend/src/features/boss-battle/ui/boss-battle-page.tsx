@@ -171,7 +171,7 @@ function BattleTimer({ battle, onBoundary }: { battle: BossBattle; onBoundary: (
     }
   }, [at, onBoundary, remaining]);
   return (
-    <p className="mx-auto inline-flex max-w-full items-center gap-2 whitespace-nowrap rounded-lg border bg-card px-4 py-2 text-sm shadow-sm sm:mx-0">
+    <p className="mx-auto inline-flex max-w-full items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm whitespace-nowrap shadow-sm sm:mx-0">
       <span className="text-muted-foreground">
         {battle.status === "SCHEDULED" ? "Battle starts in" : "Battle ends in"}
       </span>
@@ -228,7 +228,7 @@ function RewardResource({ type, value }: { type: "gold" | "gameScore"; value: nu
   return (
     <span
       className={cn(
-        "inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-lg border px-2.5 py-1.5 shadow-sm",
+        "inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 shadow-sm",
         gold
           ? "border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.13),rgba(251,191,36,0.08))]"
           : "border-fuchsia-400/60 bg-[linear-gradient(120deg,rgba(244,114,182,0.12),rgba(96,165,250,0.12),rgba(52,211,153,0.12),rgba(250,204,21,0.12))]",
@@ -243,8 +243,8 @@ function RewardResource({ type, value }: { type: "gold" | "gameScore"; value: nu
         className={cn(
           "min-w-0 truncate text-sm font-semibold tabular-nums",
           gold
-            ? "bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-transparent"
-            : "bg-gradient-to-r from-fuchsia-300 via-sky-300 to-emerald-300 bg-clip-text text-transparent",
+            ? "bg-linear-to-r from-amber-200 to-yellow-400 bg-clip-text text-transparent"
+            : "bg-linear-to-r from-fuchsia-300 via-sky-300 to-emerald-300 bg-clip-text text-transparent",
         )}
         title={String(value)}
       >
@@ -265,7 +265,7 @@ function BossDamageIndicator({
   return createPortal(
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-black/25 animate-in fade-in duration-150 motion-reduce:animate-none"
+      className="pointer-events-none fixed inset-0 z-50 grid animate-in place-items-center bg-black/25 duration-150 fade-in motion-reduce:animate-none"
     >
       <div className="flex flex-col items-center gap-3 text-center">
         {damage ? (
@@ -394,7 +394,7 @@ function BossAttackControl({
         )}
       </Button>
       <Button
-        className="min-h-14 w-full flex-col bg-gradient-to-r from-fuchsia-600 via-violet-600 to-rose-600 text-white shadow-[0_0_28px_rgba(192,38,211,0.35)] hover:from-fuchsia-500 hover:via-violet-500 hover:to-rose-500 disabled:from-fuchsia-950 disabled:via-violet-950 disabled:to-rose-950 sm:min-h-20 sm:text-lg"
+        className="min-h-14 w-full flex-col bg-linear-to-r from-fuchsia-600 via-violet-600 to-rose-600 text-white shadow-[0_0_28px_rgba(192,38,211,0.35)] hover:from-fuchsia-500 hover:via-violet-500 hover:to-rose-500 disabled:from-fuchsia-950 disabled:via-violet-950 disabled:to-rose-950 sm:min-h-20 sm:text-lg"
         size="lg"
         disabled={!ready || pending}
         onClick={() => onAttack("SUPER")}
@@ -706,7 +706,7 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
       <section className="space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-20 w-full" />
-        <Skeleton className="aspect-[16/7] w-full" />
+        <Skeleton className="aspect-16/7 w-full" />
       </section>
     );
   if (query.isError)
@@ -802,10 +802,10 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
           <img
             src={resolveAssetUrl(battle.imageUrl)}
             alt={battle.name}
-            className="max-h-[32rem] w-full object-contain"
+            className="max-h-128 w-full object-contain"
           />
         ) : (
-          <div className="flex aspect-[16/7] items-center justify-center">
+          <div className="flex aspect-16/7 items-center justify-center">
             <SkullIcon className="size-16" />
           </div>
         )}
@@ -822,7 +822,7 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
         {canClaim ? (
           <div className="flex justify-center py-2">
             <Button
-              className="h-auto min-h-12 w-full max-w-md whitespace-normal border border-amber-300/70 bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-3 text-center font-semibold leading-tight text-amber-950 shadow-[0_0_24px_rgba(245,158,11,0.3)] hover:from-amber-400 hover:to-yellow-400 sm:px-5"
+              className="h-auto min-h-12 w-full max-w-md border border-amber-300/70 bg-linear-to-r from-amber-500 to-yellow-500 px-4 py-3 text-center leading-tight font-semibold whitespace-normal text-amber-950 shadow-[0_0_24px_rgba(245,158,11,0.3)] hover:from-amber-400 hover:to-yellow-400 sm:px-5"
               disabled={claim.isPending}
               onClick={async () => {
                 try {
@@ -858,7 +858,7 @@ export function BossBattlePage({ battleId }: { battleId?: string } = {}) {
           </div>
         ) : null}
         {battle.description ? (
-          <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
+          <p className="text-sm leading-6 whitespace-pre-line text-muted-foreground">
             {battle.description}
           </p>
         ) : null}

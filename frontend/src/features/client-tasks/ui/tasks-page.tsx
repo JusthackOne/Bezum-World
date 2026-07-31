@@ -116,7 +116,7 @@ function TaskTypeLabel({ type }: { type: ClientTaskType }) {
   return (
     <span
       className={[
-        "inline-flex rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        "inline-flex rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
         taskTypeVisuals[type].labelClassName,
       ].join(" ")}
     >
@@ -448,11 +448,11 @@ export function TasksPage() {
 
   return (
     <ToastProvider duration={3500} swipeDirection="right">
-      <section className="min-w-0 max-w-full overflow-x-hidden space-y-5">
+      <section className="max-w-full min-w-0 space-y-5 overflow-x-hidden">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Tasks</h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               Complete tasks, claim rewards, and improve your hero.
             </p>
           </div>
@@ -460,7 +460,7 @@ export function TasksPage() {
           <div className="flex flex-col items-stretch gap-2 sm:items-end">
             <Button
               type="button"
-              className="max-w-full whitespace-normal text-center"
+              className="max-w-full text-center whitespace-normal"
               disabled={hasSuggestedToday || suggestionsQuery.isPending}
               onClick={() => setSuggestionDialogOpen(true)}
             >
@@ -468,7 +468,7 @@ export function TasksPage() {
               Suggest a New Task
             </Button>
             {hasSuggestedToday ? (
-              <p className="text-muted-foreground max-w-72 text-xs sm:text-right">
+              <p className="max-w-72 text-xs text-muted-foreground sm:text-right">
                 You have already suggested a task today.
               </p>
             ) : null}
@@ -514,7 +514,7 @@ export function TasksPage() {
                           sizeClassName="size-7"
                         />
                         <div className="min-w-0 text-right">
-                          <p className="text-muted-foreground text-[9px]">Suggested by</p>
+                          <p className="text-[9px] text-muted-foreground">Suggested by</p>
                           <p className="truncate text-[10px] font-semibold">
                             {suggestion.creator.username}
                           </p>
@@ -523,7 +523,7 @@ export function TasksPage() {
 
                       <button
                         type="button"
-                        className="block w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="block w-full cursor-pointer text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                         onClick={() => setSelectedSuggestion(suggestion)}
                       >
                         <div className="h-44 w-full overflow-hidden bg-muted/30 sm:h-48">
@@ -587,14 +587,14 @@ export function TasksPage() {
         ) : null}
 
         <form
-          className="min-w-0 max-w-full flex flex-col gap-2 sm:flex-row"
+          className="flex max-w-full min-w-0 flex-col gap-2 sm:flex-row"
           onSubmit={(event) => {
             event.preventDefault();
             setSearch(draftSearch.trim());
           }}
         >
           <div className="relative flex-1">
-            <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={draftSearch}
               onChange={(event) => setDraftSearch(event.target.value)}
@@ -606,7 +606,7 @@ export function TasksPage() {
           <Button
             type="button"
             variant="outline"
-            className="whitespace-normal text-center"
+            className="text-center whitespace-normal"
             onClick={() => {
               setDraftSearch("");
               setSearch("");
@@ -634,13 +634,13 @@ export function TasksPage() {
         {tasksQuery.isPending ? (
           <Card>
             <CardContent className="py-10">
-              <p className="text-muted-foreground text-sm">Loading tasks...</p>
+              <p className="text-sm text-muted-foreground">Loading tasks...</p>
             </CardContent>
           </Card>
         ) : tasks.length === 0 ? (
           <Card>
             <CardContent className="py-10">
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 {isFiltered
                   ? "No tasks match your current filters."
                   : "No tasks available right now."}
@@ -662,7 +662,7 @@ export function TasksPage() {
                   key={task.id}
                   className={[
                     "relative overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md",
-                    "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                     taskTypeVisuals[task.type].cardClassName,
                   ].join(" ")}
                   role="button"
@@ -756,11 +756,11 @@ export function TasksPage() {
 
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-md border bg-muted/10 px-3 py-2">
-                    <p className="text-muted-foreground text-xs">Type</p>
+                    <p className="text-xs text-muted-foreground">Type</p>
                     <p className="font-semibold capitalize">{selectedTask.type}</p>
                   </div>
                   <div className="rounded-md border bg-muted/10 px-3 py-2">
-                    <p className="text-muted-foreground text-xs">Status</p>
+                    <p className="text-xs text-muted-foreground">Status</p>
                     <p className="font-semibold">
                       {selectedTask.type === "event" && !selectedTask.isAvailable
                         ? "Completed"
@@ -792,7 +792,7 @@ export function TasksPage() {
         }}
       >
         <DialogContent className="max-h-[85vh] max-w-[calc(100vw-2rem)] overflow-hidden p-0 sm:max-w-2xl">
-          <div className="max-h-[85vh] min-w-0 space-y-4 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
+          <div className="max-h-[85vh] min-w-0 space-y-4 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>
                 {editingSuggestion ? "Edit Task Suggestion" : "Suggest a New Task"}
@@ -898,7 +898,7 @@ export function TasksPage() {
                     sizeClassName="size-9"
                   />
                   <div>
-                    <p className="text-muted-foreground text-xs">Suggested by</p>
+                    <p className="text-xs text-muted-foreground">Suggested by</p>
                     <p className="text-sm font-semibold">{selectedSuggestion.creator.username}</p>
                   </div>
                 </div>
@@ -914,11 +914,11 @@ export function TasksPage() {
 
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-md border bg-muted/10 px-3 py-2">
-                    <p className="text-muted-foreground text-xs">Type</p>
+                    <p className="text-xs text-muted-foreground">Type</p>
                     <p className="font-semibold capitalize">{selectedSuggestion.type}</p>
                   </div>
                   <div className="rounded-md border bg-muted/10 px-3 py-2">
-                    <p className="text-muted-foreground text-xs">Votes</p>
+                    <p className="text-xs text-muted-foreground">Votes</p>
                     <p className="font-semibold">{selectedSuggestion.voteCount}</p>
                   </div>
                 </div>

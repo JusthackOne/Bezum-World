@@ -90,11 +90,11 @@ export function ItemTooltip({ item }: { item: ItemDisplay }) {
   return (
     <div className="space-y-2">
       <p className="text-sm font-semibold">{item.name}</p>
-      <p className="text-muted-foreground text-xs">
+      <p className="text-xs text-muted-foreground">
         {item.description ?? "No description available."}
       </p>
       <div className="flex items-center justify-between">
-        <span className="text-muted-foreground text-[10px]">Rarity</span>
+        <span className="text-[10px] text-muted-foreground">Rarity</span>
         <span className={cn("text-[11px] font-semibold capitalize", rarityTextClassName)}>
           {item.rarity.replaceAll("_", " ")}
         </span>
@@ -125,7 +125,7 @@ export function ItemTooltip({ item }: { item: ItemDisplay }) {
           })}
         </div>
       ) : (
-        <p className="text-muted-foreground text-xs">No attributes</p>
+        <p className="text-xs text-muted-foreground">No attributes</p>
       )}
     </div>
   );
@@ -159,7 +159,7 @@ export function ProfileItemSlot({
     : null;
 
   const triggerClassName = cn(
-    "bg-muted/20 relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 transition-colors",
+    "relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 bg-muted/20 transition-colors",
     rarityStyle?.slotBorderClassName ?? "border-border/70",
     rarityStyle?.slotGlowClassName,
     className,
@@ -177,8 +177,8 @@ export function ProfileItemSlot({
         />
       ) : (
         <>
-          <Icon className="text-muted-foreground/45 size-9" />
-          <span className="bg-background/90 absolute right-1 bottom-1 rounded px-1 py-0.5 text-[10px] leading-none">
+          <Icon className="size-9 text-muted-foreground/45" />
+          <span className="absolute right-1 bottom-1 rounded bg-background/90 px-1 py-0.5 text-[10px] leading-none">
             {displayLabel ?? label}
           </span>
         </>
@@ -190,7 +190,7 @@ export function ProfileItemSlot({
     <div
       className={cn(
         triggerClassName,
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
       )}
     >
       {triggerContent}
@@ -210,7 +210,7 @@ export function ProfileItemSlot({
           type="button"
           className={cn(
             triggerClassName,
-            "touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
           )}
           aria-label={item.name}
           data-click-tooltip-boundary={tooltip.boundaryId}
@@ -227,7 +227,7 @@ export function ProfileItemSlot({
       </TooltipTrigger>
       <TooltipContent
         data-click-tooltip-boundary={tooltip.boundaryId}
-        className={cn("border-2 bg-card text-foreground w-64 p-3", tooltipBorderClassName)}
+        className={cn("w-64 border-2 bg-card p-3 text-foreground", tooltipBorderClassName)}
         sideOffset={8}
       >
         <ItemTooltip item={item} />

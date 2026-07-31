@@ -197,7 +197,7 @@ export function CivilizationGamesTable() {
 
       <div className="flex flex-col gap-3 md:flex-row">
         <div className="relative flex-1">
-          <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             className="pl-9"
@@ -281,7 +281,7 @@ export function CivilizationGamesTable() {
                       <TableCell>
                         <CivilizationStatusBadge status={game.status} />
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-[9px]">
+                      <TableCell className="text-[9px] whitespace-nowrap">
                         {formatDateTime(game.startAt, "short")}
                         <br />
                         {formatDateTime(game.endAt, "short")}

@@ -59,7 +59,7 @@ function PlayerRow({
     <article className="grid gap-4 rounded-xl border bg-card p-4 xl:grid-cols-5 xl:items-center">
       <button
         type="button"
-        className="flex min-w-0 items-center gap-3 rounded-lg text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 items-center gap-3 rounded-lg text-left transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         onClick={onOpenProfile}
       >
         <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted/30">
@@ -102,7 +102,7 @@ function PlayerRow({
       </TooltipProvider>
 
       <div className="rounded-lg border bg-muted/10 px-3 py-2 text-center">
-        <p className="text-muted-foreground text-xs uppercase">Featured Attribute</p>
+        <p className="text-xs text-muted-foreground uppercase">Featured Attribute</p>
         <div
           className={cn(
             "mx-auto mt-2 flex w-full min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-2",
@@ -114,7 +114,7 @@ function PlayerRow({
             aria-hidden="true"
           />
           <p className="flex max-w-full min-w-0 flex-wrap items-center justify-center gap-x-1 text-center text-xs leading-tight font-semibold">
-            <span className="break-words">{featuredAttributeVisual.label}</span>
+            <span className="wrap-break-word">{featuredAttributeVisual.label}</span>
             <span className="shrink-0 tabular-nums">
               ×{player.featuredAttributeMultiplier.toFixed(1)}
             </span>
@@ -122,7 +122,7 @@ function PlayerRow({
         </div>
 
         <div className="mt-3 border-t pt-3">
-          <p className="text-muted-foreground text-xs">Win Chance</p>
+          <p className="text-xs text-muted-foreground">Win Chance</p>
           <p className="font-semibold tabular-nums">{player.winChancePercent.toFixed(2)}%</p>
         </div>
       </div>
@@ -254,7 +254,7 @@ export function BattlesPage() {
       <section className="space-y-5">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Battles</h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Challenge other players once per day and earn gold by winning.
           </p>
         </div>
@@ -262,13 +262,13 @@ export function BattlesPage() {
         {playersQuery.isPending ? (
           <Card>
             <CardContent className="py-10">
-              <p className="text-muted-foreground text-sm">Loading battle players...</p>
+              <p className="text-sm text-muted-foreground">Loading battle players...</p>
             </CardContent>
           </Card>
         ) : players.length === 0 ? (
           <Card>
             <CardContent className="py-10">
-              <p className="text-muted-foreground text-sm">No opponents available right now.</p>
+              <p className="text-sm text-muted-foreground">No opponents available right now.</p>
             </CardContent>
           </Card>
         ) : (

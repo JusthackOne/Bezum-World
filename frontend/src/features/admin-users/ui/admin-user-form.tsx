@@ -160,7 +160,7 @@ export function AdminUserForm({
           }}
         />
 
-        <p className="text-muted-foreground text-xs">Allowed: JPG, PNG, WEBP, GIF (up to 5MB).</p>
+        <p className="text-xs text-muted-foreground">Allowed: JPG, PNG, WEBP, GIF (up to 5MB).</p>
       </div>
 
       <div className="space-y-2">
@@ -190,7 +190,7 @@ export function AdminUserForm({
             },
           })}
         />
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           {requireAuthCode
             ? "Обязательный уникальный код из 6 латинских букв или цифр."
             : "Если оставить поле пустым, система сгенерирует код автоматически."}

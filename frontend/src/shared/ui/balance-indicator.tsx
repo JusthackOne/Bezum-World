@@ -36,7 +36,7 @@ export function BalanceIndicator({
           aria-valuenow={Math.min(200, meterValue)}
           aria-valuetext={`${formattedPercent}%. ${description}`}
         >
-          <div className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 overflow-hidden rounded-full bg-gradient-to-r from-red-500 via-green-500 to-purple-600" />
+          <div className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 overflow-hidden rounded-full bg-linear-to-r from-red-500 via-green-500 to-purple-600" />
           <div
             className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-foreground ring-1 ring-background"
             aria-hidden="true"
@@ -49,7 +49,7 @@ export function BalanceIndicator({
         </div>
         <div className="flex items-start justify-between gap-3 text-sm">
           <p className="font-medium">{description}</p>
-          <span className="shrink-0 tabular-nums text-muted-foreground">{formattedPercent}%</span>
+          <span className="shrink-0 text-muted-foreground tabular-nums">{formattedPercent}%</span>
         </div>
       </CardContent>
     </Card>

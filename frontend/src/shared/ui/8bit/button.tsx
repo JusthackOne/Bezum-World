@@ -46,7 +46,7 @@ function Button({ children, asChild, ...props }: BitButtonProps) {
     <ShadcnButton
       {...props}
       className={cn(
-        "rounded-none active:translate-y-1 transition-transform relative inline-flex items-center justify-center gap-1.5 border-none",
+        "relative inline-flex items-center justify-center gap-1.5 rounded-none border-none transition-transform active:translate-y-1",
         size === "icon" && "mx-1 my-0",
         font !== "normal" && "retro",
         className,
@@ -62,25 +62,25 @@ function Button({ children, asChild, ...props }: BitButtonProps) {
           {variant !== "ghost" && variant !== "link" && size !== "icon" && (
             <>
               {/* Pixelated border */}
-              <div className="absolute -top-1.5 w-1/2 left-1.5 h-1.5 bg-foreground dark:bg-ring" />
-              <div className="absolute -top-1.5 w-1/2 right-1.5 h-1.5 bg-foreground dark:bg-ring" />
-              <div className="absolute -bottom-1.5 w-1/2 left-1.5 h-1.5 bg-foreground dark:bg-ring" />
-              <div className="absolute -bottom-1.5 w-1/2 right-1.5 h-1.5 bg-foreground dark:bg-ring" />
+              <div className="absolute -top-1.5 left-1.5 h-1.5 w-1/2 bg-foreground dark:bg-ring" />
+              <div className="absolute -top-1.5 right-1.5 h-1.5 w-1/2 bg-foreground dark:bg-ring" />
+              <div className="absolute -bottom-1.5 left-1.5 h-1.5 w-1/2 bg-foreground dark:bg-ring" />
+              <div className="absolute right-1.5 -bottom-1.5 h-1.5 w-1/2 bg-foreground dark:bg-ring" />
               <div className="absolute top-0 left-0 size-1.5 bg-foreground dark:bg-ring" />
               <div className="absolute top-0 right-0 size-1.5 bg-foreground dark:bg-ring" />
               <div className="absolute bottom-0 left-0 size-1.5 bg-foreground dark:bg-ring" />
-              <div className="absolute bottom-0 right-0 size-1.5 bg-foreground dark:bg-ring" />
+              <div className="absolute right-0 bottom-0 size-1.5 bg-foreground dark:bg-ring" />
               <div className="absolute top-1.5 -left-1.5 h-[calc(100%-12px)] w-1.5 bg-foreground dark:bg-ring" />
               <div className="absolute top-1.5 -right-1.5 h-[calc(100%-12px)] w-1.5 bg-foreground dark:bg-ring" />
               {variant !== "outline" && (
                 <>
                   {/* Top shadow */}
-                  <div className="absolute top-0 left-0 w-full h-1.5 bg-foreground/20" />
-                  <div className="absolute top-1.5 left-0 w-3 h-1.5 bg-foreground/20" />
+                  <div className="absolute top-0 left-0 h-1.5 w-full bg-foreground/20" />
+                  <div className="absolute top-1.5 left-0 h-1.5 w-3 bg-foreground/20" />
 
                   {/* Bottom shadow */}
-                  <div className="absolute bottom-0 left-0 w-full h-1.5 bg-foreground/20" />
-                  <div className="absolute bottom-1.5 right-0 w-3 h-1.5 bg-foreground/20" />
+                  <div className="absolute bottom-0 left-0 h-1.5 w-full bg-foreground/20" />
+                  <div className="absolute right-0 bottom-1.5 h-1.5 w-3 bg-foreground/20" />
                 </>
               )}
             </>
@@ -88,12 +88,12 @@ function Button({ children, asChild, ...props }: BitButtonProps) {
 
           {size === "icon" && (
             <>
-              <div className="absolute top-0 left-0 w-full h-[5px] md:h-1.5 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute bottom-0 w-full h-[5px] md:h-1.5 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute top-1 -left-1 w-[5px] md:w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute bottom-1 -left-1 w-[5px] md:w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute top-1 -right-1 w-[5px] md:w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute bottom-1 -right-1 w-[5px] md:w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none" />
+              <div className="pointer-events-none absolute top-0 left-0 h-1.25 w-full bg-foreground md:h-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute bottom-0 h-1.25 w-full bg-foreground md:h-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute top-1 -left-1 h-1/2 w-1.25 bg-foreground md:w-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute bottom-1 -left-1 h-1/2 w-1.25 bg-foreground md:w-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute top-1 -right-1 h-1/2 w-1.25 bg-foreground md:w-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute -right-1 bottom-1 h-1/2 w-1.25 bg-foreground md:w-1.5 dark:bg-ring" />
             </>
           )}
         </span>
@@ -104,25 +104,25 @@ function Button({ children, asChild, ...props }: BitButtonProps) {
           {variant !== "ghost" && variant !== "link" && size !== "icon" && (
             <>
               {/* Pixelated border */}
-              <div className="absolute -top-1.5 w-1/2 left-1.5 h-1.5 bg-foreground dark:bg-ring" />
-              <div className="absolute -top-1.5 w-1/2 right-1.5 h-1.5 bg-foreground dark:bg-ring" />
-              <div className="absolute -bottom-1.5 w-1/2 left-1.5 h-1.5 bg-foreground dark:bg-ring" />
-              <div className="absolute -bottom-1.5 w-1/2 right-1.5 h-1.5 bg-foreground dark:bg-ring" />
+              <div className="absolute -top-1.5 left-1.5 h-1.5 w-1/2 bg-foreground dark:bg-ring" />
+              <div className="absolute -top-1.5 right-1.5 h-1.5 w-1/2 bg-foreground dark:bg-ring" />
+              <div className="absolute -bottom-1.5 left-1.5 h-1.5 w-1/2 bg-foreground dark:bg-ring" />
+              <div className="absolute right-1.5 -bottom-1.5 h-1.5 w-1/2 bg-foreground dark:bg-ring" />
               <div className="absolute top-0 left-0 size-1.5 bg-foreground dark:bg-ring" />
               <div className="absolute top-0 right-0 size-1.5 bg-foreground dark:bg-ring" />
               <div className="absolute bottom-0 left-0 size-1.5 bg-foreground dark:bg-ring" />
-              <div className="absolute bottom-0 right-0 size-1.5 bg-foreground dark:bg-ring" />
+              <div className="absolute right-0 bottom-0 size-1.5 bg-foreground dark:bg-ring" />
               <div className="absolute top-1.5 -left-1.5 h-[calc(100%-12px)] w-1.5 bg-foreground dark:bg-ring" />
               <div className="absolute top-1.5 -right-1.5 h-[calc(100%-12px)] w-1.5 bg-foreground dark:bg-ring" />
               {variant !== "outline" && (
                 <>
                   {/* Top shadow */}
-                  <div className="absolute top-0 left-0 w-full h-1.5 bg-foreground/20" />
-                  <div className="absolute top-1.5 left-0 w-3 h-1.5 bg-foreground/20" />
+                  <div className="absolute top-0 left-0 h-1.5 w-full bg-foreground/20" />
+                  <div className="absolute top-1.5 left-0 h-1.5 w-3 bg-foreground/20" />
 
                   {/* Bottom shadow */}
-                  <div className="absolute bottom-0 left-0 w-full h-1.5 bg-foreground/20" />
-                  <div className="absolute bottom-1.5 right-0 w-3 h-1.5 bg-foreground/20" />
+                  <div className="absolute bottom-0 left-0 h-1.5 w-full bg-foreground/20" />
+                  <div className="absolute right-0 bottom-1.5 h-1.5 w-3 bg-foreground/20" />
                 </>
               )}
             </>
@@ -130,12 +130,12 @@ function Button({ children, asChild, ...props }: BitButtonProps) {
 
           {size === "icon" && (
             <>
-              <div className="absolute top-0 left-0 w-full h-[5px] md:h-1.5 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute bottom-0 w-full h-[5px] md:h-1.5 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute top-1 -left-1 w-[5px] md:w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute bottom-1 -left-1 w-[5px] md:w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute top-1 -right-1 w-[5px] md:w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none" />
-              <div className="absolute bottom-1 -right-1 w-[5px] md:w-1.5 h-1/2 bg-foreground dark:bg-ring pointer-events-none" />
+              <div className="pointer-events-none absolute top-0 left-0 h-1.25 w-full bg-foreground md:h-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute bottom-0 h-1.25 w-full bg-foreground md:h-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute top-1 -left-1 h-1/2 w-1.25 bg-foreground md:w-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute bottom-1 -left-1 h-1/2 w-1.25 bg-foreground md:w-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute top-1 -right-1 h-1/2 w-1.25 bg-foreground md:w-1.5 dark:bg-ring" />
+              <div className="pointer-events-none absolute -right-1 bottom-1 h-1/2 w-1.25 bg-foreground md:w-1.5 dark:bg-ring" />
             </>
           )}
         </>

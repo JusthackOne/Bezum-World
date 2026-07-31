@@ -31,6 +31,28 @@ bun run dev
 
 The frontend runs on `http://localhost:3000`.
 
+Local development uses the Next.js webpack dev server because Turbopack can intermittently fail
+atomic file updates on Windows with `EPERM`.
+
+## Code quality
+
+Run all non-destructive checks, including ESLint, Prettier with Tailwind class ordering, and the
+production build:
+
+```bash
+bun run check
+```
+
+Apply all available ESLint fixes, including canonical Tailwind CSS v4 class replacements, and then
+format the project:
+
+```bash
+bun run style:fix
+```
+
+Some invalid or dynamic Tailwind classes cannot be fixed safely. The command leaves those as ESLint
+errors so they can be corrected manually.
+
 ## 🚀 Production
 
 Production is normally started from the repository root:

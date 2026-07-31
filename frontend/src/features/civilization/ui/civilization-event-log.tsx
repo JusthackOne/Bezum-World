@@ -80,7 +80,7 @@ export function CivilizationEventLog({
                   {Object.keys(event.payload).length > 0 ? (
                     <details className="mt-2 text-[8px] text-muted-foreground">
                       <summary className="cursor-pointer select-none">Structured details</summary>
-                      <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all border bg-background/60 p-2">
+                      <pre className="mt-1 max-h-40 overflow-auto border bg-background/60 p-2 break-all whitespace-pre-wrap">
                         {JSON.stringify(event.payload, null, 2)}
                       </pre>
                     </details>

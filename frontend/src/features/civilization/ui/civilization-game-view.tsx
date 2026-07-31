@@ -278,7 +278,7 @@ export function CivilizationGameView({
           />
         </div>
 
-        <aside className="space-y-4 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:sticky xl:top-18 xl:self-start">
+        <aside className="space-y-4 xl:sticky xl:top-18 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:self-start">
           <CivilizationPlayerPanel player={currentPlayer} state={state} />
           <CivilizationSelectionPanel
             state={state}

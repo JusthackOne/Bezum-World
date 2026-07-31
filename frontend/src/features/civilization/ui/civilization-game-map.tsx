@@ -786,7 +786,7 @@ export function CivilizationGameMap({
         role="img"
         aria-label="Civilization hex map"
       />
-      <div className="absolute right-3 top-3 flex flex-col gap-2">
+      <div className="absolute top-3 right-3 flex flex-col gap-2">
         <Button
           type="button"
           size="icon"

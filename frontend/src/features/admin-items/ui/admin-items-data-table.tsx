@@ -74,7 +74,7 @@ export function AdminItemsDataTable() {
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">Items</h1>
-          <p className="text-muted-foreground text-sm">Manage shop and inventory items.</p>
+          <p className="text-sm text-muted-foreground">Manage shop and inventory items.</p>
         </div>
 
         <Button type="button" variant="outline" onClick={() => router.push("/admin/items/create")}>
@@ -128,13 +128,13 @@ export function AdminItemsDataTable() {
             <TableBody>
               {itemsQuery.isPending ? (
                 <TableRow>
-                  <TableCell className="text-muted-foreground text-center" colSpan={13}>
+                  <TableCell className="text-center text-muted-foreground" colSpan={13}>
                     Loading items...
                   </TableCell>
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell className="text-muted-foreground text-center" colSpan={13}>
+                  <TableCell className="text-center text-muted-foreground" colSpan={13}>
                     No items found.
                   </TableCell>
                 </TableRow>
@@ -148,17 +148,17 @@ export function AdminItemsDataTable() {
                       className="cursor-pointer"
                       onClick={() => router.push(`/admin/items/${item.id}`)}
                     >
-                      <TableCell className="max-w-[220px] truncate font-mono text-xs">
+                      <TableCell className="max-w-55 truncate font-mono text-xs">
                         {item.id}
                       </TableCell>
-                      <TableCell className="max-w-[220px] truncate font-mono text-xs">
+                      <TableCell className="max-w-55 truncate font-mono text-xs">
                         {item.owner_user_id ?? "N/A"}
                       </TableCell>
                       <TableCell>{item.name}</TableCell>
-                      <TableCell className="max-w-[280px] truncate">
+                      <TableCell className="max-w-70 truncate">
                         {item.description ?? "N/A"}
                       </TableCell>
-                      <TableCell className="max-w-[260px]">
+                      <TableCell className="max-w-65">
                         {item.image_url ? (
                           <a
                             href={displayImageUrl ?? item.image_url}
