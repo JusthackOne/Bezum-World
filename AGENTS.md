@@ -146,6 +146,14 @@ Core mechanics:
 
 ---
 
+## Documentation Rules
+
+- When adding or changing a feature whose behavior, domain logic, configuration, architecture, or operational workflow needs explanation, update the documentation in the same task.
+- Prefer updating the relevant existing document; if none exists, create a new English Markdown file in `docs/`.
+- Documentation must describe how the feature works and remain consistent with the implemented behavior before the task is considered complete.
+
+---
+
 ## Task Files Rules
 
 - Every new task must be created in the `tasks/` directory.
