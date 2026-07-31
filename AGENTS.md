@@ -106,6 +106,10 @@ Core mechanics:
 - use canonical Tailwind CSS v4 utility classes whenever an equivalent utility exists
 - treat `tailwindcss(suggestCanonicalClasses)` diagnostics in changed code as errors and resolve them before finishing
 - prefer theme utilities and spacing-scale utilities over arbitrary values; use arbitrary values only when no exact canonical utility exists
+- after every UI feature or UI bug fix, use Playwright MCP to verify the affected user flow in a running application before finishing
+- during Playwright MCP verification, inspect the rendered UI at relevant desktop and mobile viewport sizes, exercise the changed interactions, and check the browser console and failed network requests
+- treat visible layout regressions, broken interactions, unexpected console errors, and failed requests caused by the change as blocking issues
+- if Playwright MCP or the required local application is unavailable, do not silently skip UI verification; report what could not be verified and provide the exact command or setup needed to complete it
 - custom CSS only for game-specific components:
   - cards
   - items
