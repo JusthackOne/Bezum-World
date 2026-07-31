@@ -59,40 +59,162 @@ enum BossRewardClaimStatus {
   FAILED
 }
 
+enum CivilizationGameStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum CivilizationCompletionReason {
+  TOWN_HALL_CAPTURED
+  END_TIME_REACHED
+  ADMIN_FORCE_COMPLETED
+  ADMIN_CANCELLED
+}
+
+enum CivilizationTeamSide {
+  TEAM_A
+  TEAM_B
+}
+
+enum CivilizationTerrainType {
+  GROUND
+  MOUNTAIN
+}
+
+enum CivilizationBuildingType {
+  TOWN_HALL
+  GOLD_BUILDING
+  ATTRIBUTE_BUILDING
+}
+
+enum CivilizationBuildingStatus {
+  ACTIVE
+  CAPTURED
+}
+
+enum CivilizationTowerStatus {
+  UNDER_CONSTRUCTION
+  ACTIVE
+  DESTROYED
+  CANCELLED
+}
+
+enum CivilizationTowerWorkKind {
+  BUILD
+  REPAIR
+}
+
+enum CivilizationActionType {
+  MOVE
+  ATTACK_PLAYER
+  CONTRIBUTE_BUILDING_CAPTURE
+  START_TOWER_CONSTRUCTION
+  ATTACK_TOWER
+  REPAIR_TOWER
+  CONTRIBUTE_TOWN_HALL_CAPTURE
+  DEFEND_TOWN_HALL
+}
+
+enum CivilizationEventType {
+  GAME_CREATED
+  GAME_SCHEDULED
+  GAME_STARTED
+  GAME_COMPLETED
+  GAME_CANCELLED
+  PLAYER_ASSIGNED
+  PLAYER_ADDED_AFTER_START
+  PLAYER_MOVED
+  TILE_CAPTURED
+  PLAYER_ATTACKED
+  PLAYER_DEFEATED
+  PLAYER_RESPAWNED
+  BUILDING_CAPTURE_STARTED
+  BUILDING_CAPTURE_PROGRESS
+  BUILDING_CAPTURED
+  GOLD_ACCRUED
+  ATTRIBUTE_ACCRUED
+  TOWER_CONSTRUCTION_STARTED
+  TOWER_CONSTRUCTION_CANCELLED
+  TOWER_COMPLETED
+  TOWER_DESTROYED
+  TOWER_REPAIR_STARTED
+  TOWER_REPAIRED
+  TOWN_HALL_CAPTURE_PROGRESS
+  TOWN_HALL_DEFENDED
+  TOWN_HALL_CAPTURED
+  TEAM_GOLD_SPENT
+  REWARDS_DISTRIBUTED
+  ADMIN_STATE_CORRECTION
+}
+
+enum CivilizationRewardResourceType {
+  GOLD
+  ATTRIBUTE
+}
+
+enum CivilizationAdminActionType {
+  GAME_CREATED
+  GAME_UPDATED
+  GAME_SCHEDULED
+  PLAYER_ASSIGNED
+  PLAYER_ADDED_AFTER_START
+  MAP_UPDATED
+  SETTINGS_UPDATED
+  GAME_CANCELLED
+  GAME_FORCE_COMPLETED
+  STATE_CORRECTED
+}
+
+enum CivilizationAttributeKey {
+  strength
+  charisma
+  endurance
+  intelligence
+}
+
+enum CivilizationGameSnapshotType {
+  STARTED
+  FINAL
+}
+
 model Account {
-  id                  String                  @id @default(uuid())
-  username            String                  @unique
+  id                  String                   @id @default(uuid())
+  username            String                   @unique
   avatarUrl           String?
-  balance             Int                     @default(0)
-  gameScore           Int                     @default(0)
-  strength            Int                     @default(0)
-  charisma            Int                     @default(0)
-  endurance           Int                     @default(0)
-  intelligence        Int                     @default(0)
-  lastTimeLoggedIn    DateTime?               @db.Timestamptz(3)
-  createdAt           DateTime                @default(now()) @db.Timestamptz(3)
+  balance             Int                      @default(0)
+  gameScore           Int                      @default(0)
+  strength            Int                      @default(0)
+  charisma            Int                      @default(0)
+  endurance           Int                      @default(0)
+  intelligence        Int                      @default(0)
+  lastTimeLoggedIn    DateTime?                @db.Timestamptz(3)
+  createdAt           DateTime                 @default(now()) @db.Timestamptz(3)
   authCode            AuthCode?
   items               Item[]
   equipment           UserEquipmentSlot[]
   taskSubmissions     TaskSubmission[]
-  taskSuggestions     TaskSuggestion[]        @relation("TaskSuggestionCreator")
-  taskSuggestionVotes TaskSuggestionVote[]    @relation("TaskSuggestionVoter")
-  attackedBattles     BattleLog[]             @relation("BattleAttacker")
-  defendedBattles     BattleLog[]             @relation("BattleDefender")
-  wonBattles          BattleLog[]             @relation("BattleWinner")
-  lostBattles         BattleLog[]             @relation("BattleLoser")
-  dailyBattlesAsOne   DailyBattle[]           @relation("DailyBattlePlayerOne")
-  dailyBattlesAsTwo   DailyBattle[]           @relation("DailyBattlePlayerTwo")
-  purchaseEvents      GameEvent[]             @relation("GameEventPurchaseUser")
-  challengedEvents    GameEvent[]             @relation("GameEventChallenger")
-  opponentEvents      GameEvent[]             @relation("GameEventOpponent")
-  wonEvents           GameEvent[]             @relation("GameEventWinner")
-  taskCompletedEvents GameEvent[]             @relation("GameEventTaskCompletedUser")
+  taskSuggestions     TaskSuggestion[]         @relation("TaskSuggestionCreator")
+  taskSuggestionVotes TaskSuggestionVote[]     @relation("TaskSuggestionVoter")
+  attackedBattles     BattleLog[]              @relation("BattleAttacker")
+  defendedBattles     BattleLog[]              @relation("BattleDefender")
+  wonBattles          BattleLog[]              @relation("BattleWinner")
+  lostBattles         BattleLog[]              @relation("BattleLoser")
+  dailyBattlesAsOne   DailyBattle[]            @relation("DailyBattlePlayerOne")
+  dailyBattlesAsTwo   DailyBattle[]            @relation("DailyBattlePlayerTwo")
+  purchaseEvents      GameEvent[]              @relation("GameEventPurchaseUser")
+  challengedEvents    GameEvent[]              @relation("GameEventChallenger")
+  opponentEvents      GameEvent[]              @relation("GameEventOpponent")
+  wonEvents           GameEvent[]              @relation("GameEventWinner")
+  taskCompletedEvents GameEvent[]              @relation("GameEventTaskCompletedUser")
   bossAttacks         BossAttack[]
   bossParticipants    BossBattleParticipant[]
   bossResults         BossBattleResult[]
   bossRewardClaims    BossRewardClaim[]
   slotStatistics      SlotStatistics?
+  civilizationPlayers CivilizationGamePlayer[]
 }
 
 model SlotStatistics {
@@ -302,13 +424,15 @@ model AuthCode {
 }
 
 model Admin {
-  id               String    @id @default(uuid())
-  singletonKey     String    @unique @default("singleton")
-  username         String    @unique
-  passwordHash     String
-  lastTimeLoggedIn DateTime? @db.Timestamptz(3)
-  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
+  id                       String                      @id @default(uuid())
+  singletonKey             String                      @unique @default("singleton")
+  username                 String                      @unique
+  passwordHash             String
+  lastTimeLoggedIn         DateTime?                   @db.Timestamptz(3)
+  createdAt                DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime                    @updatedAt @db.Timestamptz(3)
+  civilizationGamesCreated CivilizationGame[]          @relation("CivilizationGameCreator")
+  civilizationAuditLogs    CivilizationAdminAuditLog[]
 }
 
 enum ItemRarity {
@@ -529,4 +653,320 @@ model GameEvent {
   @@index([taskCompletedUserId])
   @@index([taskId])
   @@map("game_events")
+}
+
+model CivilizationGame {
+  id                  String                              @id @default(uuid())
+  name                String
+  status              CivilizationGameStatus              @default(DRAFT)
+  startAt             DateTime                            @map("start_at") @db.Timestamptz(3)
+  endAt               DateTime                            @map("end_at") @db.Timestamptz(3)
+  completedAt         DateTime?                           @map("completed_at") @db.Timestamptz(3)
+  winnerTeamId        String?                             @map("winner_team_id")
+  completionReason    CivilizationCompletionReason?       @map("completion_reason")
+  settingsJson        Json                                @map("settings_json")
+  createdByAdminId    String                              @map("created_by_admin_id")
+  stateVersion        Int                                 @default(0) @map("state_version")
+  createdAt           DateTime                            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime                            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  winnerTeam          CivilizationTeam?                   @relation("CivilizationGameWinner", fields: [winnerTeamId], references: [id], onDelete: SetNull)
+  createdByAdmin      Admin                               @relation("CivilizationGameCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  teams               CivilizationTeam[]
+  players             CivilizationGamePlayer[]
+  tiles               CivilizationTile[]
+  spawnPoints         CivilizationSpawnPoint[]
+  buildings           CivilizationBuilding[]
+  towers              CivilizationTower[]
+  teamResources       CivilizationTeamResource[]
+  attributeResources  CivilizationTeamAttributeResource[]
+  actions             CivilizationAction[]
+  events              CivilizationEvent[]
+  rewardDistributions CivilizationRewardDistribution[]
+  auditLogs           CivilizationAdminAuditLog[]
+  snapshots           CivilizationGameSnapshot[]
+
+  @@index([status, startAt])
+  @@index([status, endAt])
+  @@index([createdAt(sort: Desc)])
+  @@map("civilization_games")
+}
+
+model CivilizationTeam {
+  id                  String                              @id @default(uuid())
+  gameId              String                              @map("game_id")
+  name                String
+  color               String
+  visualIdentifier    String?                             @map("visual_identifier")
+  side                CivilizationTeamSide
+  townHallTileId      String?                             @unique @map("town_hall_tile_id")
+  finalScore          Decimal?                            @map("final_score") @db.Decimal(30, 12)
+  createdAt           DateTime                            @default(now()) @map("created_at") @db.Timestamptz(3)
+  game                CivilizationGame                    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  townHallTile        CivilizationTile?                   @relation("CivilizationTeamTownHall", fields: [townHallTileId], references: [id], onDelete: SetNull)
+  wonGames            CivilizationGame[]                  @relation("CivilizationGameWinner")
+  players             CivilizationGamePlayer[]
+  ownedTiles          CivilizationTile[]                  @relation("CivilizationTileOwner")
+  spawnPoints         CivilizationSpawnPoint[]
+  ownedBuildings      CivilizationBuilding[]              @relation("CivilizationBuildingOwner")
+  capturedBuildings   CivilizationBuilding[]              @relation("CivilizationBuildingCaptureTeam")
+  towers              CivilizationTower[]
+  resources           CivilizationTeamResource[]
+  attributeResources  CivilizationTeamAttributeResource[]
+  events              CivilizationEvent[]
+  rewardDistributions CivilizationRewardDistribution[]
+
+  @@unique([gameId, side])
+  @@index([gameId])
+  @@map("civilization_teams")
+}
+
+model CivilizationGamePlayer {
+  id                      String                           @id @default(uuid())
+  gameId                  String                           @map("game_id")
+  teamId                  String                           @map("team_id")
+  userId                  String                           @map("user_id")
+  initialTileId           String                           @map("initial_tile_id")
+  spawnTileId             String                           @map("spawn_tile_id")
+  currentTileId           String                           @map("current_tile_id")
+  actionPointUnits        Int                              @map("action_point_units")
+  lastActionPointUpdateAt DateTime                         @map("last_action_point_update_at") @db.Timestamptz(3)
+  joinedAt                DateTime                         @default(now()) @map("joined_at") @db.Timestamptz(3)
+  isActive                Boolean                          @default(true) @map("is_active")
+  createdAt               DateTime                         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  game                    CivilizationGame                 @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team                    CivilizationTeam                 @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  user                    Account                          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  initialTile             CivilizationTile                 @relation("CivilizationPlayerInitialTile", fields: [initialTileId], references: [id], onDelete: Restrict)
+  spawnTile               CivilizationTile                 @relation("CivilizationPlayerSpawnTile", fields: [spawnTileId], references: [id], onDelete: Restrict)
+  currentTile             CivilizationTile                 @relation("CivilizationPlayerCurrentTile", fields: [currentTileId], references: [id], onDelete: Restrict)
+  createdTowers           CivilizationTower[]
+  actions                 CivilizationAction[]
+  actorEvents             CivilizationEvent[]              @relation("CivilizationEventActor")
+  targetEvents            CivilizationEvent[]              @relation("CivilizationEventTarget")
+  rewardDistributions     CivilizationRewardDistribution[]
+
+  @@unique([gameId, userId])
+  @@index([gameId, teamId, isActive])
+  @@index([gameId, currentTileId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("civilization_game_players")
+}
+
+model CivilizationTile {
+  id              String                   @id @default(uuid())
+  gameId          String                   @map("game_id")
+  q               Int
+  r               Int
+  terrainType     CivilizationTerrainType  @default(GROUND) @map("terrain_type")
+  ownerTeamId     String?                  @map("owner_team_id")
+  isConnected     Boolean                  @default(false) @map("is_connected")
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  game            CivilizationGame         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  ownerTeam       CivilizationTeam?        @relation("CivilizationTileOwner", fields: [ownerTeamId], references: [id], onDelete: SetNull)
+  townHallForTeam CivilizationTeam?        @relation("CivilizationTeamTownHall")
+  initialPlayers  CivilizationGamePlayer[] @relation("CivilizationPlayerInitialTile")
+  spawningPlayers CivilizationGamePlayer[] @relation("CivilizationPlayerSpawnTile")
+  currentPlayers  CivilizationGamePlayer[] @relation("CivilizationPlayerCurrentTile")
+  spawnPoint      CivilizationSpawnPoint?
+  building        CivilizationBuilding?
+  towers          CivilizationTower[]
+  events          CivilizationEvent[]
+
+  @@unique([gameId, q, r])
+  @@index([gameId, ownerTeamId])
+  @@index([gameId, isConnected])
+  @@index([gameId, terrainType])
+  @@map("civilization_tiles")
+}
+
+model CivilizationSpawnPoint {
+  id        String           @id @default(uuid())
+  gameId    String           @map("game_id")
+  teamId    String           @map("team_id")
+  tileId    String           @unique @map("tile_id")
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  game      CivilizationGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team      CivilizationTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tile      CivilizationTile @relation(fields: [tileId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, teamId, tileId])
+  @@index([gameId, teamId])
+  @@map("civilization_spawn_points")
+}
+
+model CivilizationBuilding {
+  id                   String                     @id @default(uuid())
+  gameId               String                     @map("game_id")
+  tileId               String                     @unique @map("tile_id")
+  buildingType         CivilizationBuildingType   @map("building_type")
+  attributeKey         CivilizationAttributeKey?  @map("attribute_key")
+  ownerTeamId          String?                    @map("owner_team_id")
+  captureTeamId        String?                    @map("capture_team_id")
+  captureProgressUnits Int                        @default(0) @map("capture_progress_units")
+  captureRequiredUnits Int                        @map("capture_required_units")
+  incomePerHour        Decimal                    @map("income_per_hour") @db.Decimal(30, 12)
+  status               CivilizationBuildingStatus @default(ACTIVE)
+  createdAt            DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  game                 CivilizationGame           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  tile                 CivilizationTile           @relation(fields: [tileId], references: [id], onDelete: Cascade)
+  ownerTeam            CivilizationTeam?          @relation("CivilizationBuildingOwner", fields: [ownerTeamId], references: [id], onDelete: SetNull)
+  captureTeam          CivilizationTeam?          @relation("CivilizationBuildingCaptureTeam", fields: [captureTeamId], references: [id], onDelete: SetNull)
+
+  @@index([gameId, buildingType])
+  @@index([gameId, ownerTeamId])
+  @@index([gameId, captureTeamId])
+  @@map("civilization_buildings")
+}
+
+model CivilizationTower {
+  id                      String                     @id @default(uuid())
+  gameId                  String                     @map("game_id")
+  teamId                  String                     @map("team_id")
+  tileId                  String                     @map("tile_id")
+  status                  CivilizationTowerStatus    @default(UNDER_CONSTRUCTION)
+  workKind                CivilizationTowerWorkKind? @map("work_kind")
+  protectionRadius        Int                        @map("protection_radius")
+  constructionStartedAt   DateTime                   @map("construction_started_at") @db.Timestamptz(3)
+  constructionCompletesAt DateTime?                  @map("construction_completes_at") @db.Timestamptz(3)
+  destroyedAt             DateTime?                  @map("destroyed_at") @db.Timestamptz(3)
+  createdByPlayerId       String?                    @map("created_by_player_id")
+  createdAt               DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  game                    CivilizationGame           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team                    CivilizationTeam           @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  tile                    CivilizationTile           @relation(fields: [tileId], references: [id], onDelete: Restrict)
+  createdByPlayer         CivilizationGamePlayer?    @relation(fields: [createdByPlayerId], references: [id], onDelete: SetNull)
+
+  @@index([gameId, teamId, status])
+  @@index([gameId, tileId, status])
+  @@index([status, constructionCompletesAt])
+  @@map("civilization_towers")
+}
+
+model CivilizationTeamResource {
+  id                String           @id @default(uuid())
+  gameId            String           @map("game_id")
+  teamId            String           @map("team_id")
+  goldAmount        Decimal          @default(0) @map("gold_amount") @db.Decimal(30, 12)
+  goldIncomePerHour Decimal          @default(0) @map("gold_income_per_hour") @db.Decimal(30, 12)
+  lastSettledAt     DateTime         @map("last_settled_at") @db.Timestamptz(3)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  game              CivilizationGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team              CivilizationTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, teamId])
+  @@index([teamId])
+  @@map("civilization_team_resources")
+}
+
+model CivilizationTeamAttributeResource {
+  id            String                   @id @default(uuid())
+  gameId        String                   @map("game_id")
+  teamId        String                   @map("team_id")
+  attributeKey  CivilizationAttributeKey @map("attribute_key")
+  amount        Decimal                  @default(0) @db.Decimal(30, 12)
+  incomePerHour Decimal                  @default(0) @map("income_per_hour") @db.Decimal(30, 12)
+  lastSettledAt DateTime                 @map("last_settled_at") @db.Timestamptz(3)
+  createdAt     DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  game          CivilizationGame         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team          CivilizationTeam         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, teamId, attributeKey], map: "civilization_team_attribute_resources_game_id_team_id_attribute")
+  @@index([teamId, attributeKey])
+  @@map("civilization_team_attribute_resources")
+}
+
+model CivilizationAction {
+  id             String                 @id @default(uuid())
+  gameId         String                 @map("game_id")
+  playerId       String                 @map("player_id")
+  idempotencyKey String                 @map("idempotency_key")
+  actionType     CivilizationActionType @map("action_type")
+  requestPayload Json                   @map("request_payload")
+  resultPayload  Json                   @map("result_payload")
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  game           CivilizationGame       @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  player         CivilizationGamePlayer @relation(fields: [playerId], references: [id], onDelete: Restrict)
+
+  @@unique([gameId, playerId, idempotencyKey])
+  @@index([gameId, createdAt(sort: Desc)])
+  @@index([playerId, createdAt(sort: Desc)])
+  @@map("civilization_actions")
+}
+
+model CivilizationEvent {
+  id             String                  @id @default(uuid())
+  gameId         String                  @map("game_id")
+  teamId         String?                 @map("team_id")
+  actorPlayerId  String?                 @map("actor_player_id")
+  targetPlayerId String?                 @map("target_player_id")
+  tileId         String?                 @map("tile_id")
+  eventType      CivilizationEventType   @map("event_type")
+  payloadJson    Json                    @map("payload_json")
+  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  game           CivilizationGame        @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  team           CivilizationTeam?       @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  actorPlayer    CivilizationGamePlayer? @relation("CivilizationEventActor", fields: [actorPlayerId], references: [id], onDelete: SetNull)
+  targetPlayer   CivilizationGamePlayer? @relation("CivilizationEventTarget", fields: [targetPlayerId], references: [id], onDelete: SetNull)
+  tile           CivilizationTile?       @relation(fields: [tileId], references: [id], onDelete: SetNull)
+
+  @@index([gameId, createdAt(sort: Desc), id])
+  @@index([gameId, eventType, createdAt(sort: Desc)])
+  @@index([actorPlayerId, createdAt(sort: Desc)])
+  @@map("civilization_events")
+}
+
+model CivilizationRewardDistribution {
+  id              String                         @id @default(uuid())
+  gameId          String                         @map("game_id")
+  teamId          String                         @map("team_id")
+  playerId        String                         @map("player_id")
+  resourceType    CivilizationRewardResourceType @map("resource_type")
+  attributeKey    CivilizationAttributeKey?      @map("attribute_key")
+  amount          Int
+  roundingDetails Json                           @map("rounding_details")
+  appliedAt       DateTime?                      @map("applied_at") @db.Timestamptz(3)
+  createdAt       DateTime                       @default(now()) @map("created_at") @db.Timestamptz(3)
+  game            CivilizationGame               @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  team            CivilizationTeam               @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  player          CivilizationGamePlayer         @relation(fields: [playerId], references: [id], onDelete: Restrict)
+
+  @@index([gameId, teamId])
+  @@index([playerId, appliedAt])
+  @@map("civilization_reward_distributions")
+}
+
+model CivilizationAdminAuditLog {
+  id         String                      @id @default(uuid())
+  gameId     String                      @map("game_id")
+  adminId    String                      @map("admin_id")
+  action     CivilizationAdminActionType
+  beforeData Json?                       @map("before_data")
+  afterData  Json?                       @map("after_data")
+  metadata   Json?
+  createdAt  DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  game       CivilizationGame            @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  admin      Admin                       @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([gameId, createdAt(sort: Desc)])
+  @@index([adminId, createdAt(sort: Desc)])
+  @@map("civilization_admin_audit_logs")
+}
+
+model CivilizationGameSnapshot {
+  id           String                       @id @default(uuid())
+  gameId       String                       @map("game_id")
+  snapshotType CivilizationGameSnapshotType @map("snapshot_type")
+  stateJson    Json                         @map("state_json")
+  createdAt    DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  game         CivilizationGame             @relation(fields: [gameId], references: [id], onDelete: Restrict)
+
+  @@unique([gameId, snapshotType])
+  @@index([gameId, createdAt(sort: Desc)])
+  @@map("civilization_game_snapshots")
 }
