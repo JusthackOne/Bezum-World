@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ActivityIcon,
+  CastleIcon,
   CircleDollarSignIcon,
   SkullIcon,
   ListTodoIcon,
@@ -67,12 +68,21 @@ export function ClientSidebar() {
   const isTasksActive = pathname.startsWith("/tasks");
   const isLeaderboardActive = pathname.startsWith("/leaderboard");
   const isEventsActive = pathname.startsWith("/events");
+  const isCivilizationActive = pathname.startsWith("/civilization");
 
   const username = session?.user.username ?? "Unknown user";
   const profileHref = session?.user.username
     ? publicUserRoutes.profile(session.user.username)
     : "/user";
   const navRows: ClientNavItem[][] = [
+    [
+      {
+        href: "/civilization",
+        label: "Цивилизация",
+        Icon: CastleIcon,
+        isActive: isCivilizationActive,
+      },
+    ],
     [
       {
         href: "/leaderboard",
@@ -189,7 +199,13 @@ export function ClientSidebar() {
                           ].join(" ")}
                         >
                           <item.Icon className="size-8 min-[800px]:size-9" />
-                          <span className="mt-1 text-[13px] font-semibold leading-none tracking-wide min-[800px]:text-sm">
+                          <span
+                            className={
+                              item.href === "/civilization"
+                                ? "mt-1 max-w-20 text-center text-[9px] font-semibold leading-none tracking-wide"
+                                : "mt-1 text-[13px] font-semibold leading-none tracking-wide min-[800px]:text-sm"
+                            }
+                          >
                             {item.label}
                           </span>
                         </Link>
