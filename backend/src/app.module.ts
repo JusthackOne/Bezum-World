@@ -12,6 +12,7 @@ import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BattlesModule } from './modules/battles/battles.module';
 import { BossBattlesModule } from './modules/boss-battles/boss-battles.module';
+import { CivilizationModule } from './modules/civilization/civilization.module';
 import { EventsModule } from './modules/events/events.module';
 import { ItemsModule } from './modules/items/items.module';
 import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
@@ -36,6 +37,7 @@ import { UsersModule } from './modules/users/users.module';
     EventsModule,
     BattlesModule,
     BossBattlesModule,
+    CivilizationModule,
     ItemsModule,
     LeaderboardModule,
     SlotsModule,

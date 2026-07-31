@@ -8,6 +8,7 @@ import {
 import type { Request, Response } from 'express';
 
 interface ErrorPayload {
+  code?: string;
   message: string;
   details?: unknown;
 }
@@ -47,13 +48,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
         if (exceptionResponse.error !== undefined && error.details === undefined) {
           error.details = exceptionResponse.error;
         }
+
+        if (typeof exceptionResponse.code === 'string') {
+          error.code = exceptionResponse.code;
+        }
+
+        if (exceptionResponse.details !== undefined) {
+          error.details = exceptionResponse.details;
+        }
       }
     }
 
     response.status(statusCode).json({
       success: false,
       error: {
-        code: statusCode,
+        code: error.code ?? statusCode,
+        ...(error.code ? { statusCode } : {}),
         ...error,
       },
       meta: {
