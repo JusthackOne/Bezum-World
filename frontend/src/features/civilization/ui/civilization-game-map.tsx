@@ -15,10 +15,12 @@ import { Viewport } from "pixi-viewport";
 import {
   CheckIcon,
   CoinsIcon,
+  CrosshairIcon,
   LocateFixedIcon,
   MinusIcon,
   PlusIcon,
   TrophyIcon,
+  ZapIcon,
   XIcon,
 } from "lucide-react";
 
@@ -43,12 +45,14 @@ interface CivilizationGameMapProps {
   selectedTileId: string | null;
   selectedPlayerId: string | null;
   selectedTowerId: string | null;
-  placementMode: "BUILD_TOWER" | null;
+  placementMode: "BUILD_TOWER" | "CATAPULT_ATTACK" | null;
   placementTileId: string | null;
   isInteractionDisabled?: boolean;
   onSelectTile: (tileId: string) => void;
   onSelectPlayer: (playerId: string) => void;
+  onCancelSelection: () => void;
   onToggleTowerPlacement: () => void;
+  onToggleCatapult: () => void;
   onCancelPlacement: () => void;
   onCancelPlacementPreview: () => void;
   onConfirmPlacement: () => void;
@@ -143,13 +147,6 @@ function buildingName(building: CivilizationBuilding): string {
   return `${attribute} Building`;
 }
 
-function buildingTypeLabel(building: CivilizationBuilding): string {
-  if (building.type === "ATTRIBUTE_BUILDING" && building.attributeKey) {
-    return `${building.attributeKey} production`;
-  }
-  return building.type.toLowerCase().replaceAll("_", " ");
-}
-
 function statusLabel(status: string): string {
   return status.toLowerCase().replaceAll("_", " ");
 }
@@ -173,8 +170,6 @@ function StructureTooltip({
     tooltip.kind === "tower" ? (state.towers.find((item) => item.id === tooltip.id) ?? null) : null;
   const teamId = building?.ownerTeamId ?? tower?.teamId ?? null;
   const team = teamId ? (state.teams.find((item) => item.id === teamId) ?? null) : null;
-  const tileId = building?.tileId ?? tower?.tileId;
-  const tile = tileId ? (state.tiles.find((item) => item.id === tileId) ?? null) : null;
 
   if (!building && !tower) {
     return null;
@@ -202,11 +197,6 @@ function StructureTooltip({
           ? "being captured"
           : statusLabel(building.status),
     });
-    rows.push({ label: "Owner", value: team?.name ?? "Neutral" });
-    rows.push({ label: "Type", value: buildingTypeLabel(building) });
-    if (tile) {
-      rows.push({ label: "Connected", value: tile.isConnected ? "Yes" : "No" });
-    }
     if (building.type === "GOLD_BUILDING") {
       rows.push({ label: "Production", value: `${building.incomePerHour} gold / hour` });
       if (team) {
@@ -228,17 +218,11 @@ function StructureTooltip({
   }
 
   if (tower) {
-    const towerTile = tile;
-    const affectedHexes = towerTile
-      ? state.tiles.filter(
-          (item) => hexDistance(item.coordinate, towerTile.coordinate) <= tower.protectionRadius,
-        ).length
-      : 0;
     rows.push({
       label: "Status",
       value: tower.status === "DESTROYED" ? "destroyed / damaged" : statusLabel(tower.status),
     });
-    rows.push({ label: "Owner", value: team?.name ?? "Neutral" });
+    rows.push({ label: "HP", value: `${tower.hitPoints} / ${tower.maximumHitPoints}` });
     if (tower.status === "UNDER_CONSTRUCTION" && tower.constructionCompletesAt) {
       const startedAt = new Date(tower.constructionStartedAt).getTime();
       const completesAt = new Date(tower.constructionCompletesAt).getTime();
@@ -253,12 +237,6 @@ function StructureTooltip({
         value: `${progressMinutes} / ${requiredMinutes} min`,
       });
     }
-    rows.push({ label: "Type", value: "defensive tower" });
-    rows.push({ label: "Protection radius", value: `${tower.protectionRadius} hexes` });
-    if (affectedHexes > 0) {
-      rows.push({ label: "Affected hexes", value: String(affectedHexes) });
-    }
-    rows.push({ label: "Connected", value: tower.isConnected ? "Yes" : "No" });
     if (tower.workKind) {
       rows.push({ label: "Current work", value: statusLabel(tower.workKind) });
     }
@@ -267,34 +245,45 @@ function StructureTooltip({
     }
   }
 
-  const placeOnLeft = tooltip.x + STRUCTURE_TOOLTIP_WIDTH + 28 > mapWidth;
-  const left = Math.max(
-    8,
-    Math.min(
-      placeOnLeft ? tooltip.x - STRUCTURE_TOOLTIP_WIDTH - 18 : tooltip.x + 18,
-      Math.max(8, mapWidth - STRUCTURE_TOOLTIP_WIDTH - 8),
-    ),
-  );
-  const top = Math.max(8, Math.min(tooltip.y - 36, Math.max(8, mapHeight - 220)));
+  const mobile = mapWidth < 520;
+  const width = Math.min(STRUCTURE_TOOLTIP_WIDTH, mapWidth - 16);
+  const estimatedHeight = 230;
+  const canPlaceRight = tooltip.x + width + 18 <= mapWidth - 8;
+  const canPlaceLeft = tooltip.x - width - 18 >= 8;
+  const left = mobile
+    ? 8
+    : canPlaceRight
+      ? tooltip.x + 18
+      : canPlaceLeft
+        ? tooltip.x - width - 18
+        : Math.max(8, Math.min(tooltip.x - width / 2, mapWidth - width - 8));
+  const top = mobile
+    ? Math.max(8, mapHeight - Math.min(estimatedHeight, mapHeight * 0.48) - 8)
+    : tooltip.y + estimatedHeight <= mapHeight - 8
+      ? tooltip.y + 12
+      : Math.max(8, tooltip.y - estimatedHeight - 12);
 
   return (
     <div
-      className="absolute z-20 overflow-y-auto rounded-md border border-white/20 bg-slate-950/95 p-3 text-[11px] text-slate-100 shadow-xl backdrop-blur-sm"
+      className="absolute z-20 wrap-anywhere overflow-y-auto overflow-x-hidden rounded-md border border-white/20 bg-slate-950/95 p-3 text-[11px] text-slate-100 shadow-xl backdrop-blur-sm"
       style={{
         left,
         top,
-        width: STRUCTURE_TOOLTIP_WIDTH,
+        width,
         maxHeight: Math.max(120, mapHeight - top - 8),
       }}
       role="tooltip"
       data-structure-tooltip
     >
       <p className="text-sm font-semibold">{building ? buildingName(building) : "Defense Tower"}</p>
-      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+      <dl className="mt-2 space-y-1.5">
         {rows.map((row) => (
-          <div key={`${row.label}:${row.value}`} className="contents">
+          <div
+            key={`${row.label}:${row.value}`}
+            className="grid grid-cols-1 gap-x-3 sm:grid-cols-2"
+          >
             <dt className="text-slate-400">{row.label}</dt>
-            <dd className="text-right capitalize">{row.value}</dd>
+            <dd className="min-w-0 capitalize wrap-break-word sm:text-right">{row.value}</dd>
           </div>
         ))}
       </dl>
@@ -521,7 +510,7 @@ async function renderBaseScene(
   onShowStructureTooltip: ShowStructureTooltip,
   onHideStructureTooltip: HideStructureTooltip,
   selectedPlayerId: string | null,
-  placementMode: "BUILD_TOWER" | null,
+  placementMode: "BUILD_TOWER" | "CATAPULT_ATTACK" | null,
   disabled: boolean,
 ): Promise<void> {
   const renderVersion = ++scene.renderVersion;
@@ -604,15 +593,17 @@ async function renderBaseScene(
   }
 
   if (spawnTexture) {
-    const center = centers.get(state.spawnPoint.tileId);
-    if (center) {
+    state.spawnPoints.forEach((spawn) => {
+      const center = centers.get(spawn.tileId);
+      if (!center) return;
       const sprite = new Sprite(spawnTexture);
       sprite.anchor.set(0.5);
       sprite.position.set(center.x - 24, center.y - 20);
       sprite.width = 38;
       sprite.height = 38;
+      sprite.tint = teamsById.get(spawn.teamId)?.resolvedColor ?? "#ffffff";
       scene.layers.spawns.addChild(sprite);
-    }
+    });
   }
 
   const buildingTexturesById = new Map(buildingTextures);
@@ -731,7 +722,7 @@ async function renderBaseScene(
       const visiblePlayers = players.slice(0, 6);
       const compact = players.length > 1;
       visiblePlayers.forEach((player, index) => {
-        const position = playerTokenPosition(center, index);
+        const position = compact ? playerTokenPosition(center, index) : center;
         scene.playerCenters.set(player.id, position);
         addPlayerToken(
           scene.layers.players,
@@ -807,7 +798,7 @@ const ACTION_HIGHLIGHTS: Record<ActionHighlightKind, { fill: string; stroke: str
 
 function actionHighlightKind(type: CivilizationActionType): ActionHighlightKind {
   if (type === "MOVE") return "movement";
-  if (type === "ATTACK_PLAYER" || type === "ATTACK_TOWER") return "attack";
+  if (type === "ATTACK_PLAYER" || type === "ATTACK_TOWER" || type === "CATAPULT_ATTACK") return "attack";
   if (type === "CAPTURE_BUILDING" || type === "CAPTURE_TOWN_HALL") return "capture";
   return "contribution";
 }
@@ -816,7 +807,7 @@ function renderLegalActionOverlays(
   scene: PixiScene,
   state: CivilizationGameState,
   selectedPlayerId: string | null,
-  placementMode: "BUILD_TOWER" | null,
+  placementMode: "BUILD_TOWER" | "CATAPULT_ATTACK" | null,
   onSelectTile: (tileId: string) => void,
   disabled: boolean,
 ): void {
@@ -832,7 +823,9 @@ function renderLegalActionOverlays(
         action.disabledReason === null &&
         (placementMode === "BUILD_TOWER"
           ? action.type === "BUILD_TOWER"
-          : action.type !== "BUILD_TOWER"),
+          : placementMode === "CATAPULT_ATTACK"
+            ? action.type === "CATAPULT_ATTACK"
+            : action.type !== "BUILD_TOWER" && action.type !== "CATAPULT_ATTACK"),
     )
     .forEach((action) => {
       const key = coordinateKey(action.targetCoordinate!);
@@ -940,7 +933,9 @@ export function CivilizationGameMap({
   isInteractionDisabled = false,
   onSelectTile,
   onSelectPlayer,
+  onCancelSelection,
   onToggleTowerPlacement,
+  onToggleCatapult,
   onCancelPlacement,
   onCancelPlacementPreview,
   onConfirmPlacement,
@@ -952,10 +947,14 @@ export function CivilizationGameMap({
   const selectionRef = useRef({ selectedTileId, selectedPlayerId, selectedTowerId });
   const onSelectTileRef = useRef(onSelectTile);
   const onSelectPlayerRef = useRef(onSelectPlayer);
+  const onCancelSelectionRef = useRef(onCancelSelection);
   const placementModeRef = useRef(placementMode);
   const onCancelPlacementRef = useRef(onCancelPlacement);
   const disabledRef = useRef(isInteractionDisabled);
   const placementPreviewRef = useRef<HTMLDivElement>(null);
+  const playedAttackIdsRef = useRef(new Set<string>());
+  const attackHistoryInitializedRef = useRef(false);
+  const activeAttackAnimationCleanupsRef = useRef(new Set<() => void>());
   const [structureTooltip, setStructureTooltip] = useState<StructureTooltipState | null>(null);
   const [playerStackTileId, setPlayerStackTileId] = useState<string | null>(null);
   const [mapSize, setMapSize] = useState({ width: 320, height: 420 });
@@ -980,6 +979,7 @@ export function CivilizationGameMap({
     selectionRef.current = { selectedTileId, selectedPlayerId, selectedTowerId };
     onSelectTileRef.current = onSelectTile;
     onSelectPlayerRef.current = onSelectPlayer;
+    onCancelSelectionRef.current = onCancelSelection;
     placementModeRef.current = placementMode;
     onCancelPlacementRef.current = onCancelPlacement;
     disabledRef.current = isInteractionDisabled;
@@ -987,6 +987,7 @@ export function CivilizationGameMap({
     isInteractionDisabled,
     onSelectPlayer,
     onSelectTile,
+    onCancelSelection,
     onCancelPlacement,
     placementMode,
     selectedPlayerId,
@@ -1000,6 +1001,7 @@ export function CivilizationGameMap({
     if (!host) {
       return;
     }
+    const activeAttackCleanups = activeAttackAnimationCleanupsRef.current;
 
     let cancelled = false;
     let resizeObserver: ResizeObserver | null = null;
@@ -1042,6 +1044,7 @@ export function CivilizationGameMap({
       viewport.on("pointertap", () => {
         setStructureTooltip(null);
         onCancelPlacementRef.current();
+        onCancelSelectionRef.current();
       });
       app.stage.addChild(viewport);
 
@@ -1126,6 +1129,8 @@ export function CivilizationGameMap({
     return () => {
       cancelled = true;
       resizeObserver?.disconnect();
+      activeAttackCleanups.forEach((cleanup) => cleanup());
+      activeAttackCleanups.clear();
       const scene = sceneRef.current;
       sceneRef.current = null;
       if (scene) {
@@ -1224,6 +1229,119 @@ export function CivilizationGameMap({
     };
   }, [mapSize.height, mapSize.width, placementTileId, state.stateVersion]);
 
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene || !structureTooltip?.isPinned) return;
+    const structure =
+      structureTooltip.kind === "building"
+        ? state.buildings.find((building) => building.id === structureTooltip.id)
+        : state.towers.find((tower) => tower.id === structureTooltip.id);
+    const center = structure ? scene.tileCenters.get(structure.tileId) : null;
+    if (!center) return;
+    const updatePosition = (): void => {
+      const position = scene.viewport.toScreen(center);
+      setStructureTooltip((current) =>
+        current && current.id === structureTooltip.id
+          ? { ...current, x: position.x, y: position.y }
+          : current,
+      );
+    };
+    updatePosition();
+    scene.viewport.on("moved", updatePosition);
+    scene.viewport.on("zoomed", updatePosition);
+    return () => {
+      scene.viewport.off("moved", updatePosition);
+      scene.viewport.off("zoomed", updatePosition);
+    };
+  }, [mapSize.height, mapSize.width, state, structureTooltip?.id, structureTooltip?.isPinned, structureTooltip?.kind]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    const unseenAttacks = state.recentCatapultAttacks.filter(
+      (attack) => !playedAttackIdsRef.current.has(attack.id),
+    );
+    unseenAttacks.forEach((attack) => playedAttackIdsRef.current.add(attack.id));
+    const attacksToPlay = attackHistoryInitializedRef.current
+      ? [...unseenAttacks].reverse()
+      : unseenAttacks.slice(0, 1);
+    attackHistoryInitializedRef.current = true;
+
+    attacksToPlay.forEach((attack, index) => {
+      const startTimer = window.setTimeout(() => {
+        activeAttackAnimationCleanupsRef.current.delete(cancelStart);
+        const sourceTileId = attack.payload.sourceTileId;
+        const targetTileId = attack.payload.targetTileId;
+        if (typeof sourceTileId !== "string" || typeof targetTileId !== "string") return;
+        const source = scene.tileCenters.get(sourceTileId);
+        const target = scene.tileCenters.get(targetTileId);
+        if (!source || !target) return;
+
+        const catapult = new Graphics()
+          .rect(-13, -7, 26, 14)
+          .fill({ color: "#a16207", alpha: 0.9 });
+        catapult.position.set(source.x, source.y - 7);
+        const impact = new Graphics()
+          .circle(0, 0, 24)
+          .fill({ color: "#f97316", alpha: 0 });
+        impact.position.set(target.x, target.y);
+        scene.layers.effects.addChild(catapult, impact);
+
+        let finishTimer: number | null = null;
+        let ball: Graphics | null = null;
+        let animate: (() => void) | null = null;
+        const cleanup = (): void => {
+          activeAttackAnimationCleanupsRef.current.delete(cleanup);
+          if (animate) scene.app.ticker.remove(animate);
+          if (finishTimer !== null) window.clearTimeout(finishTimer);
+          if (!catapult.destroyed) catapult.destroy();
+          if (ball && !ball.destroyed) ball.destroy();
+          if (!impact.destroyed) impact.destroy();
+        };
+        activeAttackAnimationCleanupsRef.current.add(cleanup);
+
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          impact.alpha = 0.8;
+          finishTimer = window.setTimeout(cleanup, 320);
+          return;
+        }
+
+        ball = new Graphics().circle(0, 0, 6).fill({ color: "#111827", alpha: 1 });
+        ball.position.set(source.x, source.y - 18);
+        scene.layers.effects.addChild(ball);
+        const startedAt = performance.now();
+        animate = (): void => {
+          const progress = Math.min(1, (performance.now() - startedAt) / 650);
+          ball?.position.set(
+            source.x + (target.x - source.x) * progress,
+            source.y -
+              18 +
+              (target.y - source.y + 18) * progress -
+              Math.sin(progress * Math.PI) * 55,
+          );
+          if (progress >= 1) {
+            impact.alpha = 0.85;
+            if (animate) scene.app.ticker.remove(animate);
+            animate = null;
+            finishTimer = window.setTimeout(cleanup, 220);
+          }
+        };
+        scene.app.ticker.add(animate);
+      }, index * 180);
+      const cancelStart = (): void => window.clearTimeout(startTimer);
+      activeAttackAnimationCleanupsRef.current.add(cancelStart);
+    });
+  }, [state.recentCatapultAttacks]);
+
+  useEffect(
+    () => () => {
+      activeAttackAnimationCleanupsRef.current.forEach((cleanup) => cleanup());
+      activeAttackAnimationCleanupsRef.current.clear();
+    },
+    [],
+  );
+
   const centerCurrentPlayer = (): void => {
     const scene = sceneRef.current;
     const currentPlayer = state.players.find(
@@ -1251,6 +1369,13 @@ export function CivilizationGameMap({
     state.availableActions.find(
       (action) => action.type === "BUILD_TOWER" && action.disabledReason !== null,
     )?.disabledReason ?? "No legal tower placement hexes are available.";
+  const enabledCatapultTargets = state.availableActions.filter(
+    (action) => action.type === "CATAPULT_ATTACK" && action.disabledReason === null,
+  );
+  const catapultUnavailableReason =
+    state.availableActions.find(
+      (action) => action.type === "CATAPULT_ATTACK" && action.disabledReason !== null,
+    )?.disabledReason ?? "No valid enemy tower targets are available.";
 
   return (
     <div
@@ -1281,7 +1406,8 @@ export function CivilizationGameMap({
               <Button
                 key={control.actionType}
                 type="button"
-                size="icon"
+                size="sm"
+                className="h-auto min-w-18 flex-col gap-1 p-2"
                 variant={placementMode === control.actionType ? "default" : "secondary"}
                 aria-label={control.label}
                 aria-pressed={placementMode === control.actionType}
@@ -1296,9 +1422,46 @@ export function CivilizationGameMap({
                   height={32}
                   className="h-8 w-auto object-contain"
                 />
+                <span className="flex gap-2 text-[9px]">
+                  <span className="flex items-center gap-0.5">
+                    <CoinsIcon className="size-3 text-amber-300" />
+                    {state.game.settings.tower.buildGoldCost}
+                  </span>
+                  <span className="flex items-center gap-0.5">
+                    <ZapIcon className="size-3 text-cyan-300" />
+                    {state.game.settings.costs.towerBuildUnits / 2}
+                  </span>
+                </span>
               </Button>
             );
           })}
+          <Button
+            type="button"
+            size="sm"
+            variant={placementMode === "CATAPULT_ATTACK" ? "default" : "secondary"}
+            className="h-auto min-w-18 flex-col gap-1 p-2"
+            aria-label="Target an enemy tower with a Catapult"
+            aria-pressed={placementMode === "CATAPULT_ATTACK"}
+            disabled={isInteractionDisabled || enabledCatapultTargets.length === 0}
+            title={
+              enabledCatapultTargets.length === 0
+                ? catapultUnavailableReason.replaceAll("_", " ").toLowerCase()
+                : "Use Catapult"
+            }
+            onClick={onToggleCatapult}
+          >
+            <CrosshairIcon className="size-8" />
+            <span className="flex gap-2 text-[9px]">
+              <span className="flex items-center gap-0.5">
+                <CoinsIcon className="size-3 text-amber-300" />
+                {state.game.settings.catapult.goldPrice}
+              </span>
+              <span className="flex items-center gap-0.5">
+                <ZapIcon className="size-3 text-cyan-300" />
+                {state.game.settings.catapult.actionPointUnits / 2}
+              </span>
+            </span>
+          </Button>
         </div>
       ) : null}
       {structureTooltip ? (
@@ -1314,7 +1477,7 @@ export function CivilizationGameMap({
           className="absolute top-1/2 left-1/2 z-30 w-64 max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 border border-white/20 bg-slate-950/95 p-3 text-slate-100 shadow-xl"
           data-map-overlay-control
           role="dialog"
-          aria-label="Players on shared spawn"
+          aria-label="Players on team spawn"
         >
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-xs font-semibold">Players on this hex</p>

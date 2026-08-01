@@ -432,14 +432,14 @@ export class CivilizationAdminService {
         );
       }
       const team = current.teams.find((candidate) => candidate.id === input.teamId);
-      const spawn = current.spawnPoint;
+      const spawn = current.spawnPoints.find((candidate) => candidate.teamId === input.teamId);
       const tile = spawn
         ? current.tiles.find((candidate) => candidate.id === spawn.tileId)
         : undefined;
       if (!team || !spawn || !tile || tile.terrainType === CivilizationTerrainType.MOUNTAIN) {
         throw new CivilizationException(
           CIVILIZATION_ERROR_CODES.INVALID_GAME_CONFIGURATION,
-          'The shared game spawn is invalid',
+          'The selected team spawn is invalid',
         );
       }
       if (
@@ -450,7 +450,7 @@ export class CivilizationAdminService {
       ) {
         throw new CivilizationException(
           CIVILIZATION_ERROR_CODES.INVALID_GAME_CONFIGURATION,
-          'The shared game spawn must remain free of structures',
+          'The selected team spawn must remain free of structures',
         );
       }
       await this.assertAccountsExist([input.userId], tx);
@@ -858,10 +858,10 @@ export class CivilizationAdminService {
           terrainType: tile.terrainType,
           ownerTeamSide: tile.ownerTeamId ? (teamById.get(tile.ownerTeamId)?.side ?? null) : null,
         })),
-        spawn: (() => {
-          const tile = tileById.get(state.spawnPoint!.tileId)!;
-          return { q: tile.q, r: tile.r };
-        })(),
+        spawns: state.spawnPoints.map((spawn) => {
+          const tile = tileById.get(spawn.tileId)!;
+          return { q: tile.q, r: tile.r, teamSide: teamById.get(spawn.teamId)!.side };
+        }),
         buildings: state.buildings.map((building) => {
           const tile = tileById.get(building.tileId)!;
           return {

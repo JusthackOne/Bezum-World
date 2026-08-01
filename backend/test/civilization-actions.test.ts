@@ -166,6 +166,8 @@ class InMemoryCivilizationRepository {
       createdAt: FIXED_NOW,
       updatedAt: FIXED_NOW,
       destroyedAt: null,
+      hitPoints: 100,
+      maximumHitPoints: 100,
       ...data,
     } as unknown as StateTower;
     this.state.towers.push(tower);
@@ -367,12 +369,22 @@ function createState(): CivilizationStateRecord {
     ],
     players,
     tiles,
-    spawnPoint: {
-      id: 'shared-spawn',
-      gameId: GAME_ID,
-      tileId: TEAM_A_SPAWN_TILE_ID,
-      createdAt,
-    },
+    spawnPoints: [
+      {
+        id: 'spawn-team-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        tileId: TEAM_A_SPAWN_TILE_ID,
+        createdAt,
+      },
+      {
+        id: 'spawn-team-b',
+        gameId: GAME_ID,
+        teamId: TEAM_B_ID,
+        tileId: TEAM_B_SPAWN_TILE_ID,
+        createdAt,
+      },
+    ],
     buildings: [],
     towers: [],
     teamResources: [
@@ -398,6 +410,8 @@ function createState(): CivilizationStateRecord {
       },
     ],
     attributeResources: [],
+    rewardClaims: [],
+    events: [],
   } as unknown as CivilizationStateRecord;
 }
 
@@ -483,7 +497,10 @@ function createTower(
     teamId,
     tileId,
     status,
+    workKind: null,
     protectionRadius: 1,
+    hitPoints: status === CivilizationTowerStatus.DESTROYED ? 0 : 100,
+    maximumHitPoints: 100,
     constructionStartedAt: new Date('2026-08-01T09:00:00.000Z'),
     constructionCompletesAt:
       status === CivilizationTowerStatus.UNDER_CONSTRUCTION ? FIXED_NOW : null,
@@ -532,7 +549,7 @@ async function expectCivilizationError(
 }
 
 describe('Civilization movement actions', () => {
-  test('allows movement onto the occupied shared spawn', async () => {
+  test('allows allied players to share their own team spawn', async () => {
     const state = createState();
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
     state.players.push(
@@ -713,7 +730,7 @@ describe('Civilization player combat', () => {
     });
 
     expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(12);
-    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_A_SPAWN_TILE_ID);
+    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_B_SPAWN_TILE_ID);
     expect(player(state, PLAYER_A_ID).currentTileId).toBe(TARGET_TILE_ID);
     expect(tile(state, TARGET_TILE_ID).ownerTeamId).toBe(TEAM_A_ID);
     const attack = harness.repository.events.find(
@@ -723,7 +740,7 @@ describe('Civilization player combat', () => {
       randomRoll: 0.299999,
       attackerWon: true,
       attackerMoved: true,
-      respawnTileId: TEAM_A_SPAWN_TILE_ID,
+      respawnTileId: TEAM_B_SPAWN_TILE_ID,
     });
   });
 
@@ -759,20 +776,20 @@ describe('Civilization player combat', () => {
       targetPlayerId: PLAYER_B_ID,
     });
 
-    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_A_SPAWN_TILE_ID);
+    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_B_SPAWN_TILE_ID);
     expect(player(state, PLAYER_B_TWO_ID).currentTileId).toBe(TARGET_TILE_ID);
     expect(player(state, PLAYER_A_ID).currentTileId).toBe(ORIGIN_TILE_ID);
   });
 
-  test('respawns onto the occupied shared spawn', async () => {
+  test('respawns onto the occupied spawn owned by the defeated player team', async () => {
     const state = createState();
     state.players.push(
       createPlayer(
-        PLAYER_A_TWO_ID,
-        USER_A_TWO_ID,
-        TEAM_A_ID,
-        TEAM_A_SPAWN_TILE_ID,
-        TEAM_A_SPAWN_TILE_ID,
+        PLAYER_B_TWO_ID,
+        USER_B_TWO_ID,
+        TEAM_B_ID,
+        TEAM_B_SPAWN_TILE_ID,
+        TEAM_B_SPAWN_TILE_ID,
       ),
     );
     const harness = createActionHarness(state);
@@ -783,15 +800,15 @@ describe('Civilization player combat', () => {
       targetPlayerId: PLAYER_B_ID,
     });
 
-    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_A_SPAWN_TILE_ID);
+    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_B_SPAWN_TILE_ID);
     expect(
-      state.players.filter((candidate) => candidate.currentTileId === TEAM_A_SPAWN_TILE_ID),
+      state.players.filter((candidate) => candidate.currentTileId === TEAM_B_SPAWN_TILE_ID),
     ).toHaveLength(2);
     const respawn = harness.repository.events.find(
       (event) => event.eventType === CivilizationEventType.PLAYER_RESPAWNED,
     );
     expect(respawn?.payloadJson).toMatchObject({
-      sharedSpawnTileId: TEAM_A_SPAWN_TILE_ID,
+      teamSpawnTileId: TEAM_B_SPAWN_TILE_ID,
     });
   });
 });
@@ -879,7 +896,7 @@ describe('Civilization building capture', () => {
 
 describe('Civilization tower actions', () => {
   test.each([
-    ['shared spawn', { q: -1, r: 0 }],
+    ['team spawn', { q: -1, r: 0 }],
     ['player-occupied regular tile', { q: 0, r: 0 }],
   ])('rejects construction on the %s', async (_label, coordinate) => {
     const state = createState();
@@ -967,6 +984,41 @@ describe('Civilization tower actions', () => {
     expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(10);
     expect(findTower(state, tower.id).status).toBe(CivilizationTowerStatus.DESTROYED);
     expect(findTower(state, tower.id).destroyedAt).toEqual(FIXED_NOW);
+  });
+
+  test('applies configured Catapult damage and charges one idempotent purchase', async () => {
+    const state = createState();
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    const settings = structuredClone(defaultCivilizationSettings);
+    settings.catapult.damage = 35;
+    state.settingsJson = settings;
+    const tower = createTower(
+      'catapult-target',
+      TEAM_B_ID,
+      TARGET_TILE_ID,
+      CivilizationTowerStatus.ACTIVE,
+    );
+    state.towers.push(tower);
+    const harness = createActionHarness(state);
+    const request = {
+      actionId: '00000000-0000-4000-8000-000000040008',
+      towerId: tower.id,
+    };
+
+    await harness.service.catapultAttack(GAME_ID, USER_A_ID, request);
+    await harness.service.catapultAttack(GAME_ID, USER_A_ID, request);
+
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(12);
+    expect(state.teamResources[0]!.goldAmount.toString()).toBe('350');
+    expect(findTower(state, tower.id)).toMatchObject({
+      status: CivilizationTowerStatus.ACTIVE,
+      hitPoints: 65,
+    });
+    expect(
+      harness.repository.events.filter(
+        (event) => event.eventType === CivilizationEventType.CATAPULT_ATTACKED,
+      ),
+    ).toHaveLength(1);
   });
 
   test('repairs an owned connected tower immediately for AP and gold', async () => {

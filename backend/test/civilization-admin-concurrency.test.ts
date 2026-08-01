@@ -299,16 +299,28 @@ function createAdminState(status: CivilizationGameStatus): CivilizationStateReco
         updatedAt: createdAt,
       },
     ],
-    spawnPoint: {
-      id: 'shared-spawn',
-      gameId: GAME_ID,
-      tileId: TILE_A_ID,
-      createdAt,
-    },
+    spawnPoints: [
+      {
+        id: 'spawn-team-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        tileId: TILE_A_ID,
+        createdAt,
+      },
+      {
+        id: 'spawn-team-b',
+        gameId: GAME_ID,
+        teamId: TEAM_B_ID,
+        tileId: TILE_B_ID,
+        createdAt,
+      },
+    ],
     buildings: [],
     towers: [],
     teamResources: [],
     attributeResources: [],
+    rewardClaims: [],
+    events: [],
   } as CivilizationStateRecord;
 }
 

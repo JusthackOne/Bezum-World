@@ -180,7 +180,7 @@ export function CivilizationGamesTable() {
   }, [page, totalPages]);
 
   return (
-    <section className="space-y-5">
+    <section className="min-w-0 max-w-full space-y-5 overflow-x-hidden">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Civilization</h1>
@@ -232,7 +232,7 @@ export function CivilizationGamesTable() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="min-w-0 max-w-full overflow-hidden">
         <CardHeader>
           <CardTitle>
             {query.isPending
@@ -240,19 +240,19 @@ export function CivilizationGamesTable() {
               : `${games.length} shown of ${query.data?.total ?? 0} games`}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
+        <CardContent className="min-w-0 px-2 sm:px-4">
+          <div className="max-w-full overflow-x-auto overscroll-x-contain">
+            <Table className="w-full table-fixed md:min-w-180">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Window</TableHead>
-                  <TableHead>Teams</TableHead>
-                  <TableHead>Players</TableHead>
-                  <TableHead>Winner</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-32">Name</TableHead>
+                  <TableHead className="w-24">Status</TableHead>
+                  <TableHead className="w-28">Window</TableHead>
+                  <TableHead className="hidden w-32 xl:table-cell">Teams</TableHead>
+                  <TableHead className="w-14">Players</TableHead>
+                  <TableHead className="w-24">Winner</TableHead>
+                  <TableHead className="hidden w-24 2xl:table-cell">Created</TableHead>
+                  <TableHead className="w-32 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -277,7 +277,9 @@ export function CivilizationGamesTable() {
                 ) : (
                   games.map((game) => (
                     <TableRow key={game.id}>
-                      <TableCell className="font-medium">{game.name}</TableCell>
+                      <TableCell className="truncate font-medium" title={game.name}>
+                        {game.name}
+                      </TableCell>
                       <TableCell>
                         <CivilizationStatusBadge status={game.status} />
                       </TableCell>
@@ -286,10 +288,20 @@ export function CivilizationGamesTable() {
                         <br />
                         {formatDateTime(game.endAt, "short")}
                       </TableCell>
-                      <TableCell>{game.teams.map((team) => team.name).join(" / ")}</TableCell>
+                      <TableCell
+                        className="hidden truncate xl:table-cell"
+                        title={game.teams.map((team) => team.name).join(" / ")}
+                      >
+                        {game.teams.map((team) => team.name).join(" / ")}
+                      </TableCell>
                       <TableCell>{game.playerCount}</TableCell>
-                      <TableCell>{game.winnerTeam?.name ?? "—"}</TableCell>
-                      <TableCell className="whitespace-nowrap">
+                      <TableCell
+                        className="truncate"
+                        title={game.winnerTeam?.name ?? "No winner"}
+                      >
+                        {game.winnerTeam?.name ?? "—"}
+                      </TableCell>
+                      <TableCell className="hidden whitespace-nowrap 2xl:table-cell">
                         {formatDateTime(game.createdAt, "short")}
                       </TableCell>
                       <TableCell>

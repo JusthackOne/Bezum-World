@@ -38,13 +38,12 @@ export function serializeCivilizationSnapshot(
       createdAt: tile.createdAt.toISOString(),
       updatedAt: tile.updatedAt.toISOString(),
     })),
-    spawnPoint: state.spawnPoint
-      ? {
-          id: state.spawnPoint.id,
-          tileId: state.spawnPoint.tileId,
-          createdAt: state.spawnPoint.createdAt.toISOString(),
-        }
-      : null,
+    spawnPoints: state.spawnPoints.map((spawn) => ({
+      id: spawn.id,
+      teamId: spawn.teamId,
+      tileId: spawn.tileId,
+      createdAt: spawn.createdAt.toISOString(),
+    })),
     buildings: state.buildings.map((building) => ({
       id: building.id,
       tileId: building.tileId,
@@ -66,6 +65,8 @@ export function serializeCivilizationSnapshot(
       status: tower.status,
       workKind: tower.workKind,
       protectionRadius: tower.protectionRadius,
+      hitPoints: tower.hitPoints,
+      maximumHitPoints: tower.maximumHitPoints,
       constructionStartedAt: tower.constructionStartedAt.toISOString(),
       constructionCompletesAt: tower.constructionCompletesAt?.toISOString() ?? null,
       destroyedAt: tower.destroyedAt?.toISOString() ?? null,

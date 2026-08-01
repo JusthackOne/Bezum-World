@@ -30,11 +30,17 @@ const civilizationStateInclude = {
     orderBy: { id: 'asc' as const },
   },
   tiles: { orderBy: [{ q: 'asc' as const }, { r: 'asc' as const }] },
-  spawnPoint: true,
+  spawnPoints: { orderBy: { teamId: 'asc' as const } },
   buildings: true,
   towers: true,
   teamResources: true,
   attributeResources: true,
+  rewardClaims: true,
+  events: {
+    where: { eventType: CivilizationEventType.CATAPULT_ATTACKED },
+    orderBy: [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
+    take: 10,
+  },
 } satisfies Prisma.CivilizationGameInclude;
 
 const civilizationAdminListInclude = {
@@ -458,23 +464,32 @@ export class CivilizationRepository {
     return tx.civilizationGamePlayer.update({ where: { id: playerId }, data });
   }
 
-  placeActivePlayersAtSharedSpawn(
+  placeActivePlayersAtTeamSpawns(
     gameId: string,
-    spawnTileId: string,
+    spawnTileByTeamId: ReadonlyMap<string, string>,
     actionPointUnits: number,
     now: Date,
     tx: CivilizationTransaction,
-  ) {
-    return tx.civilizationGamePlayer.updateMany({
-      where: { gameId, isActive: true },
-      data: {
-        initialTileId: spawnTileId,
-        spawnTileId,
-        currentTileId: spawnTileId,
-        actionPointUnits,
-        lastActionPointUpdateAt: now,
-      },
-    });
+  ): Promise<number> {
+    return tx.civilizationGamePlayer
+      .findMany({ where: { gameId, isActive: true }, select: { id: true, teamId: true } })
+      .then(async (players) => {
+        for (const player of players) {
+          const spawnTileId = spawnTileByTeamId.get(player.teamId);
+          if (!spawnTileId) throw new Error(`Team ${player.teamId} has no spawn`);
+          await tx.civilizationGamePlayer.update({
+            where: { id: player.id },
+            data: {
+              initialTileId: spawnTileId,
+              spawnTileId,
+              currentTileId: spawnTileId,
+              actionPointUnits,
+              lastActionPointUpdateAt: now,
+            },
+          });
+        }
+        return players.length;
+      });
   }
 
   updateTile(
@@ -573,6 +588,45 @@ export class CivilizationRepository {
     tx: CivilizationTransaction,
   ) {
     return tx.civilizationRewardDistribution.create({ data });
+  }
+
+  createRewardClaim(
+    data: Prisma.CivilizationRewardClaimUncheckedCreateInput,
+    tx: CivilizationTransaction,
+  ) {
+    return tx.civilizationRewardClaim.create({ data });
+  }
+
+  findRewardClaim(gameId: string, playerId: string, tx: CivilizationTransaction) {
+    return tx.civilizationRewardClaim.findUnique({
+      where: { gameId_playerId: { gameId, playerId } },
+    });
+  }
+
+  updateRewardClaim(
+    claimId: string,
+    data: Prisma.CivilizationRewardClaimUncheckedUpdateInput,
+    tx: CivilizationTransaction,
+  ) {
+    return tx.civilizationRewardClaim.update({ where: { id: claimId }, data });
+  }
+
+  listPendingRewardDistributions(gameId: string, playerId: string, tx: CivilizationTransaction) {
+    return tx.civilizationRewardDistribution.findMany({
+      where: { gameId, playerId, appliedAt: null },
+      orderBy: [{ resourceType: 'asc' }, { attributeKey: 'asc' }],
+    });
+  }
+
+  markRewardDistributionApplied(
+    distributionId: string,
+    appliedAt: Date,
+    tx: CivilizationTransaction,
+  ) {
+    return tx.civilizationRewardDistribution.update({
+      where: { id: distributionId },
+      data: { appliedAt },
+    });
   }
 
   incrementAccountReward(
@@ -702,10 +756,15 @@ export class CivilizationRepository {
       tilesByCoordinate.set(this.coordinateKey(tile), created);
     }
 
-    const spawnTile = tilesByCoordinate.get(this.coordinateKey(input.map.spawn))!;
-    await tx.civilizationSpawnPoint.create({
-      data: { gameId, tileId: spawnTile.id },
-    });
+    const spawnTileBySide = new Map<CivilizationTeamSide, { id: string }>();
+    for (const spawn of input.map.spawns) {
+      const team = teamsBySide.get(spawn.teamSide as CivilizationTeamSide)!;
+      const tile = tilesByCoordinate.get(this.coordinateKey(spawn))!;
+      spawnTileBySide.set(spawn.teamSide as CivilizationTeamSide, tile);
+      await tx.civilizationSpawnPoint.create({
+        data: { gameId, teamId: team.id, tileId: tile.id },
+      });
+    }
 
     for (const building of input.map.buildings) {
       const tile = tilesByCoordinate.get(this.coordinateKey(building))!;
@@ -748,9 +807,9 @@ export class CivilizationRepository {
             gameId,
             teamId: team.id,
             userId,
-            initialTileId: spawnTile.id,
-            spawnTileId: spawnTile.id,
-            currentTileId: spawnTile.id,
+            initialTileId: spawnTileBySide.get(configuredTeam.side as CivilizationTeamSide)!.id,
+            spawnTileId: spawnTileBySide.get(configuredTeam.side as CivilizationTeamSide)!.id,
+            currentTileId: spawnTileBySide.get(configuredTeam.side as CivilizationTeamSide)!.id,
             actionPointUnits: input.settings.actionPoints.initialUnits,
             lastActionPointUpdateAt: input.startAt,
           },
@@ -773,6 +832,8 @@ export class CivilizationRepository {
               ? CivilizationTowerWorkKind.BUILD
               : null,
           protectionRadius: tower.protectionRadius ?? input.settings.tower.protectionRadius,
+          hitPoints: status === CivilizationTowerStatus.DESTROYED ? 0 : 100,
+          maximumHitPoints: 100,
           constructionStartedAt: input.startAt,
           constructionCompletesAt:
             status === CivilizationTowerStatus.UNDER_CONSTRUCTION

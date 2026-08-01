@@ -37,6 +37,7 @@ export const civilizationSettingsSchema = z
         otherMoveUnits: nonNegativeIntegerSchema,
         attackPlayerUnits: nonNegativeIntegerSchema,
         buildingCaptureUnits: nonNegativeIntegerSchema,
+        towerBuildUnits: nonNegativeIntegerSchema,
         towerAttackUnits: nonNegativeIntegerSchema,
         townHallCaptureUnits: nonNegativeIntegerSchema,
         townHallDefenseUnits: nonNegativeIntegerSchema,
@@ -65,6 +66,14 @@ export const civilizationSettingsSchema = z
         repairMinutes: nonNegativeIntegerSchema,
         protectionRadius: nonNegativeIntegerSchema,
         repairGoldCost: civilizationDecimalStringSchema,
+      })
+      .strict(),
+    catapult: z
+      .object({
+        enabled: z.boolean(),
+        goldPrice: civilizationDecimalStringSchema,
+        actionPointUnits: nonNegativeIntegerSchema,
+        damage: positiveIntegerSchema,
       })
       .strict(),
     townHall: z
@@ -143,6 +152,7 @@ export const defaultCivilizationSettings = {
     otherMoveUnits: 2,
     attackPlayerUnits: 4,
     buildingCaptureUnits: 2,
+    towerBuildUnits: 2,
     towerAttackUnits: 6,
     townHallCaptureUnits: 2,
     townHallDefenseUnits: 2,
@@ -170,6 +180,12 @@ export const defaultCivilizationSettings = {
     repairMinutes: 0,
     protectionRadius: 1,
     repairGoldCost: '75',
+  },
+  catapult: {
+    enabled: true,
+    goldPrice: '150',
+    actionPointUnits: 4,
+    damage: 50,
   },
   townHall: {
     captureRequiredUnits: 16,

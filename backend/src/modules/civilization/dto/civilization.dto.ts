@@ -107,7 +107,10 @@ export class CivilizationTileInputDto extends HexCoordinateDto {
   ownerTeamSide?: (typeof TEAM_SIDES)[number] | null;
 }
 
-export class CivilizationSpawnPointInputDto extends HexCoordinateDto {}
+export class CivilizationSpawnPointInputDto extends HexCoordinateDto {
+  @IsIn(TEAM_SIDES)
+  teamSide!: (typeof TEAM_SIDES)[number];
+}
 
 export class CivilizationBuildingInputDto extends HexCoordinateDto {
   @IsOptional()
@@ -159,9 +162,12 @@ export class CivilizationMapInputDto {
   @Type(() => CivilizationTileInputDto)
   tiles!: CivilizationTileInputDto[];
 
-  @ValidateNested()
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @ValidateNested({ each: true })
   @Type(() => CivilizationSpawnPointInputDto)
-  spawn!: CivilizationSpawnPointInputDto;
+  spawns!: CivilizationSpawnPointInputDto[];
 
   @IsArray()
   @ArrayMinSize(2)

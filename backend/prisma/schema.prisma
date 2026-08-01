@@ -116,6 +116,7 @@ enum CivilizationActionType {
   REPAIR_TOWER
   CONTRIBUTE_TOWN_HALL_CAPTURE
   DEFEND_TOWN_HALL
+  CATAPULT_ATTACK
 }
 
 enum CivilizationEventType {
@@ -147,6 +148,8 @@ enum CivilizationEventType {
   TOWN_HALL_CAPTURED
   TEAM_GOLD_SPENT
   REWARDS_DISTRIBUTED
+  REWARD_CLAIMED
+  CATAPULT_ATTACKED
   ADMIN_STATE_CORRECTION
 }
 
@@ -674,7 +677,7 @@ model CivilizationGame {
   teams               CivilizationTeam[]
   players             CivilizationGamePlayer[]
   tiles               CivilizationTile[]
-  spawnPoint          CivilizationSpawnPoint?
+  spawnPoints         CivilizationSpawnPoint[]
   buildings           CivilizationBuilding[]
   towers              CivilizationTower[]
   teamResources       CivilizationTeamResource[]
@@ -682,6 +685,7 @@ model CivilizationGame {
   actions             CivilizationAction[]
   events              CivilizationEvent[]
   rewardDistributions CivilizationRewardDistribution[]
+  rewardClaims        CivilizationRewardClaim[]
   auditLogs           CivilizationAdminAuditLog[]
   snapshots           CivilizationGameSnapshot[]
 
@@ -713,6 +717,8 @@ model CivilizationTeam {
   attributeResources  CivilizationTeamAttributeResource[]
   events              CivilizationEvent[]
   rewardDistributions CivilizationRewardDistribution[]
+  spawnPoint          CivilizationSpawnPoint?
+  rewardClaims        CivilizationRewardClaim[]
 
   @@unique([gameId, side])
   @@index([gameId])
@@ -744,6 +750,7 @@ model CivilizationGamePlayer {
   actorEvents             CivilizationEvent[]              @relation("CivilizationEventActor")
   targetEvents            CivilizationEvent[]              @relation("CivilizationEventTarget")
   rewardDistributions     CivilizationRewardDistribution[]
+  rewardClaims            CivilizationRewardClaim[]
 
   @@unique([gameId, userId])
   @@index([gameId, teamId, isActive])
@@ -782,12 +789,16 @@ model CivilizationTile {
 
 model CivilizationSpawnPoint {
   id        String           @id @default(uuid())
-  gameId    String           @unique @map("game_id")
+  gameId    String           @map("game_id")
+  teamId    String           @unique @map("team_id")
   tileId    String           @unique @map("tile_id")
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   game      CivilizationGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team      CivilizationTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
   tile      CivilizationTile @relation(fields: [tileId], references: [id], onDelete: Cascade)
 
+  @@unique([gameId, teamId])
+  @@index([gameId, teamId])
   @@map("civilization_spawn_points")
 }
 
@@ -824,6 +835,8 @@ model CivilizationTower {
   status                  CivilizationTowerStatus    @default(UNDER_CONSTRUCTION)
   workKind                CivilizationTowerWorkKind? @map("work_kind")
   protectionRadius        Int                        @map("protection_radius")
+  hitPoints               Int                        @default(100) @map("hit_points")
+  maximumHitPoints        Int                        @default(100) @map("maximum_hit_points")
   constructionStartedAt   DateTime                   @map("construction_started_at") @db.Timestamptz(3)
   constructionCompletesAt DateTime?                  @map("construction_completes_at") @db.Timestamptz(3)
   destroyedAt             DateTime?                  @map("destroyed_at") @db.Timestamptz(3)
@@ -934,6 +947,27 @@ model CivilizationRewardDistribution {
   @@index([gameId, teamId])
   @@index([playerId, appliedAt])
   @@map("civilization_reward_distributions")
+}
+
+model CivilizationRewardClaim {
+  id               String                   @id @default(uuid())
+  gameId           String                   @map("game_id")
+  teamId           String                   @map("team_id")
+  playerId         String                   @map("player_id")
+  eligible         Boolean
+  unavailableReason String?                 @map("unavailable_reason")
+  rewardJson       Json                     @map("reward_json")
+  expiresAt        DateTime?                @map("expires_at") @db.Timestamptz(3)
+  claimedAt        DateTime?                @map("claimed_at") @db.Timestamptz(3)
+  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  game             CivilizationGame         @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  team             CivilizationTeam         @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  player           CivilizationGamePlayer   @relation(fields: [playerId], references: [id], onDelete: Restrict)
+
+  @@unique([gameId, playerId])
+  @@index([playerId, claimedAt])
+  @@map("civilization_reward_claims")
 }
 
 model CivilizationAdminAuditLog {

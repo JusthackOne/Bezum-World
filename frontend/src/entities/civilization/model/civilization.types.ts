@@ -17,7 +17,8 @@ export type CivilizationActionType =
   | "ATTACK_TOWER"
   | "REPAIR_TOWER"
   | "CAPTURE_TOWN_HALL"
-  | "DEFEND_TOWN_HALL";
+  | "DEFEND_TOWN_HALL"
+  | "CATAPULT_ATTACK";
 
 export interface HexCoordinate {
   q: number;
@@ -43,6 +44,7 @@ export interface CivilizationSettings {
     otherMoveUnits: number;
     attackPlayerUnits: number;
     buildingCaptureUnits: number;
+    towerBuildUnits: number;
     towerAttackUnits: number;
     townHallCaptureUnits: number;
     townHallDefenseUnits: number;
@@ -65,6 +67,12 @@ export interface CivilizationSettings {
     repairMinutes: number;
     protectionRadius: number;
     repairGoldCost: string;
+  };
+  catapult: {
+    enabled: boolean;
+    goldPrice: string;
+    actionPointUnits: number;
+    damage: number;
   };
   townHall: {
     captureRequiredUnits: number;
@@ -120,6 +128,7 @@ export interface CivilizationTile {
 
 export interface CivilizationSpawnPoint {
   id: string;
+  teamId: string;
   tileId: string;
 }
 
@@ -143,6 +152,8 @@ export interface CivilizationTower {
   status: CivilizationTowerStatus;
   workKind: CivilizationTowerWorkKind | null;
   protectionRadius: number;
+  hitPoints: number;
+  maximumHitPoints: number;
   isConnected: boolean;
   constructionStartedAt: string;
   constructionCompletesAt: string | null;
@@ -230,12 +241,26 @@ export interface CivilizationGameState {
   game: CivilizationGameSummary & { settings: CivilizationSettings };
   teams: CivilizationTeamState[];
   tiles: CivilizationTile[];
-  spawnPoint: CivilizationSpawnPoint;
+  spawnPoints: CivilizationSpawnPoint[];
   buildings: CivilizationBuilding[];
   towers: CivilizationTower[];
   players: CivilizationPlayer[];
   access: CivilizationGameAccess;
   availableActions: CivilizationLegalAction[];
+  rewardClaim: {
+    eligible: boolean;
+    unavailableReason: string | null;
+    reward: { gold: number; attributes: Record<CivilizationAttributeKey, number> };
+    expiresAt: string | null;
+    claimedAt: string | null;
+  } | null;
+  recentCatapultAttacks: Array<{
+    id: string;
+    actorPlayerId: string | null;
+    tileId: string | null;
+    payload: Record<string, unknown>;
+    createdAt: string;
+  }>;
   serverTime: string;
   stateVersion: number;
 }
@@ -296,7 +321,7 @@ export interface CivilizationAdminTileInput extends HexCoordinate {
   ownerTeamSide: CivilizationTeamSide | null;
 }
 
-export type CivilizationAdminSpawnInput = HexCoordinate;
+export type CivilizationAdminSpawnInput = HexCoordinate & { teamSide: CivilizationTeamSide };
 
 export interface CivilizationAdminBuildingInput extends HexCoordinate {
   id?: string;
@@ -315,7 +340,7 @@ export interface CivilizationAdminTowerInput extends HexCoordinate {
 
 export interface CivilizationAdminMapInput {
   tiles: CivilizationAdminTileInput[];
-  spawn: CivilizationAdminSpawnInput;
+  spawns: CivilizationAdminSpawnInput[];
   buildings: CivilizationAdminBuildingInput[];
   towers: CivilizationAdminTowerInput[];
 }

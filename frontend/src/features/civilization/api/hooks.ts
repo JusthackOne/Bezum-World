@@ -17,6 +17,7 @@ import {
   getCivilizationHistory,
   getCurrentCivilizationGame,
   performCivilizationAction,
+  claimCivilizationReward,
   type CivilizationActionPayload,
 } from "./requests";
 
@@ -94,6 +95,19 @@ export function useCivilizationActionMutation(gameId: string | null) {
         return;
       }
 
+      void Promise.allSettled([
+        queryClient.invalidateQueries({ queryKey: queryKeys.civilizationCurrent }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.civilizationState(gameId) }),
+      ]);
+    },
+  });
+}
+
+export function useClaimCivilizationRewardMutation(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => claimCivilizationReward(gameId),
+    onSettled: () => {
       void Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: queryKeys.civilizationCurrent }),
         queryClient.invalidateQueries({ queryKey: queryKeys.civilizationState(gameId) }),

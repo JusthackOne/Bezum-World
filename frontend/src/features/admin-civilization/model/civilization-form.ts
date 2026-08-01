@@ -55,7 +55,9 @@ export const civilizationGameFormSchema = z
           ownerTeamSide: z.enum(["TEAM_A", "TEAM_B"]).nullable(),
         }),
       ),
-      spawn: coordinateSchema,
+      spawns: z
+        .array(coordinateSchema.extend({ teamSide: z.enum(["TEAM_A", "TEAM_B"]) }))
+        .length(2),
       buildings: z.array(
         coordinateSchema.extend({
           type: z.enum(["TOWN_HALL", "GOLD_BUILDING", "ATTRIBUTE_BUILDING"]),
@@ -85,6 +87,7 @@ export const civilizationGameFormSchema = z
         otherMoveUnits: z.number().int().nonnegative(),
         attackPlayerUnits: z.number().int().nonnegative(),
         buildingCaptureUnits: z.number().int().nonnegative(),
+        towerBuildUnits: z.number().int().nonnegative(),
         towerAttackUnits: z.number().int().nonnegative(),
         townHallCaptureUnits: z.number().int().nonnegative(),
         townHallDefenseUnits: z.number().int().nonnegative(),
@@ -107,6 +110,12 @@ export const civilizationGameFormSchema = z
         repairMinutes: z.number().int().nonnegative(),
         protectionRadius: z.number().int().nonnegative(),
         repairGoldCost: nonNegativeDecimal,
+      }),
+      catapult: z.object({
+        enabled: z.boolean(),
+        goldPrice: nonNegativeDecimal,
+        actionPointUnits: z.number().int().nonnegative(),
+        damage: z.number().int().positive(),
       }),
       townHall: z.object({
         captureRequiredUnits: z.number().int().positive(),
@@ -197,6 +206,7 @@ export const DEFAULT_CIVILIZATION_SETTINGS: CivilizationSettings = {
     otherMoveUnits: 2,
     attackPlayerUnits: 4,
     buildingCaptureUnits: 2,
+    towerBuildUnits: 2,
     towerAttackUnits: 6,
     townHallCaptureUnits: 2,
     townHallDefenseUnits: 2,
@@ -218,6 +228,12 @@ export const DEFAULT_CIVILIZATION_SETTINGS: CivilizationSettings = {
     repairMinutes: 0,
     protectionRadius: 1,
     repairGoldCost: "75",
+  },
+  catapult: {
+    enabled: true,
+    goldPrice: "150",
+    actionPointUnits: 4,
+    damage: 50,
   },
   townHall: {
     captureRequiredUnits: 16,
@@ -244,7 +260,10 @@ export function createDefaultCivilizationMap(): CivilizationAdminMapInput {
   }));
   return {
     tiles,
-    spawn: { q: 0, r: 0 },
+    spawns: [
+      { q: -2, r: 0, teamSide: "TEAM_A" },
+      { q: 2, r: 0, teamSide: "TEAM_B" },
+    ],
     buildings: [
       {
         q: -3,
@@ -405,11 +424,19 @@ export function validateCivilizationMap(
       );
     }
   });
-  if (!validGround(map.spawn)) {
-    issues.push(
-      issue("INVALID_SPAWN_TILE", "The shared spawn must be on playable ground.", map.spawn),
-    );
+  const spawnSides = new Set(map.spawns.map((spawn) => spawn.teamSide));
+  if (map.spawns.length !== 2 || spawnSides.size !== 2) {
+    issues.push(issue("INVALID_TEAM_SPAWNS", "Configure one separate spawn for each team."));
   }
+  map.spawns.forEach((spawn) => {
+    if (!validGround(spawn)) {
+      issues.push(issue("INVALID_SPAWN_TILE", `${spawn.teamSide} spawn must be on playable ground.`, spawn));
+    }
+    const tile = tiles.get(coordinateKey(spawn));
+    if (tile?.ownerTeamSide && tile.ownerTeamSide !== spawn.teamSide) {
+      issues.push(issue("ENEMY_TEAM_SPAWN", "A spawn cannot be on enemy territory.", spawn));
+    }
+  });
   map.towers.forEach((tower, index) => {
     if (!validGround(tower)) {
       issues.push(issue("INVALID_TOWER_TILE", "A tower must be on playable ground.", tower));
@@ -440,7 +467,7 @@ export function validateCivilizationMap(
   });
 
   const objectCoordinates = new Map<string, number>();
-  [...map.buildings, map.spawn, ...map.towers].forEach((object) => {
+  [...map.buildings, ...map.spawns, ...map.towers].forEach((object) => {
     const key = coordinateKey(object);
     objectCoordinates.set(key, (objectCoordinates.get(key) ?? 0) + 1);
   });

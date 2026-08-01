@@ -65,21 +65,23 @@ function createLifecycleHarness(state: CivilizationStateRecord, now = NOW): Life
       if (data.status) state.status = data.status as CivilizationGameStatus;
       state.stateVersion += 1;
     },
-    async placeActivePlayersAtSharedSpawn(
+    async placeActivePlayersAtTeamSpawns(
       _gameId: string,
-      spawnTileId: string,
+      spawnTileByTeamId: ReadonlyMap<string, string>,
       actionPointUnits: number,
       placementTime: Date,
-    ): Promise<{ count: number }> {
+    ): Promise<number> {
       const activePlayers = state.players.filter((player) => player.isActive);
       activePlayers.forEach((player) => {
+        const spawnTileId = spawnTileByTeamId.get(player.teamId);
+        if (!spawnTileId) throw new Error(`Missing spawn for ${player.teamId}`);
         player.initialTileId = spawnTileId;
         player.spawnTileId = spawnTileId;
         player.currentTileId = spawnTileId;
         player.actionPointUnits = actionPointUnits;
         player.lastActionPointUpdateAt = placementTime;
       });
-      return { count: activePlayers.length };
+      return activePlayers.length;
     },
     async createSnapshot(): Promise<void> {},
   };
@@ -130,7 +132,7 @@ function createLifecycleHarness(state: CivilizationStateRecord, now = NOW): Life
 function createScheduledLifecycleState(): CivilizationStateRecord {
   const state = createLifecycleState();
   state.status = CivilizationGameStatus.SCHEDULED;
-  state.name = 'Shared spawn activation fixture';
+  state.name = 'Team spawn activation fixture';
   state.startAt = NOW;
   state.endAt = new Date('2026-08-08T12:00:00.000Z');
   state.completedAt = null;
@@ -141,12 +143,15 @@ function createScheduledLifecycleState(): CivilizationStateRecord {
   state.stateVersion = 0;
   state.createdAt = NOW;
   state.updatedAt = NOW;
-  state.spawnPoint = {
-    id: 'shared-spawn',
-    gameId: GAME_ID,
-    tileId: TILE_ID,
-    createdAt: NOW,
-  };
+  state.spawnPoints = [
+    {
+      id: 'spawn-team-a',
+      gameId: GAME_ID,
+      teamId: TEAM_A_ID,
+      tileId: TILE_ID,
+      createdAt: NOW,
+    },
+  ];
   state.towers = [];
   state.buildings = [];
   state.teamResources = [];
@@ -184,7 +189,7 @@ function createScheduledLifecycleState(): CivilizationStateRecord {
 }
 
 describe('Civilization game activation', () => {
-  test('atomically places every active participant on the shared spawn', async () => {
+  test('atomically places every active participant on their team spawn', async () => {
     const state = createScheduledLifecycleState();
     const harness = createLifecycleHarness(state);
 
@@ -215,7 +220,10 @@ describe('Civilization game activation', () => {
     expect(harness.events).toContainEqual(
       expect.objectContaining({
         eventType: CivilizationEventType.GAME_STARTED,
-        payload: expect.objectContaining({ sharedSpawnTileId: TILE_ID, placedPlayerCount: 2 }),
+        payload: expect.objectContaining({
+          teamSpawnTileIds: { [TEAM_A_ID]: TILE_ID },
+          placedPlayerCount: 2,
+        }),
       }),
     );
   });

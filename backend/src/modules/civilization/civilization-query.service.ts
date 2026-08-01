@@ -113,9 +113,12 @@ export class CivilizationQueryService {
     playerStatistics = new Map<string, CivilizationPlayerStatistics>(),
   ): Record<string, unknown> {
     const settings = parseCivilizationSettings(state.settingsJson);
-    const currentPlayer = state.players.find(
-      (player) => player.userId === userId && player.isActive,
-    );
+    const assignedPlayer = state.players.find((player) => player.userId === userId);
+    const currentPlayer =
+      assignedPlayer &&
+      (assignedPlayer.isActive || state.status !== CivilizationGameStatus.ACTIVE)
+        ? assignedPlayer
+        : undefined;
     const tileById = new Map(state.tiles.map((tile) => [tile.id, tile]));
     const buildingByTileId = new Map(
       state.buildings.map((building) => [building.tileId, building]),
@@ -283,6 +286,8 @@ export class CivilizationQueryService {
         status: tower.status,
         workKind: tower.workKind,
         protectionRadius: tower.protectionRadius,
+        hitPoints: tower.hitPoints,
+        maximumHitPoints: tower.maximumHitPoints,
         isConnected: tileById.get(tower.tileId)?.isConnected ?? false,
         constructionStartedAt: tower.constructionStartedAt.toISOString(),
         constructionCompletesAt: tower.constructionCompletesAt?.toISOString() ?? null,
@@ -310,12 +315,33 @@ export class CivilizationQueryService {
           statistics: playerStatistics.get(player.id) ?? this.emptyPlayerStatistics(),
         };
       }),
-      spawnPoint: state.spawnPoint
-        ? {
-            id: state.spawnPoint.id,
-            tileId: state.spawnPoint.tileId,
-          }
+      spawnPoints: state.spawnPoints.map((spawn) => ({
+        id: spawn.id,
+        teamId: spawn.teamId,
+        tileId: spawn.tileId,
+      })),
+      rewardClaim: currentPlayer
+        ? (() => {
+            const claim = state.rewardClaims.find((item) => item.playerId === currentPlayer.id);
+            if (claim) {
+              return {
+                eligible: claim.eligible,
+                unavailableReason: claim.unavailableReason,
+                reward: claim.rewardJson,
+                expiresAt: claim.expiresAt?.toISOString() ?? null,
+                claimedAt: claim.claimedAt?.toISOString() ?? null,
+              };
+            }
+            return null;
+          })()
         : null,
+      recentCatapultAttacks: state.events.map((event) => ({
+        id: event.id,
+        actorPlayerId: event.actorPlayerId,
+        tileId: event.tileId,
+        payload: event.payloadJson,
+        createdAt: event.createdAt.toISOString(),
+      })),
       access: {
         isParticipant: Boolean(currentPlayer),
         isSpectator: !currentPlayer,
@@ -515,7 +541,9 @@ export class CivilizationQueryService {
         continue;
       }
       if (
-        tile.id !== state.spawnPoint?.tileId &&
+        !state.spawnPoints.some(
+          (spawn) => spawn.tileId === tile.id && spawn.teamId === player.teamId,
+        ) &&
         state.players.some(
           (candidate) =>
             candidate.id !== player.id && candidate.isActive && candidate.currentTileId === tile.id,
@@ -526,6 +554,10 @@ export class CivilizationQueryService {
       const environmentalDisabledReason =
         tile.terrainType === 'MOUNTAIN'
           ? CIVILIZATION_ERROR_CODES.TILE_IMPASSABLE
+          : state.spawnPoints.some(
+                (spawn) => spawn.tileId === tile.id && spawn.teamId !== player.teamId,
+              )
+            ? CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY
           : protectedByTower
             ? CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER
             : null;
@@ -623,7 +655,7 @@ export class CivilizationQueryService {
           (tower) =>
             tower.tileId === placementTile.id && tower.status !== CivilizationTowerStatus.CANCELLED,
         ) ||
-        placementTile.id === state.spawnPoint?.tileId ||
+        state.spawnPoints.some((spawn) => spawn.tileId === placementTile.id) ||
         state.players.some(
           (candidate) => candidate.isActive && candidate.currentTileId === placementTile.id,
         )
@@ -645,7 +677,7 @@ export class CivilizationQueryService {
       actions.push({
         type: 'BUILD_TOWER',
         targetCoordinate: { q: placementTile.q, r: placementTile.r },
-        actionPointUnits: 0,
+        actionPointUnits: settings.costs.towerBuildUnits,
         goldCost: settings.tower.buildGoldCost,
         label: 'Build tower',
         requiresConfirmation: true,
@@ -653,7 +685,7 @@ export class CivilizationQueryService {
           ? CIVILIZATION_ERROR_CODES.TOWER_RADIUS_OVERLAP
           : lacksGold
             ? CIVILIZATION_ERROR_CODES.NOT_ENOUGH_TEAM_GOLD
-            : null,
+            : actionPointDisabledReason(settings.costs.towerBuildUnits),
       });
     }
 
@@ -708,6 +740,48 @@ export class CivilizationQueryService {
             : actionPointDisabledReason(settings.costs.towerRepairUnits),
         });
       }
+    }
+
+    const catapultTargets = state.towers.filter((tower) => {
+      if (
+        tower.teamId === player.teamId ||
+        tower.status !== CivilizationTowerStatus.ACTIVE ||
+        tower.hitPoints <= 0
+      ) {
+        return false;
+      }
+      const towerTile = state.tiles.find((tile) => tile.id === tower.tileId);
+      return Boolean(towerTile && hexDistance(currentTile, towerTile) === tower.protectionRadius);
+    });
+    const catapultResourceDisabledReason = !settings.catapult.enabled
+      ? 'CATAPULT_DISABLED'
+      : teamGold.lessThan(new Prisma.Decimal(settings.catapult.goldPrice))
+        ? CIVILIZATION_ERROR_CODES.NOT_ENOUGH_TEAM_GOLD
+        : actionPointDisabledReason(settings.catapult.actionPointUnits);
+    for (const tower of catapultTargets) {
+      const towerTile = state.tiles.find((tile) => tile.id === tower.tileId)!;
+      actions.push({
+        type: 'CATAPULT_ATTACK',
+        towerId: tower.id,
+        targetCoordinate: { q: towerTile.q, r: towerTile.r },
+        actionPointUnits: settings.catapult.actionPointUnits,
+        goldCost: settings.catapult.goldPrice,
+        label: 'Fire Catapult',
+        requiresConfirmation: true,
+        disabledReason: catapultResourceDisabledReason,
+      });
+    }
+    if (catapultTargets.length === 0) {
+      actions.push({
+        type: 'CATAPULT_ATTACK',
+        actionPointUnits: settings.catapult.actionPointUnits,
+        goldCost: settings.catapult.goldPrice,
+        label: 'Fire Catapult',
+        requiresConfirmation: true,
+        disabledReason: settings.catapult.enabled
+          ? 'NO_VALID_ENEMY_TOWER_TARGETS'
+          : 'CATAPULT_DISABLED',
+      });
     }
 
     const defendingTownHall = state.buildings.find(

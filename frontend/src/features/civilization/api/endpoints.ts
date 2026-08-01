@@ -9,7 +9,9 @@ export const civilizationEndpoints = {
   captureBuilding: (gameId: string) => `${gameBase(gameId)}/actions/capture-building`,
   buildTower: (gameId: string) => `${gameBase(gameId)}/actions/build-tower`,
   attackTower: (gameId: string) => `${gameBase(gameId)}/actions/attack-tower`,
+  catapultAttack: (gameId: string) => `${gameBase(gameId)}/actions/catapult-attack`,
   repairTower: (gameId: string) => `${gameBase(gameId)}/actions/repair-tower`,
   captureTownHall: (gameId: string) => `${gameBase(gameId)}/actions/capture-town-hall`,
   defendTownHall: (gameId: string) => `${gameBase(gameId)}/actions/defend-town-hall`,
+  claimReward: (gameId: string) => `${gameBase(gameId)}/reward/claim`,
 } as const;

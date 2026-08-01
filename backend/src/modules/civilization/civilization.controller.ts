@@ -14,6 +14,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 import type { RequestWithAuthUser } from '../auth/types/request-with-auth-user.type';
 import { CivilizationActionsService } from './civilization-actions.service';
+import { CivilizationCompletionService } from './civilization-completion.service';
 import { CivilizationQueryService } from './civilization-query.service';
 import { CivilizationRateLimitGuard } from './civilization-rate-limit.guard';
 import {
@@ -35,6 +36,7 @@ export class CivilizationController {
   constructor(
     private readonly queryService: CivilizationQueryService,
     private readonly actionsService: CivilizationActionsService,
+    private readonly completionService: CivilizationCompletionService,
   ) {}
 
   @Get('current')
@@ -82,6 +84,15 @@ export class CivilizationController {
     return this.actionsService.move(params.gameId, this.requireUserId(request), body);
   }
 
+  @Post('games/:gameId/reward/claim')
+  @UseGuards(CivilizationRateLimitGuard)
+  async claimReward(
+    @Param() params: CivilizationGameIdParamsDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<unknown> {
+    return this.completionService.claimReward(params.gameId, this.requireUserId(request));
+  }
+
   @Post('games/:gameId/actions/attack-player')
   @UseGuards(CivilizationRateLimitGuard)
   async attackPlayer(
@@ -120,6 +131,20 @@ export class CivilizationController {
     @Req() request: RequestWithAuthUser,
   ): Promise<unknown> {
     return this.actionsService.attackTower(params.gameId, this.requireUserId(request), body);
+  }
+
+  @Post('games/:gameId/actions/catapult-attack')
+  @UseGuards(CivilizationRateLimitGuard)
+  async catapultAttack(
+    @Param() params: CivilizationGameIdParamsDto,
+    @Body() body: CivilizationTowerActionDto,
+    @Req() request: RequestWithAuthUser,
+  ): Promise<unknown> {
+    return this.actionsService.catapultAttack(
+      params.gameId,
+      this.requireUserId(request),
+      body,
+    );
   }
 
   @Post('games/:gameId/actions/repair-tower')

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { EyeIcon, HistoryIcon, RefreshCwIcon, SwordsIcon } from "lucide-react";
+import { EyeIcon, GiftIcon, HistoryIcon, RefreshCwIcon, SwordsIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import type {
@@ -25,7 +25,11 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { Button, Card, CardContent, Skeleton } from "@/shared/ui/8bit";
 
-import { useCivilizationActionMutation, useCivilizationGameStateQuery } from "../api";
+import {
+  useCivilizationActionMutation,
+  useCivilizationGameStateQuery,
+  useClaimCivilizationRewardMutation,
+} from "../api";
 import { coordinateKey, useCivilizationUiStore } from "../model";
 import { civilizationRoutes } from "../routes";
 import type { CivilizationActionPayload } from "../api/requests";
@@ -60,6 +64,8 @@ function buildActionPayload(action: CivilizationLegalAction): CivilizationAction
         : null,
     ATTACK_TOWER: () =>
       action.towerId ? { type: "ATTACK_TOWER", actionId, towerId: action.towerId } : null,
+    CATAPULT_ATTACK: () =>
+      action.towerId ? { type: "CATAPULT_ATTACK", actionId, towerId: action.towerId } : null,
     REPAIR_TOWER: () =>
       action.towerId ? { type: "REPAIR_TOWER", actionId, towerId: action.towerId } : null,
     CAPTURE_TOWN_HALL: () =>
@@ -100,7 +106,9 @@ function automaticActionForTile(
   state: CivilizationGameState,
   tileId: string,
 ): CivilizationLegalAction | null {
-  const actions = actionsForTile(state, tileId).filter((action) => action.type !== "BUILD_TOWER");
+  const actions = actionsForTile(state, tileId).filter(
+    (action) => action.type !== "BUILD_TOWER" && action.type !== "CATAPULT_ATTACK",
+  );
   const interactions = actions.filter((action) => action.type !== "MOVE");
   if (interactions.length === 1) {
     return interactions[0] ?? null;
@@ -117,11 +125,16 @@ export function CivilizationGameView({
 }) {
   const query = useCivilizationGameStateQuery(gameId, isHistorical);
   const actionMutation = useCivilizationActionMutation(gameId);
+  const claimRewardMutation = useClaimCivilizationRewardMutation(gameId);
   const [confirmationAction, setConfirmationAction] = useState<CivilizationLegalAction | null>(
     null,
   );
-  const [placementMode, setPlacementMode] = useState<"BUILD_TOWER" | null>(null);
+  const [placementMode, setPlacementMode] = useState<
+    "BUILD_TOWER" | "CATAPULT_ATTACK" | null
+  >(null);
   const [placementTileId, setPlacementTileId] = useState<string | null>(null);
+  const [closedResultGameId, setClosedResultGameId] = useState<string | null>(null);
+  const [resultReopened, setResultReopened] = useState(false);
   const actionRequestPendingRef = useRef(false);
   const selectedTileId = useCivilizationUiStore((state) => state.selectedTileId);
   const selectedPlayerId = useCivilizationUiStore((state) => state.selectedPlayerId);
@@ -221,6 +234,17 @@ export function CivilizationGameView({
 
   const state = query.data;
   const readOnly = isHistorical || state.access.isReadOnly || state.game.status !== "ACTIVE";
+  const resultOpen =
+    state.game.status === "COMPLETED" &&
+    (closedResultGameId !== state.game.id || resultReopened);
+  const setResultDialogOpen = (open: boolean): void => {
+    if (open) {
+      setResultReopened(true);
+      return;
+    }
+    setClosedResultGameId(state.game.id);
+    setResultReopened(false);
+  };
 
   const selectTile = (tileId: string): void => {
     setSelectedTile(tileId);
@@ -274,6 +298,14 @@ export function CivilizationGameView({
   };
 
   const selectTileOrAct = (tileId: string): void => {
+    if (placementMode === "CATAPULT_ATTACK") {
+      const catapultAction = actionsForTile(state, tileId).find(
+        (action) => action.type === "CATAPULT_ATTACK",
+      );
+      if (catapultAction) requestAction(catapultAction);
+      else cancelPlacement();
+      return;
+    }
     if (placementMode === "BUILD_TOWER") {
       const buildAction = actionsForTile(state, tileId).find(
         (action) => action.type === "BUILD_TOWER",
@@ -285,10 +317,21 @@ export function CivilizationGameView({
       }
       return;
     }
+    const tower = state.towers.find(
+      (candidate) => candidate.tileId === tileId && candidate.status !== "CANCELLED",
+    );
+    if (tower) {
+      clearSelection();
+      setSelectedTile(tileId);
+      setSelectedTower(tower.id);
+      return;
+    }
     if (selectedPlayerId === state.access.currentPlayerId) {
       const action = automaticActionForTile(state, tileId);
       if (action) {
         requestAction(action);
+      } else {
+        clearSelection();
       }
       return;
     }
@@ -303,6 +346,16 @@ export function CivilizationGameView({
     }
     clearSelection();
     setPlacementMode("BUILD_TOWER");
+    setPlacementTileId(null);
+  };
+
+  const toggleCatapult = (): void => {
+    if (placementMode === "CATAPULT_ATTACK") {
+      cancelPlacement();
+      return;
+    }
+    clearSelection();
+    setPlacementMode("CATAPULT_ATTACK");
     setPlacementTileId(null);
   };
 
@@ -350,6 +403,11 @@ export function CivilizationGameView({
             <RefreshCwIcon className={query.isFetching ? "size-4 animate-spin" : "size-4"} />
             Refresh
           </Button>
+          {state.game.status === "COMPLETED" && !resultOpen ? (
+            <Button type="button" variant="outline" onClick={() => setResultReopened(true)}>
+              <GiftIcon className="size-4" /> View result
+            </Button>
+          ) : null}
           <Button asChild type="button" variant="outline">
             <Link href={civilizationRoutes.history}>History</Link>
           </Button>
@@ -374,7 +432,9 @@ export function CivilizationGameView({
             isInteractionDisabled={actionMutation.isPending}
             onSelectTile={selectTileOrAct}
             onSelectPlayer={selectPlayer}
+            onCancelSelection={clearSelection}
             onToggleTowerPlacement={toggleTowerPlacement}
+            onToggleCatapult={toggleCatapult}
             onCancelPlacement={cancelPlacement}
             onCancelPlacementPreview={() => setPlacementTileId(null)}
             onConfirmPlacement={confirmTowerPlacement}
@@ -434,6 +494,72 @@ export function CivilizationGameView({
             >
               {actionMutation.isPending ? "Submitting..." : "Confirm action"}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={resultOpen} onOpenChange={setResultDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Game result</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-left">
+                <p>
+                  Winner: {state.game.winnerTeam?.name ?? "Draw"}. Loser:{" "}
+                  {state.game.winnerTeamId
+                    ? (state.game.teams.find((team) => team.id !== state.game.winnerTeamId)?.name ??
+                      "None")
+                    : "None"}.
+                </p>
+                <p>
+                  Final score: {state.game.teams.map((team) => `${team.name} ${team.finalScore ?? "0"}`).join(" · ")}
+                </p>
+                <p>
+                  Reason:{" "}
+                  {state.game.completionReason === "TOWN_HALL_CAPTURED"
+                    ? "Town Hall destroyed"
+                    : state.game.completionReason?.replaceAll("_", " ").toLowerCase() ??
+                      "event completion"}
+                </p>
+                {state.rewardClaim ? (
+                  state.rewardClaim.eligible ? (
+                    <p>
+                      Reward: {state.rewardClaim.reward.gold} gold
+                      {state.rewardClaim.claimedAt
+                        ? ` · Claimed ${formatDateTime(state.rewardClaim.claimedAt)}`
+                        : " · Ready to claim"}
+                    </p>
+                  ) : (
+                    <p className="text-destructive">
+                      {state.rewardClaim.unavailableReason ?? "No reward is available."}
+                    </p>
+                  )
+                ) : (
+                  <p>No reward is available for this account.</p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {claimRewardMutation.isError ? (
+            <p className="text-xs text-destructive">
+              {getApiRequestErrorMessage(claimRewardMutation.error, "Unable to claim reward.")}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={claimRewardMutation.isPending}>Close</AlertDialogCancel>
+            {state.rewardClaim?.eligible && !state.rewardClaim.claimedAt ? (
+              <AlertDialogAction
+                disabled={claimRewardMutation.isPending}
+                onClick={(event) => {
+                  event.preventDefault();
+                  claimRewardMutation.mutate(undefined, {
+                    onSuccess: () => toast.success("Civilization reward claimed."),
+                  });
+                }}
+              >
+                {claimRewardMutation.isPending ? "Claiming..." : "Claim reward"}
+              </AlertDialogAction>
+            ) : null}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

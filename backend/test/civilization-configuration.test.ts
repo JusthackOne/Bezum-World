@@ -34,11 +34,15 @@ function createValidConfiguration(): CreateCivilizationGameDto {
         { q: -2, r: 0, terrainType: 'GROUND', ownerTeamSide: 'TEAM_A' },
         { q: -1, r: 0, terrainType: 'GROUND', ownerTeamSide: 'TEAM_A' },
         { q: 0, r: 0, terrainType: 'GROUND', ownerTeamSide: null },
+        { q: 0, r: 1, terrainType: 'GROUND', ownerTeamSide: null },
         { q: 1, r: 0, terrainType: 'GROUND', ownerTeamSide: 'TEAM_B' },
         { q: 2, r: 0, terrainType: 'GROUND', ownerTeamSide: 'TEAM_B' },
         { q: 2, r: -1, terrainType: 'GROUND', ownerTeamSide: 'TEAM_B' },
       ],
-      spawn: { q: 0, r: 0 },
+      spawns: [
+        { q: 0, r: 0, teamSide: 'TEAM_A' },
+        { q: 0, r: 1, teamSide: 'TEAM_B' },
+      ],
       buildings: [
         { q: -2, r: 0, type: 'TOWN_HALL', ownerTeamSide: 'TEAM_A' },
         { q: 2, r: 0, type: 'TOWN_HALL', ownerTeamSide: 'TEAM_B' },
@@ -94,18 +98,18 @@ describe('Civilization configuration validation', () => {
     expect(issueCodes(input)).toContain('TOWN_HALL_TILE_NOT_OWNED');
   });
 
-  test('rejects a building on the shared spawn', () => {
+  test('rejects a building on a team spawn', () => {
     const input = createValidConfiguration();
-    input.map.spawn = { q: -2, r: 0 };
+    input.map.spawns[0] = { q: -2, r: 0, teamSide: 'TEAM_A' };
 
     expect(issueCodes(input)).toContain('SPAWN_OBJECT_COLLISION');
   });
 
   test('rejects map objects on mountains and mountains with owners', () => {
     const input = createValidConfiguration();
-    const sharedSpawn = input.map.tiles.find((tile) => tile.q === 0 && tile.r === 0)!;
-    sharedSpawn.terrainType = 'MOUNTAIN';
-    sharedSpawn.ownerTeamSide = 'TEAM_A';
+    const teamSpawn = input.map.tiles.find((tile) => tile.q === 0 && tile.r === 0)!;
+    teamSpawn.terrainType = 'MOUNTAIN';
+    teamSpawn.ownerTeamSide = 'TEAM_A';
 
     const codes = issueCodes(input);
     expect(codes).toContain('MOUNTAIN_HAS_OWNER');

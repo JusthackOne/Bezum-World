@@ -148,11 +148,21 @@ function createQueryState(status: CivilizationGameStatus): CivilizationStateReco
         updatedAt: FIXED_NOW,
       },
     ],
-    spawnPoint: { id: 'shared-spawn', gameId: GAME_ID, tileId: 'tile-a', createdAt: FIXED_NOW },
+    spawnPoints: [
+      {
+        id: 'spawn-team-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        tileId: 'tile-a',
+        createdAt: FIXED_NOW,
+      },
+    ],
     buildings: [],
     towers: [],
     teamResources: [],
     attributeResources: [],
+    rewardClaims: [],
+    events: [],
   } as unknown as CivilizationStateRecord;
 }
 
@@ -275,6 +285,8 @@ describe('Civilization query access', () => {
         status: CivilizationTowerStatus.DESTROYED,
         workKind: null,
         protectionRadius: 1,
+        hitPoints: 0,
+        maximumHitPoints: 100,
         constructionStartedAt: FIXED_NOW,
         constructionCompletesAt: null,
         destroyedAt: FIXED_NOW,

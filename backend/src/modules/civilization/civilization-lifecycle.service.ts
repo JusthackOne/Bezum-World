@@ -72,22 +72,33 @@ export class CivilizationLifecycleService implements OnModuleInit {
       await this.repository.lockGameState(gameId, tx);
       let state = await this.repository.findStateById(gameId, tx);
       if (!state || state.status !== CivilizationGameStatus.SCHEDULED) return [];
+      const scheduledState = state;
       const now = this.runtime.now();
-      if (now.getTime() < state.startAt.getTime()) return [];
+      if (now.getTime() < scheduledState.startAt.getTime()) return [];
 
-      const spawnTileId = state.spawnPoint?.tileId;
-      if (!spawnTileId || !state.tiles.some((tile) => tile.id === spawnTileId)) {
+      const spawnTileByTeamId = new Map(
+        scheduledState.spawnPoints.map((spawn) => [spawn.teamId, spawn.tileId]),
+      );
+      const missingSpawnTeam = scheduledState.teams.find(
+        (team) => !spawnTileByTeamId.has(team.id),
+      );
+      if (
+        missingSpawnTeam ||
+        [...spawnTileByTeamId.values()].some(
+          (spawnTileId) => !scheduledState.tiles.some((tile) => tile.id === spawnTileId),
+        )
+      ) {
         throw new CivilizationException(
           CIVILIZATION_ERROR_CODES.INVALID_GAME_CONFIGURATION,
-          'Civilization game has no valid shared spawn tile',
+          `Civilization game has no valid separate spawn for ${missingSpawnTeam?.name ?? 'a team'}`,
         );
       }
-      const settings = parseCivilizationSettings(state.settingsJson);
-      const placement = await this.repository.placeActivePlayersAtSharedSpawn(
+      const settings = parseCivilizationSettings(scheduledState.settingsJson);
+      const placedPlayerCount = await this.repository.placeActivePlayersAtTeamSpawns(
         gameId,
-        spawnTileId,
+        spawnTileByTeamId,
         settings.actionPoints.initialUnits,
-        state.startAt,
+        scheduledState.startAt,
         tx,
       );
 
@@ -96,7 +107,7 @@ export class CivilizationLifecycleService implements OnModuleInit {
         { status: CivilizationGameStatus.ACTIVE, stateVersion: { increment: 1 } },
         tx,
       );
-      state = await this.connectivityService.recalculate(gameId, state.startAt, tx);
+      state = await this.connectivityService.recalculate(gameId, scheduledState.startAt, tx);
 
       const pendingTowerJobs: Array<{ towerId: string; completesAt: Date }> = [];
       for (const tower of state.towers.filter(
@@ -117,6 +128,9 @@ export class CivilizationLifecycleService implements OnModuleInit {
           tower.id,
           {
             status: completed ? CivilizationTowerStatus.ACTIVE : CivilizationTowerStatus.CANCELLED,
+            ...(completed && tower.workKind === CivilizationTowerWorkKind.REPAIR
+              ? { hitPoints: tower.maximumHitPoints, destroyedAt: null }
+              : {}),
             workKind: null,
           },
           tx,
@@ -148,8 +162,8 @@ export class CivilizationLifecycleService implements OnModuleInit {
           payload: {
             scheduledStartAt: state.startAt.toISOString(),
             activatedAt: now.toISOString(),
-            sharedSpawnTileId: spawnTileId,
-            placedPlayerCount: placement.count,
+            teamSpawnTileIds: Object.fromEntries(spawnTileByTeamId),
+            placedPlayerCount,
           },
         },
         tx,
@@ -238,7 +252,13 @@ export class CivilizationLifecycleService implements OnModuleInit {
       } else {
         await this.repository.updateTower(
           tower.id,
-          { status: CivilizationTowerStatus.ACTIVE, workKind: null },
+          {
+            status: CivilizationTowerStatus.ACTIVE,
+            ...(tower.workKind === CivilizationTowerWorkKind.REPAIR
+              ? { hitPoints: tower.maximumHitPoints, destroyedAt: null }
+              : {}),
+            workKind: null,
+          },
           tx,
         );
         await this.repository.createEvent(

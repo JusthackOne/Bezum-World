@@ -216,17 +216,36 @@ export class CivilizationConfigurationService {
     }
 
     const occupiedObjectCoordinates = new Set(occupiedBuildingCoordinates);
-    this.validateObjectTile(map.spawn, tilesByCoordinate, issues, 'map.spawn');
-    const spawnKey = this.coordinateKey(map.spawn);
-    if (occupiedBuildingCoordinates.has(spawnKey)) {
+    const spawnSides = new Set(map.spawns.map((spawn) => spawn.teamSide));
+    if (map.spawns.length !== 2 || spawnSides.size !== 2) {
       this.issue(
         issues,
-        'SPAWN_OBJECT_COLLISION',
-        'The shared spawn cannot share a tile with a building',
-        'map.spawn',
+        'INVALID_TEAM_SPAWNS',
+        'Exactly one separate spawn is required for each team',
+        'map.spawns',
       );
     }
-    occupiedObjectCoordinates.add(spawnKey);
+    for (const [index, spawn] of map.spawns.entries()) {
+      const path = `map.spawns.${index}`;
+      this.validateObjectTile(spawn, tilesByCoordinate, issues, path);
+      const spawnKey = this.coordinateKey(spawn);
+      const tile = tilesByCoordinate.get(spawnKey);
+      if (occupiedBuildingCoordinates.has(spawnKey)) {
+        this.issue(issues, 'SPAWN_OBJECT_COLLISION', 'A team spawn cannot contain a building', path);
+      }
+      if (occupiedObjectCoordinates.has(spawnKey)) {
+        this.issue(issues, 'DUPLICATE_TEAM_SPAWN', 'Teams must use different spawn hexes', path);
+      }
+      if (tile?.ownerTeamSide && tile.ownerTeamSide !== spawn.teamSide) {
+        this.issue(
+          issues,
+          'ENEMY_TEAM_SPAWN',
+          'A team spawn cannot be placed on another team\'s territory',
+          path,
+        );
+      }
+      occupiedObjectCoordinates.add(spawnKey);
+    }
 
     for (const [index, tower] of map.towers.entries()) {
       this.validateObjectTile(tower, tilesByCoordinate, issues, `map.towers.${index}`);
@@ -237,7 +256,7 @@ export class CivilizationConfigurationService {
         this.issue(
           issues,
           'INVALID_TOWER_TILE',
-          'A tower requires an owned tile without a building, the shared spawn, or another tower',
+        'A tower requires an owned tile without a building, team spawn, or another tower',
           `map.towers.${index}`,
         );
       }

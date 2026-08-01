@@ -346,8 +346,13 @@ export function CivilizationGameDetails({ gameId }: { gameId: string }) {
                 </select>
               </label>
               <p className="self-end text-xs text-muted-foreground">
-                The player will join on the shared spawn at ({game.map.spawn.q}, {game.map.spawn.r}
-                ).
+                {(() => {
+                  const team = game.teams.find((item) => item.id === newPlayer.teamId);
+                  const spawn = game.map.spawns.find((item) => item.teamSide === team?.side);
+                  return spawn
+                    ? `The player will join on ${team?.name}'s spawn at (${spawn.q}, ${spawn.r}).`
+                    : "Select a team to view its spawn.";
+                })()}
               </p>
             </div>
             {addPlayerMutation.isError ? (

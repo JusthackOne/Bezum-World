@@ -37,9 +37,10 @@ interface RewardRecord {
 }
 
 describe('Civilization completion, scoring, and rewards', () => {
-  test('scores all four attributes, splits rewards equally, and is idempotent', async () => {
+  test('scores all attributes, creates pending claims, and remains idempotent', async () => {
     const state = createCompletionState();
     const rewards: RewardRecord[] = [];
+    const rewardClaims = state.rewardClaims;
     const accountIncrements: Array<{
       userId: string;
       key: 'balance' | CivilizationAttributeKey;
@@ -81,6 +82,16 @@ describe('Civilization completion, scoring, and rewards', () => {
       },
       async createRewardDistribution(data: RewardRecord): Promise<void> {
         rewards.push(data);
+      },
+      async createRewardClaim(data: Record<string, unknown>): Promise<void> {
+        rewardClaims.push({
+          id: `claim-${rewardClaims.length + 1}`,
+          createdAt: COMPLETED_AT,
+          updatedAt: COMPLETED_AT,
+          expiresAt: null,
+          claimedAt: null,
+          ...data,
+        } as unknown as CivilizationStateRecord['rewardClaims'][number]);
       },
       async incrementAccountReward(
         userId: string,
@@ -157,12 +168,18 @@ describe('Civilization completion, scoring, and rewards', () => {
         CivilizationAttributeKey.intelligence,
       ]),
     );
-    expect(accountIncrements).toContainEqual({ userId: 'user-a-1', key: 'balance', amount: 3 });
-    expect(accountIncrements).toContainEqual({
-      userId: 'user-a-1',
-      key: CivilizationAttributeKey.endurance,
-      amount: 2,
-    });
+    expect(accountIncrements).toEqual([]);
+    expect(rewardClaims).toHaveLength(3);
+    expect(rewardClaims).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          playerId: 'player-a-1',
+          eligible: true,
+          claimedAt: null,
+          rewardJson: expect.objectContaining({ gold: 3 }),
+        }),
+      ]),
+    );
     expect(events.at(-1)).toMatchObject({
       eventType: CivilizationEventType.GAME_COMPLETED,
       payload: {
@@ -228,12 +245,22 @@ function createCompletionState(): CivilizationStateRecord {
     teams,
     players,
     tiles: [completionTile('tile-a', 0, TEAM_A_ID), completionTile('tile-b', 1, TEAM_B_ID)],
-    spawnPoint: {
-      id: 'shared-spawn',
-      gameId: GAME_ID,
-      tileId: 'tile-a',
-      createdAt: COMPLETED_AT,
-    },
+    spawnPoints: [
+      {
+        id: 'spawn-team-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        tileId: 'tile-a',
+        createdAt: COMPLETED_AT,
+      },
+      {
+        id: 'spawn-team-b',
+        gameId: GAME_ID,
+        teamId: TEAM_B_ID,
+        tileId: 'tile-b',
+        createdAt: COMPLETED_AT,
+      },
+    ],
     buildings: [],
     towers: [],
     teamResources: [
@@ -241,6 +268,8 @@ function createCompletionState(): CivilizationStateRecord {
       completionGoldResource('gold-b', TEAM_B_ID, '20'),
     ],
     attributeResources,
+    rewardClaims: [],
+    events: [],
   } as unknown as CivilizationStateRecord;
 }
 

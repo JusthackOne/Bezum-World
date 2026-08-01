@@ -19,6 +19,7 @@ import {
   toScaledInteger,
 } from './domain';
 import { CivilizationConnectivityService } from './civilization-connectivity.service';
+import { CIVILIZATION_ERROR_CODES, CivilizationException } from './civilization.errors';
 import { CivilizationRuntimeService } from './civilization-runtime.service';
 import { serializeCivilizationSnapshot } from './civilization-snapshot';
 import {
@@ -43,6 +44,86 @@ export class CivilizationCompletionService {
     return this.repository.transaction(async (tx) => {
       await this.repository.lockGameState(gameId, tx);
       return this.completeInTransaction(gameId, reason, winnerTeamId, this.runtime.now(), tx);
+    });
+  }
+
+  claimReward(gameId: string, userId: string): Promise<unknown> {
+    return this.repository.transaction(async (tx) => {
+      await this.repository.lockGameState(gameId, tx);
+      const state = await this.repository.findStateById(gameId, tx);
+      if (!state || state.status !== CivilizationGameStatus.COMPLETED) {
+        throw new CivilizationException(
+          CIVILIZATION_ERROR_CODES.REWARD_NOT_AVAILABLE,
+          'Civilization rewards are available only after game completion',
+        );
+      }
+      const player = state.players.find((candidate) => candidate.userId === userId);
+      if (!player) {
+        throw new CivilizationException(
+          CIVILIZATION_ERROR_CODES.REWARD_NOT_AVAILABLE,
+          'The current user did not participate in this game',
+          403,
+        );
+      }
+      const claim = await this.repository.findRewardClaim(gameId, player.id, tx);
+      if (!claim) {
+        throw new CivilizationException(
+          CIVILIZATION_ERROR_CODES.REWARD_NOT_AVAILABLE,
+          'No reward is available for this player',
+          404,
+        );
+      }
+      if (!claim.eligible) {
+        throw new CivilizationException(
+          CIVILIZATION_ERROR_CODES.REWARD_NOT_AVAILABLE,
+          claim.unavailableReason ?? 'This player is not eligible for a reward',
+          403,
+        );
+      }
+      if (claim.expiresAt && claim.expiresAt.getTime() <= this.runtime.now().getTime()) {
+        throw new CivilizationException(
+          CIVILIZATION_ERROR_CODES.REWARD_EXPIRED,
+          'This reward has expired',
+          410,
+        );
+      }
+      if (claim.claimedAt) {
+        return {
+          status: 'ALREADY_CLAIMED',
+          claimedAt: claim.claimedAt.toISOString(),
+          reward: claim.rewardJson,
+        };
+      }
+
+      const claimedAt = this.runtime.now();
+      const distributions = await this.repository.listPendingRewardDistributions(
+        gameId,
+        player.id,
+        tx,
+      );
+      for (const distribution of distributions) {
+        if (distribution.amount > 0) {
+          await this.repository.incrementAccountReward(
+            player.userId,
+            distribution.attributeKey ?? 'balance',
+            distribution.amount,
+            tx,
+          );
+        }
+        await this.repository.markRewardDistributionApplied(distribution.id, claimedAt, tx);
+      }
+      await this.repository.updateRewardClaim(claim.id, { claimedAt }, tx);
+      await this.repository.createEvent(
+        {
+          gameId,
+          teamId: player.teamId,
+          actorPlayerId: player.id,
+          eventType: CivilizationEventType.REWARD_CLAIMED,
+          payload: { claimId: claim.id, reward: claim.rewardJson, claimedAt: claimedAt.toISOString() },
+        },
+        tx,
+      );
+      return { status: 'CLAIMED', claimedAt: claimedAt.toISOString(), reward: claim.rewardJson };
     });
   }
 
@@ -148,7 +229,7 @@ export class CivilizationCompletionService {
     );
 
     state = (await this.repository.findStateById(gameId, tx))!;
-    await this.distributeRewards(state, completionAt, tx);
+    await this.distributeRewards(state, tx);
     state = (await this.repository.findStateById(gameId, tx))!;
 
     await this.repository.createEvent(
@@ -178,30 +259,33 @@ export class CivilizationCompletionService {
 
   private async distributeRewards(
     state: CivilizationStateRecord,
-    now: Date,
     tx: CivilizationTransaction,
   ): Promise<void> {
     for (const team of state.teams) {
       const players = state.players.filter((player) => player.teamId === team.id);
       if (players.length === 0) continue;
+      const eligible =
+        state.completionReason !== CivilizationCompletionReason.TOWN_HALL_CAPTURED ||
+        state.winnerTeamId === team.id;
       const playerIds = players.map((player) => player.id);
-      const playerById = new Map(players.map((player) => [player.id, player]));
       const goldReward = this.rewardAmount(
         state.teamResources.find((resource) => resource.teamId === team.id)?.goldAmount ?? 0,
       );
-      await this.distributeOneResource(
-        state.id,
-        team.id,
-        playerIds,
-        playerById,
-        CivilizationRewardResourceType.GOLD,
-        null,
-        goldReward,
-        now,
-        tx,
-      );
+      const goldSplit = splitIntegerReward(goldReward.distributableAmount, playerIds);
+      if (eligible) {
+        await this.distributeOneResource(
+          state.id,
+          team.id,
+          playerIds,
+          CivilizationRewardResourceType.GOLD,
+          null,
+          goldReward,
+          tx,
+        );
+      }
 
       const attributeRewards: Record<string, { amount: number; discardedFraction: string }> = {};
+      const attributeShares = new Map<string, Map<string, number>>();
       for (const attributeKey of CIVILIZATION_ATTRIBUTE_KEYS) {
         const reward = this.rewardAmount(
           state.attributeResources.find(
@@ -212,15 +296,46 @@ export class CivilizationCompletionService {
           amount: reward.distributableAmount,
           discardedFraction: reward.discardedFraction,
         };
-        await this.distributeOneResource(
-          state.id,
-          team.id,
-          playerIds,
-          playerById,
-          CivilizationRewardResourceType.ATTRIBUTE,
+        const split = splitIntegerReward(reward.distributableAmount, playerIds);
+        attributeShares.set(
           attributeKey,
-          reward,
-          now,
+          new Map(split.shares.map((share) => [share.playerId, share.amount])),
+        );
+        if (eligible) {
+          await this.distributeOneResource(
+            state.id,
+            team.id,
+            playerIds,
+            CivilizationRewardResourceType.ATTRIBUTE,
+            attributeKey,
+            reward,
+            tx,
+          );
+        }
+      }
+
+      for (const player of players) {
+        await this.repository.createRewardClaim(
+          {
+            gameId: state.id,
+            teamId: team.id,
+            playerId: player.id,
+            eligible,
+            unavailableReason: eligible
+              ? null
+              : 'No reward is available because your team\'s Town Hall was destroyed.',
+            rewardJson: {
+              gold: eligible
+                ? (goldSplit.shares.find((share) => share.playerId === player.id)?.amount ?? 0)
+                : 0,
+              attributes: Object.fromEntries(
+                CIVILIZATION_ATTRIBUTE_KEYS.map((key) => [
+                  key,
+                  eligible ? (attributeShares.get(key)?.get(player.id) ?? 0) : 0,
+                ]),
+              ),
+            },
+          },
           tx,
         );
       }
@@ -232,6 +347,8 @@ export class CivilizationCompletionService {
           eventType: CivilizationEventType.REWARDS_DISTRIBUTED,
           payload: {
             playerCount: players.length,
+            claimRequired: true,
+            eligible,
             goldAmount: goldReward.distributableAmount,
             discardedGoldFraction: goldReward.discardedFraction,
             attributeRewards,
@@ -246,7 +363,6 @@ export class CivilizationCompletionService {
     gameId: string,
     teamId: string,
     playerIds: string[],
-    playerById: Map<string, CivilizationStateRecord['players'][number]>,
     resourceType: CivilizationRewardResourceType,
     attributeKey: (typeof CIVILIZATION_ATTRIBUTE_KEYS)[number] | null,
     reward: {
@@ -254,7 +370,6 @@ export class CivilizationCompletionService {
       distributableAmount: number;
       discardedFraction: string;
     },
-    now: Date,
     tx: CivilizationTransaction,
   ): Promise<void> {
     const split = splitIntegerReward(reward.distributableAmount, playerIds);
@@ -267,7 +382,6 @@ export class CivilizationCompletionService {
         tx,
       );
       if (existing?.appliedAt) continue;
-      const player = playerById.get(share.playerId)!;
       await this.repository.createRewardDistribution(
         {
           gameId,
@@ -276,7 +390,7 @@ export class CivilizationCompletionService {
           resourceType,
           attributeKey,
           amount: share.amount,
-          appliedAt: now,
+          appliedAt: null,
           roundingDetails: {
             sourceAmount: reward.sourceAmount,
             discardedFraction: reward.discardedFraction,
@@ -290,14 +404,6 @@ export class CivilizationCompletionService {
         },
         tx,
       );
-      if (share.amount > 0) {
-        await this.repository.incrementAccountReward(
-          player.userId,
-          attributeKey ?? 'balance',
-          share.amount,
-          tx,
-        );
-      }
     }
   }
 

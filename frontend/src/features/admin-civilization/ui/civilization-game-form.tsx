@@ -490,6 +490,11 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 register={form.register}
               />
               <NumberField
+                label="Tower build cost (units)"
+                name="settings.costs.towerBuildUnits"
+                register={form.register}
+              />
+              <NumberField
                 label="Tower attack cost (units)"
                 name="settings.costs.towerAttackUnits"
                 register={form.register}
@@ -507,6 +512,33 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
               <NumberField
                 label="Tower repair cost (units)"
                 name="settings.costs.towerRepairUnits"
+                register={form.register}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Catapult</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" {...form.register("settings.catapult.enabled")} />
+                Enabled for this game
+              </label>
+              <DecimalField
+                label="Gold price"
+                name="settings.catapult.goldPrice"
+                register={form.register}
+              />
+              <NumberField
+                label="Action cost (units)"
+                name="settings.catapult.actionPointUnits"
+                register={form.register}
+              />
+              <NumberField
+                label="Tower damage"
+                name="settings.catapult.damage"
                 register={form.register}
               />
             </CardContent>

@@ -17,6 +17,7 @@ export type CivilizationActionPayload =
   | { type: "CAPTURE_BUILDING"; actionId: string; buildingId: string }
   | { type: "BUILD_TOWER"; actionId: string; tile: HexCoordinate }
   | { type: "ATTACK_TOWER"; actionId: string; towerId: string }
+  | { type: "CATAPULT_ATTACK"; actionId: string; towerId: string }
   | { type: "REPAIR_TOWER"; actionId: string; towerId: string }
   | { type: "CAPTURE_TOWN_HALL"; actionId: string; townHallBuildingId: string }
   | { type: "DEFEND_TOWN_HALL"; actionId: string; townHallBuildingId: string };
@@ -27,6 +28,7 @@ const actionEndpoints: Record<CivilizationActionType, (gameId: string) => string
   CAPTURE_BUILDING: civilizationEndpoints.captureBuilding,
   BUILD_TOWER: civilizationEndpoints.buildTower,
   ATTACK_TOWER: civilizationEndpoints.attackTower,
+  CATAPULT_ATTACK: civilizationEndpoints.catapultAttack,
   REPAIR_TOWER: civilizationEndpoints.repairTower,
   CAPTURE_TOWN_HALL: civilizationEndpoints.captureTownHall,
   DEFEND_TOWN_HALL: civilizationEndpoints.defendTownHall,
@@ -69,5 +71,14 @@ export function performCivilizationAction(
   return requestApiData(
     () => clientHttpClient.post(actionEndpoints[payload.type](gameId), withoutActionType(payload)),
     "The Civilization action could not be completed.",
+  );
+}
+
+export function claimCivilizationReward(
+  gameId: string,
+): Promise<{ status: "CLAIMED" | "ALREADY_CLAIMED"; claimedAt: string; reward: unknown }> {
+  return requestApiData(
+    () => clientHttpClient.post(civilizationEndpoints.claimReward(gameId)),
+    "The Civilization reward could not be claimed.",
   );
 }
