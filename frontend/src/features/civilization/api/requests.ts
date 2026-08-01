@@ -4,7 +4,6 @@ import type {
   CivilizationGameState,
   CivilizationGameSummary,
   CivilizationPage,
-  CivilizationEvent,
   HexCoordinate,
 } from "@/entities/civilization";
 import { requestApiData } from "@/shared/lib/api-request";
@@ -60,17 +59,6 @@ export function getCivilizationHistory(
   return requestApiData(
     () => clientHttpClient.get(civilizationEndpoints.history, { params: { page, limit } }),
     "Unable to load Civilization history.",
-  );
-}
-
-export function getCivilizationEvents(
-  gameId: string,
-  page: number,
-  limit: number,
-): Promise<CivilizationPage<CivilizationEvent>> {
-  return requestApiData(
-    () => clientHttpClient.get(civilizationEndpoints.events(gameId), { params: { page, limit } }),
-    "Unable to load Civilization events.",
   );
 }
 

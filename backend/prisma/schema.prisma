@@ -674,7 +674,7 @@ model CivilizationGame {
   teams               CivilizationTeam[]
   players             CivilizationGamePlayer[]
   tiles               CivilizationTile[]
-  spawnPoints         CivilizationSpawnPoint[]
+  spawnPoint          CivilizationSpawnPoint?
   buildings           CivilizationBuilding[]
   towers              CivilizationTower[]
   teamResources       CivilizationTeamResource[]
@@ -706,7 +706,6 @@ model CivilizationTeam {
   wonGames            CivilizationGame[]                  @relation("CivilizationGameWinner")
   players             CivilizationGamePlayer[]
   ownedTiles          CivilizationTile[]                  @relation("CivilizationTileOwner")
-  spawnPoints         CivilizationSpawnPoint[]
   ownedBuildings      CivilizationBuilding[]              @relation("CivilizationBuildingOwner")
   capturedBuildings   CivilizationBuilding[]              @relation("CivilizationBuildingCaptureTeam")
   towers              CivilizationTower[]
@@ -783,16 +782,12 @@ model CivilizationTile {
 
 model CivilizationSpawnPoint {
   id        String           @id @default(uuid())
-  gameId    String           @map("game_id")
-  teamId    String           @map("team_id")
+  gameId    String           @unique @map("game_id")
   tileId    String           @unique @map("tile_id")
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   game      CivilizationGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  team      CivilizationTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
   tile      CivilizationTile @relation(fields: [tileId], references: [id], onDelete: Cascade)
 
-  @@unique([gameId, teamId, tileId])
-  @@index([gameId, teamId])
   @@map("civilization_spawn_points")
 }
 

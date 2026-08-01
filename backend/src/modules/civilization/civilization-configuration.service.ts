@@ -213,110 +213,20 @@ export class CivilizationConfigurationService {
           );
         }
       }
-
-      const teamSpawns = map.spawnPoints.filter((spawn) => spawn.teamSide === team.side);
-      if (teamSpawns.length === 0) {
-        this.issue(
-          issues,
-          'SPAWN_POINT_REQUIRED',
-          `${team.side} requires at least one spawn point`,
-          'map.spawnPoints',
-        );
-      }
     }
 
-    const spawnKeysBySide = new Map<string, Set<string>>();
     const occupiedObjectCoordinates = new Set(occupiedBuildingCoordinates);
-    const spawnCoordinates = new Set<string>();
-    for (const [index, spawn] of map.spawnPoints.entries()) {
-      this.validateObjectTile(spawn, tilesByCoordinate, issues, `map.spawnPoints.${index}`);
-      const spawnKey = this.coordinateKey(spawn);
-      if (spawnCoordinates.has(spawnKey)) {
-        this.issue(
-          issues,
-          'SPAWN_TILE_COLLISION',
-          'Spawn points must occupy distinct tiles, including across teams',
-          `map.spawnPoints.${index}`,
-        );
-      }
-      if (occupiedBuildingCoordinates.has(spawnKey)) {
-        this.issue(
-          issues,
-          'SPAWN_OBJECT_COLLISION',
-          'A spawn point cannot share a tile with a building',
-          `map.spawnPoints.${index}`,
-        );
-      }
-      spawnCoordinates.add(spawnKey);
-      occupiedObjectCoordinates.add(spawnKey);
-      const sideSpawns = spawnKeysBySide.get(spawn.teamSide) ?? new Set<string>();
-      sideSpawns.add(spawnKey);
-      spawnKeysBySide.set(spawn.teamSide, sideSpawns);
-    }
-
-    const teamByUserId = new Map<string, string>();
-    for (const team of teams) {
-      for (const userId of team.playerIds) teamByUserId.set(userId, team.side);
-    }
-    const placedUsers = new Set<string>();
-    const placementSideByCoordinate = new Map<string, string>();
-    for (const [index, placement] of map.playerPlacements.entries()) {
-      this.validateObjectTile(
-        placement,
-        tilesByCoordinate,
+    this.validateObjectTile(map.spawn, tilesByCoordinate, issues, 'map.spawn');
+    const spawnKey = this.coordinateKey(map.spawn);
+    if (occupiedBuildingCoordinates.has(spawnKey)) {
+      this.issue(
         issues,
-        `map.playerPlacements.${index}`,
+        'SPAWN_OBJECT_COLLISION',
+        'The shared spawn cannot share a tile with a building',
+        'map.spawn',
       );
-      const expectedSide = teamByUserId.get(placement.userId);
-      if (!expectedSide || expectedSide !== placement.teamSide) {
-        this.issue(
-          issues,
-          'INVALID_PLAYER_TEAM',
-          'Player placement must match the configured team',
-          `map.playerPlacements.${index}.teamSide`,
-        );
-      }
-      if (placedUsers.has(placement.userId)) {
-        this.issue(
-          issues,
-          'DUPLICATE_PLAYER_PLACEMENT',
-          'Each player requires exactly one initial placement',
-          `map.playerPlacements.${index}.userId`,
-        );
-      }
-      placedUsers.add(placement.userId);
-      const placementKey = this.coordinateKey(placement);
-      const occupyingSide = placementSideByCoordinate.get(placementKey);
-      if (occupyingSide && occupyingSide !== placement.teamSide) {
-        this.issue(
-          issues,
-          'OPPOSING_PLAYER_PLACEMENT_COLLISION',
-          'Players from opposing teams cannot start on the same tile',
-          `map.playerPlacements.${index}`,
-        );
-      } else {
-        placementSideByCoordinate.set(placementKey, placement.teamSide);
-      }
-      if (!spawnKeysBySide.get(placement.teamSide)?.has(this.coordinateKey(placement.spawn))) {
-        this.issue(
-          issues,
-          'INVALID_PLAYER_SPAWN',
-          'Assigned spawn must be a configured spawn for the player team',
-          `map.playerPlacements.${index}.spawn`,
-        );
-      }
     }
-
-    for (const userId of teamByUserId.keys()) {
-      if (!placedUsers.has(userId)) {
-        this.issue(
-          issues,
-          'PLAYER_PLACEMENT_REQUIRED',
-          `Player ${userId} requires an initial placement`,
-          'map.playerPlacements',
-        );
-      }
-    }
+    occupiedObjectCoordinates.add(spawnKey);
 
     for (const [index, tower] of map.towers.entries()) {
       this.validateObjectTile(tower, tilesByCoordinate, issues, `map.towers.${index}`);
@@ -327,7 +237,7 @@ export class CivilizationConfigurationService {
         this.issue(
           issues,
           'INVALID_TOWER_TILE',
-          'A tower requires an owned tile without a building, spawn point, or another tower',
+          'A tower requires an owned tile without a building, the shared spawn, or another tower',
           `map.towers.${index}`,
         );
       }

@@ -299,7 +299,12 @@ function createAdminState(status: CivilizationGameStatus): CivilizationStateReco
         updatedAt: createdAt,
       },
     ],
-    spawnPoints: [],
+    spawnPoint: {
+      id: 'shared-spawn',
+      gameId: GAME_ID,
+      tileId: TILE_A_ID,
+      createdAt,
+    },
     buildings: [],
     towers: [],
     teamResources: [],
@@ -441,11 +446,21 @@ describe('Civilization repository concurrency primitives', () => {
 
     await repository.acquireGameLock(GAME_ID, tx);
     await repository.acquireScheduleLock(tx);
+    await repository.acquireAdminMutationLock(
+      ADMIN_ID,
+      CivilizationAdminActionType.GAME_CREATED,
+      IDEMPOTENCY_KEY,
+      tx,
+    );
 
-    expect(rawCalls).toHaveLength(2);
+    expect(rawCalls).toHaveLength(3);
     expect(rawCalls[0]?.sql).toContain('pg_advisory_xact_lock');
     expect(rawCalls[0]?.values).toEqual([`civilization:${GAME_ID}`]);
     expect(rawCalls[1]?.sql).toContain("hashtext('civilization:schedule')");
     expect(rawCalls[1]?.values).toEqual([]);
+    expect(rawCalls[2]?.sql).toContain('pg_advisory_xact_lock');
+    expect(rawCalls[2]?.values).toEqual([
+      `civilization-admin:${ADMIN_ID}:${CivilizationAdminActionType.GAME_CREATED}:${IDEMPOTENCY_KEY}`,
+    ]);
   });
 });

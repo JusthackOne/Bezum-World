@@ -30,7 +30,7 @@ const civilizationStateInclude = {
     orderBy: { id: 'asc' as const },
   },
   tiles: { orderBy: [{ q: 'asc' as const }, { r: 'asc' as const }] },
-  spawnPoints: true,
+  spawnPoint: true,
   buildings: true,
   towers: true,
   teamResources: true,
@@ -372,10 +372,10 @@ export class CivilizationRepository {
     idempotencyKey: string,
     tx: CivilizationTransaction,
   ): Promise<void> {
-    await tx.$queryRaw<Array<{ locked: null }>>`
+    await tx.$executeRaw`
       SELECT pg_advisory_xact_lock(
         hashtext(${`civilization-admin:${adminId}:${action}:${idempotencyKey}`})
-      ) AS "locked"
+      )
     `;
   }
 
@@ -456,6 +456,25 @@ export class CivilizationRepository {
     tx: CivilizationTransaction,
   ) {
     return tx.civilizationGamePlayer.update({ where: { id: playerId }, data });
+  }
+
+  placeActivePlayersAtSharedSpawn(
+    gameId: string,
+    spawnTileId: string,
+    actionPointUnits: number,
+    now: Date,
+    tx: CivilizationTransaction,
+  ) {
+    return tx.civilizationGamePlayer.updateMany({
+      where: { gameId, isActive: true },
+      data: {
+        initialTileId: spawnTileId,
+        spawnTileId,
+        currentTileId: spawnTileId,
+        actionPointUnits,
+        lastActionPointUpdateAt: now,
+      },
+    });
   }
 
   updateTile(
@@ -683,13 +702,10 @@ export class CivilizationRepository {
       tilesByCoordinate.set(this.coordinateKey(tile), created);
     }
 
-    for (const spawn of input.map.spawnPoints) {
-      const team = teamsBySide.get(spawn.teamSide as CivilizationTeamSide)!;
-      const tile = tilesByCoordinate.get(this.coordinateKey(spawn))!;
-      await tx.civilizationSpawnPoint.create({
-        data: { gameId, teamId: team.id, tileId: tile.id },
-      });
-    }
+    const spawnTile = tilesByCoordinate.get(this.coordinateKey(input.map.spawn))!;
+    await tx.civilizationSpawnPoint.create({
+      data: { gameId, tileId: spawnTile.id },
+    });
 
     for (const building of input.map.buildings) {
       const tile = tilesByCoordinate.get(this.coordinateKey(building))!;
@@ -724,22 +740,22 @@ export class CivilizationRepository {
       }
     }
 
-    for (const placement of input.map.playerPlacements) {
-      const team = teamsBySide.get(placement.teamSide as CivilizationTeamSide)!;
-      const initialTile = tilesByCoordinate.get(this.coordinateKey(placement))!;
-      const spawnTile = tilesByCoordinate.get(this.coordinateKey(placement.spawn))!;
-      await tx.civilizationGamePlayer.create({
-        data: {
-          gameId,
-          teamId: team.id,
-          userId: placement.userId,
-          initialTileId: initialTile.id,
-          spawnTileId: spawnTile.id,
-          currentTileId: initialTile.id,
-          actionPointUnits: input.settings.actionPoints.initialUnits,
-          lastActionPointUpdateAt: input.startAt,
-        },
-      });
+    for (const configuredTeam of input.teams) {
+      const team = teamsBySide.get(configuredTeam.side as CivilizationTeamSide)!;
+      for (const userId of configuredTeam.playerIds) {
+        await tx.civilizationGamePlayer.create({
+          data: {
+            gameId,
+            teamId: team.id,
+            userId,
+            initialTileId: spawnTile.id,
+            spawnTileId: spawnTile.id,
+            currentTileId: spawnTile.id,
+            actionPointUnits: input.settings.actionPoints.initialUnits,
+            lastActionPointUpdateAt: input.startAt,
+          },
+        });
+      }
     }
 
     for (const tower of input.map.towers) {

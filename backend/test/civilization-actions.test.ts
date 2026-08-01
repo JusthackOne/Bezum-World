@@ -50,6 +50,7 @@ const TEAM_A_SPAWN_TILE_ID = '00000000-0000-4000-8000-00000000100a';
 const TEAM_B_SPAWN_TILE_ID = '00000000-0000-4000-8000-00000000100b';
 const TEAM_B_APPROACH_TILE_ID = '00000000-0000-4000-8000-00000000100c';
 const TEAM_A_REMOTE_TILE_ID = '00000000-0000-4000-8000-00000000100d';
+const TEAM_A_BUILD_TILE_ID = '00000000-0000-4000-8000-00000000100e';
 const FIXED_NOW = new Date('2026-08-01T12:00:00.000Z');
 
 type StatePlayer = CivilizationStateRecord['players'][number];
@@ -317,6 +318,7 @@ function createState(): CivilizationStateRecord {
   const tiles: StateTile[] = [
     createTile(TEAM_A_SPAWN_TILE_ID, -1, 0, TEAM_A_ID, true),
     createTile(ORIGIN_TILE_ID, 0, 0, TEAM_A_ID, true),
+    createTile(TEAM_A_BUILD_TILE_ID, 0, -1, TEAM_A_ID, true),
     createTile(TARGET_TILE_ID, 1, 0, null, false),
     createTile(TEAM_B_SPAWN_TILE_ID, 2, -1, TEAM_B_ID, true),
   ];
@@ -365,22 +367,12 @@ function createState(): CivilizationStateRecord {
     ],
     players,
     tiles,
-    spawnPoints: [
-      {
-        id: 'spawn-a',
-        gameId: GAME_ID,
-        teamId: TEAM_A_ID,
-        tileId: TEAM_A_SPAWN_TILE_ID,
-        createdAt,
-      },
-      {
-        id: 'spawn-b',
-        gameId: GAME_ID,
-        teamId: TEAM_B_ID,
-        tileId: TEAM_B_SPAWN_TILE_ID,
-        createdAt,
-      },
-    ],
+    spawnPoint: {
+      id: 'shared-spawn',
+      gameId: GAME_ID,
+      tileId: TEAM_A_SPAWN_TILE_ID,
+      createdAt,
+    },
     buildings: [],
     towers: [],
     teamResources: [
@@ -540,7 +532,32 @@ async function expectCivilizationError(
 }
 
 describe('Civilization movement actions', () => {
-  test('charges half an AP for owned movement and allows same-team stacking', async () => {
+  test('allows movement onto the occupied shared spawn', async () => {
+    const state = createState();
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    state.players.push(
+      createPlayer(
+        PLAYER_A_TWO_ID,
+        USER_A_TWO_ID,
+        TEAM_A_ID,
+        TEAM_A_SPAWN_TILE_ID,
+        TEAM_A_SPAWN_TILE_ID,
+      ),
+    );
+    const harness = createActionHarness(state);
+
+    await harness.service.move(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000010000',
+      target: { q: -1, r: 0 },
+    });
+
+    expect(player(state, PLAYER_A_ID).currentTileId).toBe(TEAM_A_SPAWN_TILE_ID);
+    expect(
+      state.players.filter((candidate) => candidate.currentTileId === TEAM_A_SPAWN_TILE_ID),
+    ).toHaveLength(2);
+  });
+
+  test('rejects movement onto a regular hex occupied by a teammate', async () => {
     const state = createState();
     tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_A_ID;
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
@@ -549,16 +566,14 @@ describe('Civilization movement actions', () => {
     );
     const harness = createActionHarness(state);
 
-    await harness.service.move(GAME_ID, USER_A_ID, {
-      actionId: '00000000-0000-4000-8000-000000010001',
-      target: { q: 1, r: 0 },
-    });
-
-    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(15);
-    expect(player(state, PLAYER_A_ID).currentTileId).toBe(TARGET_TILE_ID);
-    expect(
-      state.players.filter((candidate) => candidate.currentTileId === TARGET_TILE_ID),
-    ).toHaveLength(2);
+    await expectCivilizationError(
+      harness.service.move(GAME_ID, USER_A_ID, {
+        actionId: '00000000-0000-4000-8000-000000010001',
+        target: { q: 1, r: 0 },
+      }),
+      CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_PLAYER,
+    );
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(16);
   });
 
   test.each([
@@ -599,7 +614,7 @@ describe('Civilization movement actions', () => {
     expect(player(harness.state, PLAYER_A_ID).actionPointUnits).toBe(16);
   });
 
-  test('blocks an active connected enemy tower but ignores it after disconnection', async () => {
+  test('never allows movement onto a tower tile', async () => {
     const state = createState();
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
     tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_B_ID;
@@ -614,18 +629,20 @@ describe('Civilization movement actions', () => {
         actionId: '00000000-0000-4000-8000-000000010005',
         target: { q: 1, r: 0 },
       }),
-      CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER,
+      CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_STRUCTURE,
     );
 
     tile(state, TARGET_TILE_ID).isConnected = false;
-    await harness.service.move(GAME_ID, USER_A_ID, {
-      actionId: '00000000-0000-4000-8000-000000010006',
-      target: { q: 1, r: 0 },
-    });
-    expect(player(state, PLAYER_A_ID).currentTileId).toBe(TARGET_TILE_ID);
+    await expectCivilizationError(
+      harness.service.move(GAME_ID, USER_A_ID, {
+        actionId: '00000000-0000-4000-8000-000000010006',
+        target: { q: 1, r: 0 },
+      }),
+      CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_STRUCTURE,
+    );
   });
 
-  test('cancels an enemy tower under construction when its tile is captured without refund', async () => {
+  test('never captures a tower tile by moving onto a tower under construction', async () => {
     const state = createState();
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
     tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_B_ID;
@@ -639,16 +656,17 @@ describe('Civilization movement actions', () => {
     const harness = createActionHarness(state);
     const previousGold = state.teamResources[1]!.goldAmount.toString();
 
-    await harness.service.move(GAME_ID, USER_A_ID, {
-      actionId: '00000000-0000-4000-8000-000000010007',
-      target: { q: 1, r: 0 },
-    });
-
-    expect(findTower(state, tower.id).status).toBe(CivilizationTowerStatus.CANCELLED);
-    expect(state.teamResources[1]!.goldAmount.toString()).toBe(previousGold);
-    expect(harness.repository.events.map((event) => event.eventType)).toContain(
-      CivilizationEventType.TOWER_CONSTRUCTION_CANCELLED,
+    await expectCivilizationError(
+      harness.service.move(GAME_ID, USER_A_ID, {
+        actionId: '00000000-0000-4000-8000-000000010007',
+        target: { q: 1, r: 0 },
+      }),
+      CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_STRUCTURE,
     );
+
+    expect(findTower(state, tower.id).status).toBe(CivilizationTowerStatus.UNDER_CONSTRUCTION);
+    expect(state.teamResources[1]!.goldAmount.toString()).toBe(previousGold);
+    expect(harness.repository.events).toHaveLength(0);
   });
 
   test('serializes simultaneous attempts to capture the same neutral tile', async () => {
@@ -695,7 +713,7 @@ describe('Civilization player combat', () => {
     });
 
     expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(12);
-    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_B_SPAWN_TILE_ID);
+    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_A_SPAWN_TILE_ID);
     expect(player(state, PLAYER_A_ID).currentTileId).toBe(TARGET_TILE_ID);
     expect(tile(state, TARGET_TILE_ID).ownerTeamId).toBe(TEAM_A_ID);
     const attack = harness.repository.events.find(
@@ -705,7 +723,7 @@ describe('Civilization player combat', () => {
       randomRoll: 0.299999,
       attackerWon: true,
       attackerMoved: true,
-      respawnTileId: TEAM_B_SPAWN_TILE_ID,
+      respawnTileId: TEAM_A_SPAWN_TILE_ID,
     });
   });
 
@@ -741,23 +759,22 @@ describe('Civilization player combat', () => {
       targetPlayerId: PLAYER_B_ID,
     });
 
-    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_B_SPAWN_TILE_ID);
+    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_A_SPAWN_TILE_ID);
     expect(player(state, PLAYER_B_TWO_ID).currentTileId).toBe(TARGET_TILE_ID);
     expect(player(state, PLAYER_A_ID).currentTileId).toBe(ORIGIN_TILE_ID);
   });
 
-  test('falls back to another team spawn when the assigned spawn becomes invalid', async () => {
+  test('respawns onto the occupied shared spawn', async () => {
     const state = createState();
-    tile(state, TEAM_B_SPAWN_TILE_ID).terrainType = CivilizationTerrainType.MOUNTAIN;
-    const fallback = createTile('fallback-spawn-b', 2, 0, TEAM_B_ID, true);
-    state.tiles.push(fallback);
-    state.spawnPoints.push({
-      id: 'spawn-b-fallback',
-      gameId: GAME_ID,
-      teamId: TEAM_B_ID,
-      tileId: fallback.id,
-      createdAt: FIXED_NOW,
-    });
+    state.players.push(
+      createPlayer(
+        PLAYER_A_TWO_ID,
+        USER_A_TWO_ID,
+        TEAM_A_ID,
+        TEAM_A_SPAWN_TILE_ID,
+        TEAM_A_SPAWN_TILE_ID,
+      ),
+    );
     const harness = createActionHarness(state);
     harness.setRandomRoll(0);
 
@@ -766,13 +783,15 @@ describe('Civilization player combat', () => {
       targetPlayerId: PLAYER_B_ID,
     });
 
-    expect(player(state, PLAYER_B_ID).currentTileId).toBe(fallback.id);
+    expect(player(state, PLAYER_B_ID).currentTileId).toBe(TEAM_A_SPAWN_TILE_ID);
+    expect(
+      state.players.filter((candidate) => candidate.currentTileId === TEAM_A_SPAWN_TILE_ID),
+    ).toHaveLength(2);
     const respawn = harness.repository.events.find(
       (event) => event.eventType === CivilizationEventType.PLAYER_RESPAWNED,
     );
     expect(respawn?.payloadJson).toMatchObject({
-      fallbackSpawnUsed: true,
-      originalSpawnTileId: TEAM_B_SPAWN_TILE_ID,
+      sharedSpawnTileId: TEAM_A_SPAWN_TILE_ID,
     });
   });
 });
@@ -780,10 +799,15 @@ describe('Civilization player combat', () => {
 describe('Civilization building capture', () => {
   test('combines contributions from several players and resets progress on ownership transfer', async () => {
     const state = createState();
-    player(state, PLAYER_A_ID).currentTileId = TARGET_TILE_ID;
-    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    player(state, PLAYER_B_ID).currentTileId = TEAM_A_SPAWN_TILE_ID;
     state.players.push(
-      createPlayer(PLAYER_A_TWO_ID, USER_A_TWO_ID, TEAM_A_ID, TARGET_TILE_ID, TEAM_A_SPAWN_TILE_ID),
+      createPlayer(
+        PLAYER_A_TWO_ID,
+        USER_A_TWO_ID,
+        TEAM_A_ID,
+        TEAM_B_SPAWN_TILE_ID,
+        TEAM_A_SPAWN_TILE_ID,
+      ),
     );
     const building = createBuilding(
       'gold-building',
@@ -810,6 +834,8 @@ describe('Civilization building capture', () => {
     expect(findBuilding(state, building.id).captureTeamId).toBeNull();
     expect(findBuilding(state, building.id).captureProgressUnits).toBe(0);
     expect(tile(state, TARGET_TILE_ID).ownerTeamId).toBe(TEAM_A_ID);
+    expect(player(state, PLAYER_A_ID).currentTileId).toBe(ORIGIN_TILE_ID);
+    expect(player(state, PLAYER_A_TWO_ID).currentTileId).toBe(TEAM_B_SPAWN_TILE_ID);
     expect(harness.repository.events.at(-1)?.eventType).toBe(
       CivilizationEventType.BUILDING_CAPTURED,
     );
@@ -817,7 +843,6 @@ describe('Civilization building capture', () => {
 
   test('removes hostile capture progress before a later contribution starts counter-capture', async () => {
     const state = createState();
-    player(state, PLAYER_A_ID).currentTileId = TARGET_TILE_ID;
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
     const building = createBuilding(
       'attribute-building',
@@ -853,6 +878,28 @@ describe('Civilization building capture', () => {
 });
 
 describe('Civilization tower actions', () => {
+  test.each([
+    ['shared spawn', { q: -1, r: 0 }],
+    ['player-occupied regular tile', { q: 0, r: 0 }],
+  ])('rejects construction on the %s', async (_label, coordinate) => {
+    const state = createState();
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    const harness = createActionHarness(state);
+
+    await expectCivilizationError(
+      harness.service.buildTower(GAME_ID, USER_A_ID, {
+        actionId:
+          coordinate.q === -1
+            ? '00000000-0000-4000-8000-000000040010'
+            : '00000000-0000-4000-8000-000000040011',
+        tile: coordinate,
+      }),
+      CIVILIZATION_ERROR_CODES.TOWER_PLACEMENT_INVALID,
+    );
+    expect(state.towers).toHaveLength(0);
+    expect(state.teamResources[0]!.goldAmount.toString()).toBe('500');
+  });
+
   test('spends gold, starts construction, and schedules deterministic completion', async () => {
     const state = createState();
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
@@ -860,14 +907,14 @@ describe('Civilization tower actions', () => {
 
     await harness.service.buildTower(GAME_ID, USER_A_ID, {
       actionId: '00000000-0000-4000-8000-000000040001',
-      tile: { q: 0, r: 0 },
+      tile: { q: 0, r: -1 },
     });
 
     expect(state.teamResources[0]!.goldAmount.toString()).toBe('300');
     expect(state.towers).toHaveLength(1);
     expect(state.towers[0]).toMatchObject({
       teamId: TEAM_A_ID,
-      tileId: ORIGIN_TILE_ID,
+      tileId: TEAM_A_BUILD_TILE_ID,
       status: CivilizationTowerStatus.UNDER_CONSTRUCTION,
       protectionRadius: 1,
     });
@@ -894,7 +941,7 @@ describe('Civilization tower actions', () => {
     await expectCivilizationError(
       harness.service.buildTower(GAME_ID, USER_A_ID, {
         actionId: '00000000-0000-4000-8000-000000040002',
-        tile: { q: 0, r: 0 },
+        tile: { q: 0, r: -1 },
       }),
       CIVILIZATION_ERROR_CODES.TOWER_RADIUS_OVERLAP,
     );
@@ -987,6 +1034,7 @@ describe('Civilization tower actions', () => {
   test('serializes simultaneous team-gold spending and prevents an overdraft', async () => {
     const state = createState();
     state.tiles.push(createTile(TEAM_A_REMOTE_TILE_ID, 4, 0, TEAM_A_ID, true));
+    state.tiles.push(createTile('remote-build-tile', 5, 0, TEAM_A_ID, true));
     state.players.push(
       createPlayer(
         PLAYER_A_TWO_ID,
@@ -1003,12 +1051,12 @@ describe('Civilization tower actions', () => {
     await Promise.all([
       harness.service.buildTower(GAME_ID, USER_A_ID, {
         actionId: '00000000-0000-4000-8000-000000040005',
-        tile: { q: 0, r: 0 },
+        tile: { q: 0, r: -1 },
       }),
       expectCivilizationError(
         harness.service.buildTower(GAME_ID, USER_A_TWO_ID, {
           actionId: '00000000-0000-4000-8000-000000040006',
-          tile: { q: 4, r: 0 },
+          tile: { q: 5, r: 0 },
         }),
         CIVILIZATION_ERROR_CODES.NOT_ENOUGH_TEAM_GOLD,
       ),
@@ -1026,12 +1074,40 @@ describe('Civilization tower actions', () => {
 });
 
 describe('Civilization town-hall actions', () => {
+  test('captures an adjacent enemy town hall without moving onto its hex', async () => {
+    const state = createState();
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    const townHall = createBuilding(
+      'town-hall-adjacent',
+      CivilizationBuildingType.TOWN_HALL,
+      TEAM_B_ID,
+      0,
+      null,
+      16,
+    );
+    state.buildings.push(townHall);
+    const harness = createActionHarness(state);
+
+    await harness.service.captureTownHall(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000050000',
+      townHallBuildingId: townHall.id,
+    });
+
+    expect(player(state, PLAYER_A_ID).currentTileId).toBe(ORIGIN_TILE_ID);
+    expect(findBuilding(state, townHall.id).captureProgressUnits).toBe(2);
+  });
+
   test('combines several players contributions, completes the game, and rejects later actions', async () => {
     const state = createState();
-    player(state, PLAYER_A_ID).currentTileId = TARGET_TILE_ID;
-    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    player(state, PLAYER_B_ID).currentTileId = TEAM_A_SPAWN_TILE_ID;
     state.players.push(
-      createPlayer(PLAYER_A_TWO_ID, USER_A_TWO_ID, TEAM_A_ID, TARGET_TILE_ID, TEAM_A_SPAWN_TILE_ID),
+      createPlayer(
+        PLAYER_A_TWO_ID,
+        USER_A_TWO_ID,
+        TEAM_A_ID,
+        TEAM_B_SPAWN_TILE_ID,
+        TEAM_A_SPAWN_TILE_ID,
+      ),
     );
     const townHall = createBuilding(
       'town-hall-b',
@@ -1170,7 +1246,7 @@ describe('Civilization action idempotency and authorization', () => {
     const harness = createActionHarness(state);
     const input = {
       actionId: '00000000-0000-4000-8000-000000060003',
-      tile: { q: 0, r: 0 },
+      tile: { q: 0, r: -1 },
     };
     harness.failNextTowerSchedules();
 

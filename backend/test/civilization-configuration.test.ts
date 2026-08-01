@@ -38,29 +38,10 @@ function createValidConfiguration(): CreateCivilizationGameDto {
         { q: 2, r: 0, terrainType: 'GROUND', ownerTeamSide: 'TEAM_B' },
         { q: 2, r: -1, terrainType: 'GROUND', ownerTeamSide: 'TEAM_B' },
       ],
-      spawnPoints: [
-        { q: -1, r: 0, teamSide: 'TEAM_A' },
-        { q: 1, r: 0, teamSide: 'TEAM_B' },
-      ],
+      spawn: { q: 0, r: 0 },
       buildings: [
         { q: -2, r: 0, type: 'TOWN_HALL', ownerTeamSide: 'TEAM_A' },
         { q: 2, r: 0, type: 'TOWN_HALL', ownerTeamSide: 'TEAM_B' },
-      ],
-      playerPlacements: [
-        {
-          q: -1,
-          r: 0,
-          userId: PLAYER_A_ID,
-          teamSide: 'TEAM_A',
-          spawn: { q: -1, r: 0 },
-        },
-        {
-          q: 1,
-          r: 0,
-          userId: PLAYER_B_ID,
-          teamSide: 'TEAM_B',
-          spawn: { q: 1, r: 0 },
-        },
       ],
       towers: [],
     },
@@ -98,13 +79,12 @@ describe('Civilization configuration validation', () => {
     expect(issueCodes(input)).toContain('TOWER_RADIUS_OVERLAP');
   });
 
-  test('rejects a player assigned to both teams and a mismatched placement', () => {
+  test('rejects a player assigned to both teams', () => {
     const input = createValidConfiguration();
     input.teams[1]!.playerIds = [PLAYER_A_ID];
 
     const codes = issueCodes(input);
     expect(codes).toContain('PLAYER_ASSIGNED_TWICE');
-    expect(codes).toContain('INVALID_PLAYER_TEAM');
   });
 
   test('rejects a town hall whose tile is not owned by its team', () => {
@@ -114,10 +94,18 @@ describe('Civilization configuration validation', () => {
     expect(issueCodes(input)).toContain('TOWN_HALL_TILE_NOT_OWNED');
   });
 
+  test('rejects a building on the shared spawn', () => {
+    const input = createValidConfiguration();
+    input.map.spawn = { q: -2, r: 0 };
+
+    expect(issueCodes(input)).toContain('SPAWN_OBJECT_COLLISION');
+  });
+
   test('rejects map objects on mountains and mountains with owners', () => {
     const input = createValidConfiguration();
-    const teamASpawn = input.map.tiles.find((tile) => tile.q === -1 && tile.r === 0)!;
-    teamASpawn.terrainType = 'MOUNTAIN';
+    const sharedSpawn = input.map.tiles.find((tile) => tile.q === 0 && tile.r === 0)!;
+    sharedSpawn.terrainType = 'MOUNTAIN';
+    sharedSpawn.ownerTeamSide = 'TEAM_A';
 
     const codes = issueCodes(input);
     expect(codes).toContain('MOUNTAIN_HAS_OWNER');

@@ -13,7 +13,6 @@ import {
 } from "@/shared/lib/idempotency";
 
 import {
-  getCivilizationEvents,
   getCivilizationGameState,
   getCivilizationHistory,
   getCurrentCivilizationGame,
@@ -65,22 +64,6 @@ export function useCivilizationHistoryQuery(page: number, limit = 12) {
   });
 }
 
-export function useCivilizationEventsQuery(
-  gameId: string | null,
-  page: number,
-  limit = 20,
-  isActive = false,
-) {
-  return useQuery({
-    queryKey: queryKeys.civilizationEvents(gameId ?? "none", page, limit),
-    queryFn: () => getCivilizationEvents(gameId!, page, limit),
-    enabled: Boolean(gameId),
-    placeholderData: (previous) => previous,
-    refetchOnWindowFocus: "always",
-    refetchInterval: isActive ? ACTIVE_GAME_POLL_INTERVAL_MS : false,
-  });
-}
-
 export function useCivilizationActionMutation(gameId: string | null) {
   const queryClient = useQueryClient();
   const actionAttemptRef = useRef<IdempotencyAttempt | null>(null);
@@ -106,17 +89,14 @@ export function useCivilizationActionMutation(gameId: string | null) {
         result.gameState,
       );
     },
-    onSettled: async () => {
+    onSettled: () => {
       if (!gameId) {
         return;
       }
 
-      await Promise.all([
+      void Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: queryKeys.civilizationCurrent }),
         queryClient.invalidateQueries({ queryKey: queryKeys.civilizationState(gameId) }),
-        queryClient.invalidateQueries({
-          queryKey: ["civilization", "games", gameId, "events"],
-        }),
       ]);
     },
   });

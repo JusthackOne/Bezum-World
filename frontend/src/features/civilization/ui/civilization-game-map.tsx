@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   Application,
   Container,
@@ -11,15 +12,26 @@ import {
   Texture,
 } from "pixi.js";
 import { Viewport } from "pixi-viewport";
-import { LocateFixedIcon, MinusIcon, PlusIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CoinsIcon,
+  LocateFixedIcon,
+  MinusIcon,
+  PlusIcon,
+  TrophyIcon,
+  XIcon,
+} from "lucide-react";
 
 import {
   CIVILIZATION_ASSETS,
+  type CivilizationActionType,
   type CivilizationAssetKey,
   type CivilizationBuilding,
   type CivilizationGameState,
   type CivilizationPlayer,
 } from "@/entities/civilization";
+import { formatDateTime } from "@/shared/lib/date-time";
+import { formatNumber } from "@/shared/lib/number-format";
 import { cn } from "@/shared/lib/utils";
 import { clearPixiContainer, safelyLoadPixiTexture } from "@/shared/lib/pixi";
 import { Button } from "@/shared/ui/8bit";
@@ -31,9 +43,15 @@ interface CivilizationGameMapProps {
   selectedTileId: string | null;
   selectedPlayerId: string | null;
   selectedTowerId: string | null;
+  placementMode: "BUILD_TOWER" | null;
+  placementTileId: string | null;
   isInteractionDisabled?: boolean;
   onSelectTile: (tileId: string) => void;
   onSelectPlayer: (playerId: string) => void;
+  onToggleTowerPlacement: () => void;
+  onCancelPlacement: () => void;
+  onCancelPlacementPreview: () => void;
+  onConfirmPlacement: () => void;
   className?: string;
 }
 
@@ -65,7 +83,38 @@ interface PixiScene {
   playerCenters: Map<string, { x: number; y: number }>;
 }
 
+interface StructureTooltipTarget {
+  kind: "building" | "tower";
+  id: string;
+}
+
+interface StructureTooltipState extends StructureTooltipTarget {
+  x: number;
+  y: number;
+  isPinned: boolean;
+}
+
+type ShowStructureTooltip = (
+  target: StructureTooltipTarget,
+  event: FederatedPointerEvent,
+  isPinned: boolean,
+) => void;
+
+type HideStructureTooltip = (target: StructureTooltipTarget) => void;
+
 const FALLBACK_TEAM_COLORS = ["#6366f1", "#f43f5e"] as const;
+const MINIMUM_MAP_ZOOM = 0.08;
+const MAXIMUM_MAP_ZOOM = 2.4;
+const MAP_ZOOM_STEP = 0.18;
+const STRUCTURE_TOOLTIP_WIDTH = 256;
+
+const BUILDING_PLACEMENT_CONTROLS = [
+  {
+    actionType: "BUILD_TOWER" as const,
+    label: "Place defensive tower",
+    asset: CIVILIZATION_ASSETS["tower.active"],
+  },
+];
 
 function parseColor(color: string | undefined, fallback: string): string {
   return color && /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
@@ -81,6 +130,178 @@ function buildingAssetKey(building: CivilizationBuilding): CivilizationAssetKey 
   return building.attributeKey ? `attributeBuilding.${building.attributeKey}` : "resource.neutral";
 }
 
+function buildingName(building: CivilizationBuilding): string {
+  if (building.type === "TOWN_HALL") {
+    return "Town Hall";
+  }
+  if (building.type === "GOLD_BUILDING") {
+    return "Gold Mine";
+  }
+  const attribute = building.attributeKey
+    ? `${building.attributeKey[0].toUpperCase()}${building.attributeKey.slice(1)}`
+    : "Attribute";
+  return `${attribute} Building`;
+}
+
+function buildingTypeLabel(building: CivilizationBuilding): string {
+  if (building.type === "ATTRIBUTE_BUILDING" && building.attributeKey) {
+    return `${building.attributeKey} production`;
+  }
+  return building.type.toLowerCase().replaceAll("_", " ");
+}
+
+function statusLabel(status: string): string {
+  return status.toLowerCase().replaceAll("_", " ");
+}
+
+function StructureTooltip({
+  tooltip,
+  state,
+  mapWidth,
+  mapHeight,
+}: {
+  tooltip: StructureTooltipState;
+  state: CivilizationGameState;
+  mapWidth: number;
+  mapHeight: number;
+}) {
+  const building =
+    tooltip.kind === "building"
+      ? (state.buildings.find((item) => item.id === tooltip.id) ?? null)
+      : null;
+  const tower =
+    tooltip.kind === "tower" ? (state.towers.find((item) => item.id === tooltip.id) ?? null) : null;
+  const teamId = building?.ownerTeamId ?? tower?.teamId ?? null;
+  const team = teamId ? (state.teams.find((item) => item.id === teamId) ?? null) : null;
+  const tileId = building?.tileId ?? tower?.tileId;
+  const tile = tileId ? (state.tiles.find((item) => item.id === tileId) ?? null) : null;
+
+  if (!building && !tower) {
+    return null;
+  }
+
+  const rows: Array<{ label: string; value: string }> = [];
+
+  if (building) {
+    if (building.captureRequired > 0) {
+      rows.push({
+        label: "Capture progress",
+        value: `${building.captureProgress / 2} / ${building.captureRequired / 2}`,
+      });
+    }
+    if (building.capturingTeamId) {
+      const capturingTeam = state.teams.find((item) => item.id === building.capturingTeamId);
+      if (capturingTeam) {
+        rows.push({ label: "Capturing team", value: capturingTeam.name });
+      }
+    }
+    rows.push({
+      label: "Status",
+      value:
+        building.captureProgress > 0 && building.status !== "CAPTURED"
+          ? "being captured"
+          : statusLabel(building.status),
+    });
+    rows.push({ label: "Owner", value: team?.name ?? "Neutral" });
+    rows.push({ label: "Type", value: buildingTypeLabel(building) });
+    if (tile) {
+      rows.push({ label: "Connected", value: tile.isConnected ? "Yes" : "No" });
+    }
+    if (building.type === "GOLD_BUILDING") {
+      rows.push({ label: "Production", value: `${building.incomePerHour} gold / hour` });
+      if (team) {
+        rows.push({ label: "Team gold", value: team.goldAmount });
+      }
+    }
+    if (building.type === "ATTRIBUTE_BUILDING" && building.attributeKey) {
+      rows.push({
+        label: "Production",
+        value: `${building.incomePerHour} ${building.attributeKey} / hour`,
+      });
+      if (team) {
+        rows.push({
+          label: "Team resource",
+          value: team.attributeAmounts[building.attributeKey],
+        });
+      }
+    }
+  }
+
+  if (tower) {
+    const towerTile = tile;
+    const affectedHexes = towerTile
+      ? state.tiles.filter(
+          (item) => hexDistance(item.coordinate, towerTile.coordinate) <= tower.protectionRadius,
+        ).length
+      : 0;
+    rows.push({
+      label: "Status",
+      value: tower.status === "DESTROYED" ? "destroyed / damaged" : statusLabel(tower.status),
+    });
+    rows.push({ label: "Owner", value: team?.name ?? "Neutral" });
+    if (tower.status === "UNDER_CONSTRUCTION" && tower.constructionCompletesAt) {
+      const startedAt = new Date(tower.constructionStartedAt).getTime();
+      const completesAt = new Date(tower.constructionCompletesAt).getTime();
+      const serverTime = new Date(state.serverTime).getTime();
+      const requiredMinutes = Math.max(0, Math.ceil((completesAt - startedAt) / 60_000));
+      const progressMinutes = Math.min(
+        requiredMinutes,
+        Math.max(0, Math.floor((serverTime - startedAt) / 60_000)),
+      );
+      rows.push({
+        label: tower.workKind === "REPAIR" ? "Repair progress" : "Construction progress",
+        value: `${progressMinutes} / ${requiredMinutes} min`,
+      });
+    }
+    rows.push({ label: "Type", value: "defensive tower" });
+    rows.push({ label: "Protection radius", value: `${tower.protectionRadius} hexes` });
+    if (affectedHexes > 0) {
+      rows.push({ label: "Affected hexes", value: String(affectedHexes) });
+    }
+    rows.push({ label: "Connected", value: tower.isConnected ? "Yes" : "No" });
+    if (tower.workKind) {
+      rows.push({ label: "Current work", value: statusLabel(tower.workKind) });
+    }
+    if (tower.constructionCompletesAt) {
+      rows.push({ label: "Completes", value: formatDateTime(tower.constructionCompletesAt) });
+    }
+  }
+
+  const placeOnLeft = tooltip.x + STRUCTURE_TOOLTIP_WIDTH + 28 > mapWidth;
+  const left = Math.max(
+    8,
+    Math.min(
+      placeOnLeft ? tooltip.x - STRUCTURE_TOOLTIP_WIDTH - 18 : tooltip.x + 18,
+      Math.max(8, mapWidth - STRUCTURE_TOOLTIP_WIDTH - 8),
+    ),
+  );
+  const top = Math.max(8, Math.min(tooltip.y - 36, Math.max(8, mapHeight - 220)));
+
+  return (
+    <div
+      className="absolute z-20 overflow-y-auto rounded-md border border-white/20 bg-slate-950/95 p-3 text-[11px] text-slate-100 shadow-xl backdrop-blur-sm"
+      style={{
+        left,
+        top,
+        width: STRUCTURE_TOOLTIP_WIDTH,
+        maxHeight: Math.max(120, mapHeight - top - 8),
+      }}
+      role="tooltip"
+      data-structure-tooltip
+    >
+      <p className="text-sm font-semibold">{building ? buildingName(building) : "Defense Tower"}</p>
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+        {rows.map((row) => (
+          <div key={`${row.label}:${row.value}`} className="contents">
+            <dt className="text-slate-400">{row.label}</dt>
+            <dd className="text-right capitalize">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 function addPlayerToken(
   layer: Container,
   player: CivilizationPlayer,
@@ -90,11 +311,14 @@ function addPlayerToken(
   avatarTexture: Texture | null,
   onSelectPlayer: (playerId: string) => void,
   disabled: boolean,
+  compact = false,
 ): void {
   const token = new Container();
   token.position.set(position.x, position.y);
-  token.eventMode = disabled ? "none" : "static";
-  token.cursor = disabled ? "default" : "pointer";
+  token.scale.set(compact ? 0.72 : 1);
+  const isSelectable = !disabled;
+  token.eventMode = isSelectable ? "static" : "none";
+  token.cursor = isSelectable ? "pointer" : "default";
   token.on("pointertap", (event: FederatedPointerEvent) => {
     event.stopPropagation();
     onSelectPlayer(player.id);
@@ -123,19 +347,21 @@ function addPlayerToken(
     token.addChild(initial);
   }
 
-  const name = new Text({
-    text: player.username,
-    style: {
-      fill: "#ffffff",
-      fontFamily: "Arial",
-      fontSize: 11,
-      fontWeight: "700",
-      stroke: { color: "#020617", width: 3 },
-    },
-  });
-  name.anchor.set(0.5, 0);
-  name.position.set(0, 23);
-  token.addChild(name);
+  if (!compact) {
+    const name = new Text({
+      text: player.username,
+      style: {
+        fill: "#ffffff",
+        fontFamily: "Arial",
+        fontSize: 11,
+        fontWeight: "700",
+        stroke: { color: "#020617", width: 3 },
+      },
+    });
+    name.anchor.set(0.5, 0);
+    name.position.set(0, 23);
+    token.addChild(name);
+  }
   layer.addChild(token);
 }
 
@@ -143,9 +369,11 @@ function playerTokenPosition(
   tileCenter: { x: number; y: number },
   stackIndex: number,
 ): { x: number; y: number } {
-  const offsetX = (stackIndex % 3) * 18 - Math.min(2, stackIndex) * 9;
-  const offsetY = Math.floor(stackIndex / 3) * 18;
-  return { x: tileCenter.x + offsetX, y: tileCenter.y - 4 + offsetY };
+  const angle = -Math.PI / 2 + stackIndex * (Math.PI / 3);
+  return {
+    x: tileCenter.x + Math.cos(angle) * 27,
+    y: tileCenter.y - 4 + Math.sin(angle) * 27,
+  };
 }
 
 function createStaticMapFingerprint(state: CivilizationGameState): string {
@@ -190,8 +418,8 @@ function renderStaticMap(
   clearPixiContainer(scene.layers.effects);
 
   scene.viewport.resize(
-    scene.app.renderer.width / scene.app.renderer.resolution,
-    scene.app.renderer.height / scene.app.renderer.resolution,
+    scene.app.renderer.screen.width,
+    scene.app.renderer.screen.height,
     layout.width,
     layout.height,
   );
@@ -202,14 +430,17 @@ function renderStaticMap(
       return;
     }
 
-    const baseFill = tile.terrainType === "MOUNTAIN" ? "#273449" : "#31473a";
+    const baseFill = tile.terrainType === "MOUNTAIN" ? "#273449" : "#475569";
     const terrain = new Graphics()
       .poly(layoutItem.corners, true)
       .fill({ color: baseFill, alpha: 1 })
       .stroke({ color: "#0f172a", width: 2, alpha: 0.95 });
     terrain.eventMode = disabled ? "none" : "static";
     terrain.cursor = disabled ? "default" : "pointer";
-    terrain.on("pointertap", () => onSelectTile(tile.id));
+    terrain.on("pointertap", (event: FederatedPointerEvent) => {
+      event.stopPropagation();
+      onSelectTile(tile.id);
+    });
     scene.terrainTileGraphics.set(tile.id, terrain);
     scene.layers.terrain.addChild(terrain);
 
@@ -248,11 +479,49 @@ function renderStaticMap(
   });
 }
 
+function addStructureInteraction(
+  layer: Container,
+  corners: Array<{ x: number; y: number }>,
+  target: StructureTooltipTarget,
+  tileId: string,
+  onSelectTile: (tileId: string) => void,
+  onShowTooltip: ShowStructureTooltip,
+  onHideTooltip: HideStructureTooltip,
+  disabled: boolean,
+): void {
+  const hitArea = new Graphics().poly(corners, true).fill({ color: "#ffffff", alpha: 0.001 });
+  hitArea.eventMode = disabled ? "none" : "static";
+  hitArea.cursor = disabled ? "default" : "pointer";
+  hitArea.on("pointerover", (event: FederatedPointerEvent) => {
+    if (event.pointerType === "mouse") {
+      onShowTooltip(target, event, false);
+    }
+  });
+  hitArea.on("pointerout", (event: FederatedPointerEvent) => {
+    if (event.pointerType === "mouse") {
+      onHideTooltip(target);
+    }
+  });
+  hitArea.on("pointertap", (event: FederatedPointerEvent) => {
+    event.stopPropagation();
+    onSelectTile(tileId);
+    if (event.pointerType !== "mouse") {
+      onShowTooltip(target, event, true);
+    }
+  });
+  layer.addChild(hitArea);
+}
+
 async function renderBaseScene(
   scene: PixiScene,
   state: CivilizationGameState,
   onSelectTile: (tileId: string) => void,
   onSelectPlayer: (playerId: string) => void,
+  onShowPlayerStack: (tileId: string) => void,
+  onShowStructureTooltip: ShowStructureTooltip,
+  onHideStructureTooltip: HideStructureTooltip,
+  selectedPlayerId: string | null,
+  placementMode: "BUILD_TOWER" | null,
   disabled: boolean,
 ): Promise<void> {
   const renderVersion = ++scene.renderVersion;
@@ -335,33 +604,33 @@ async function renderBaseScene(
   }
 
   if (spawnTexture) {
-    state.spawnPoints.forEach((spawn) => {
-      const center = centers.get(spawn.tileId);
-      if (!center) {
-        return;
-      }
+    const center = centers.get(state.spawnPoint.tileId);
+    if (center) {
       const sprite = new Sprite(spawnTexture);
       sprite.anchor.set(0.5);
       sprite.position.set(center.x - 24, center.y - 20);
       sprite.width = 38;
       sprite.height = 38;
-      sprite.tint = teamsById.get(spawn.teamId)?.resolvedColor ?? "#ffffff";
       scene.layers.spawns.addChild(sprite);
-    });
+    }
   }
 
   const buildingTexturesById = new Map(buildingTextures);
   state.buildings.forEach((building) => {
     const center = centers.get(building.tileId);
+    const tile = state.tiles.find((item) => item.id === building.tileId);
+    const layoutItem = tile ? layout.items.get(coordinateKey(tile.coordinate)) : null;
     const texture = buildingTexturesById.get(building.id);
-    if (!center || !texture) {
+    if (!center || !texture || !layoutItem) {
       return;
     }
     const sprite = new Sprite(texture);
     sprite.anchor.set(0.5);
-    sprite.position.set(center.x, center.y - 6);
-    sprite.width = 58;
-    sprite.height = 58;
+    sprite.position.set(center.x, center.y - 7);
+    const buildingSize = building.type === "TOWN_HALL" ? 92 : 84;
+    sprite.width = buildingSize;
+    sprite.height = buildingSize;
+    sprite.eventMode = "none";
     const team = building.ownerTeamId ? teamsById.get(building.ownerTeamId) : null;
     if (team) {
       sprite.tint = team.resolvedColor;
@@ -400,6 +669,16 @@ async function renderBaseScene(
       progress.position.set(center.x, center.y + 25);
       scene.layers.buildings.addChild(progress);
     }
+    addStructureInteraction(
+      scene.layers.buildings,
+      layoutItem.corners,
+      { kind: "building", id: building.id },
+      building.tileId,
+      onSelectTile,
+      onShowStructureTooltip,
+      onHideStructureTooltip,
+      disabled,
+    );
   });
 
   const towerTexturesById = new Map(towerTextures);
@@ -407,25 +686,40 @@ async function renderBaseScene(
     .filter((tower) => tower.status !== "CANCELLED")
     .forEach((tower) => {
       const center = centers.get(tower.tileId);
+      const tile = state.tiles.find((item) => item.id === tower.tileId);
+      const layoutItem = tile ? layout.items.get(coordinateKey(tile.coordinate)) : null;
       const texture = towerTexturesById.get(tower.id);
-      if (!center || !texture) {
+      if (!center || !texture || !layoutItem) {
         return;
       }
       const sprite = new Sprite(texture);
       sprite.anchor.set(0.5);
-      sprite.position.set(center.x + 24, center.y - 20);
-      sprite.width = 40;
-      sprite.height = 40;
+      sprite.position.set(center.x, center.y - 7);
+      sprite.width = 76;
+      sprite.height = 76;
+      sprite.eventMode = "none";
       sprite.tint = teamsById.get(tower.teamId)?.resolvedColor ?? "#ffffff";
       scene.layers.buildings.addChild(sprite);
+      addStructureInteraction(
+        scene.layers.buildings,
+        layoutItem.corners,
+        { kind: "tower", id: tower.id },
+        tower.tileId,
+        onSelectTile,
+        onShowStructureTooltip,
+        onHideStructureTooltip,
+        disabled,
+      );
     });
 
   const playersByTile = new Map<string, CivilizationPlayer[]>();
-  state.players.forEach((player) => {
-    const tilePlayers = playersByTile.get(player.currentTileId) ?? [];
-    tilePlayers.push(player);
-    playersByTile.set(player.currentTileId, tilePlayers);
-  });
+  state.players
+    .filter((player) => player.isActive)
+    .forEach((player) => {
+      const tilePlayers = playersByTile.get(player.currentTileId) ?? [];
+      tilePlayers.push(player);
+      playersByTile.set(player.currentTileId, tilePlayers);
+    });
   const renderPlayers = (avatarTexturesById: Map<string, Texture | null>): void => {
     clearPixiContainer(scene.layers.players);
     scene.playerCenters = new Map();
@@ -434,7 +728,9 @@ async function renderBaseScene(
       if (!center) {
         return;
       }
-      players.forEach((player, index) => {
+      const visiblePlayers = players.slice(0, 6);
+      const compact = players.length > 1;
+      visiblePlayers.forEach((player, index) => {
         const position = playerTokenPosition(center, index);
         scene.playerCenters.set(player.id, position);
         addPlayerToken(
@@ -446,8 +742,32 @@ async function renderBaseScene(
           avatarTexturesById.get(player.id) ?? null,
           onSelectPlayer,
           disabled,
+          compact,
         );
       });
+      if (players.length > 6) {
+        const overflow = new Container();
+        overflow.position.set(center.x, center.y + 36);
+        overflow.eventMode = disabled ? "none" : "static";
+        overflow.cursor = disabled ? "default" : "pointer";
+        overflow.on("pointertap", (event: FederatedPointerEvent) => {
+          event.stopPropagation();
+          onShowPlayerStack(tileId);
+        });
+        overflow.addChild(
+          new Graphics()
+            .circle(0, 0, 17)
+            .fill({ color: "#0f172a", alpha: 0.96 })
+            .stroke({ color: "#ffffff", width: 2 }),
+        );
+        const label = new Text({
+          text: `+${players.length - 6}`,
+          style: { fill: "#ffffff", fontFamily: "Arial", fontSize: 12, fontWeight: "700" },
+        });
+        label.anchor.set(0.5);
+        overflow.addChild(label);
+        scene.layers.players.addChild(overflow);
+      }
     });
   };
   renderPlayers(new Map());
@@ -466,42 +786,84 @@ async function renderBaseScene(
   });
 
   if (!scene.hasCentered) {
-    scene.viewport.fitWorld(true);
+    scene.viewport.fitWorld();
     scene.viewport.setZoom(Math.min(scene.viewport.scaled, 1.15), true);
+    scene.viewport.moveCenter(scene.viewport.worldWidth / 2, scene.viewport.worldHeight / 2);
     scene.hasCentered = true;
   }
-  renderLegalActionOverlays(scene, state);
+  renderLegalActionOverlays(scene, state, selectedPlayerId, placementMode, onSelectTile, disabled);
   scene.renderedStateVersion = state.stateVersion;
   scene.renderedInteractionDisabled = disabled;
 }
 
-function renderLegalActionOverlays(scene: PixiScene, state: CivilizationGameState): void {
+type ActionHighlightKind = "movement" | "attack" | "capture" | "contribution";
+
+const ACTION_HIGHLIGHTS: Record<ActionHighlightKind, { fill: string; stroke: string }> = {
+  movement: { fill: "#22c55e", stroke: "#86efac" },
+  attack: { fill: "#ef4444", stroke: "#fca5a5" },
+  capture: { fill: "#f59e0b", stroke: "#fcd34d" },
+  contribution: { fill: "#06b6d4", stroke: "#67e8f9" },
+};
+
+function actionHighlightKind(type: CivilizationActionType): ActionHighlightKind {
+  if (type === "MOVE") return "movement";
+  if (type === "ATTACK_PLAYER" || type === "ATTACK_TOWER") return "attack";
+  if (type === "CAPTURE_BUILDING" || type === "CAPTURE_TOWN_HALL") return "capture";
+  return "contribution";
+}
+
+function renderLegalActionOverlays(
+  scene: PixiScene,
+  state: CivilizationGameState,
+  selectedPlayerId: string | null,
+  placementMode: "BUILD_TOWER" | null,
+  onSelectTile: (tileId: string) => void,
+  disabled: boolean,
+): void {
   clearPixiContainer(scene.layers.legalActions);
-  const legalMoveTargets = new Set(
-    state.availableActions
-      .filter(
-        (action) =>
-          action.type === "MOVE" && action.targetCoordinate && action.disabledReason === null,
-      )
-      .map((action) => coordinateKey(action.targetCoordinate!)),
-  );
-  if (legalMoveTargets.size === 0) {
+  if (!placementMode && (!selectedPlayerId || selectedPlayerId !== state.access.currentPlayerId)) {
     return;
   }
+  const highlightKindsByCoordinate = new Map<string, Set<ActionHighlightKind>>();
+  state.availableActions
+    .filter(
+      (action) =>
+        action.targetCoordinate &&
+        action.disabledReason === null &&
+        (placementMode === "BUILD_TOWER"
+          ? action.type === "BUILD_TOWER"
+          : action.type !== "BUILD_TOWER"),
+    )
+    .forEach((action) => {
+      const key = coordinateKey(action.targetCoordinate!);
+      const kinds = highlightKindsByCoordinate.get(key) ?? new Set<ActionHighlightKind>();
+      kinds.add(actionHighlightKind(action.type));
+      highlightKindsByCoordinate.set(key, kinds);
+    });
 
   const layout = createHexLayout(state.tiles.map((tile) => tile.coordinate));
   state.tiles.forEach((tile) => {
-    if (!legalMoveTargets.has(coordinateKey(tile.coordinate))) {
+    const kinds = highlightKindsByCoordinate.get(coordinateKey(tile.coordinate));
+    if (!kinds || kinds.size === 0) {
       return;
     }
     const layoutItem = layout.items.get(coordinateKey(tile.coordinate));
     if (layoutItem) {
-      scene.layers.legalActions.addChild(
-        new Graphics()
-          .poly(layoutItem.corners, true)
-          .fill({ color: "#22c55e", alpha: 0.2 })
-          .stroke({ color: "#86efac", width: 4, alpha: 0.95 }),
-      );
+      const kind = (["attack", "capture", "contribution", "movement"] as const).find((item) =>
+        kinds.has(item),
+      )!;
+      const colors = ACTION_HIGHLIGHTS[kind];
+      const actionTarget = new Graphics()
+        .poly(layoutItem.corners, true)
+        .fill({ color: colors.fill, alpha: 0.24 })
+        .stroke({ color: colors.stroke, width: 4, alpha: 0.95 });
+      actionTarget.eventMode = disabled ? "none" : "static";
+      actionTarget.cursor = disabled ? "default" : "pointer";
+      actionTarget.on("pointertap", (event: FederatedPointerEvent) => {
+        event.stopPropagation();
+        onSelectTile(tile.id);
+      });
+      scene.layers.legalActions.addChild(actionTarget);
     }
   });
 }
@@ -573,9 +935,15 @@ export function CivilizationGameMap({
   selectedTileId,
   selectedPlayerId,
   selectedTowerId,
+  placementMode,
+  placementTileId,
   isInteractionDisabled = false,
   onSelectTile,
   onSelectPlayer,
+  onToggleTowerPlacement,
+  onCancelPlacement,
+  onCancelPlacementPreview,
+  onConfirmPlacement,
   className,
 }: CivilizationGameMapProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -584,18 +952,43 @@ export function CivilizationGameMap({
   const selectionRef = useRef({ selectedTileId, selectedPlayerId, selectedTowerId });
   const onSelectTileRef = useRef(onSelectTile);
   const onSelectPlayerRef = useRef(onSelectPlayer);
+  const placementModeRef = useRef(placementMode);
+  const onCancelPlacementRef = useRef(onCancelPlacement);
   const disabledRef = useRef(isInteractionDisabled);
+  const placementPreviewRef = useRef<HTMLDivElement>(null);
+  const [structureTooltip, setStructureTooltip] = useState<StructureTooltipState | null>(null);
+  const [playerStackTileId, setPlayerStackTileId] = useState<string | null>(null);
+  const [mapSize, setMapSize] = useState({ width: 320, height: 420 });
+  const showStructureTooltipRef = useRef<ShowStructureTooltip>((target, event, isPinned) => {
+    setStructureTooltip({
+      ...target,
+      x: event.global.x,
+      y: event.global.y,
+      isPinned,
+    });
+  });
+  const hideStructureTooltipRef = useRef<HideStructureTooltip>((target) => {
+    setStructureTooltip((current) =>
+      current && current.kind === target.kind && current.id === target.id && !current.isPinned
+        ? null
+        : current,
+    );
+  });
 
   useEffect(() => {
     stateRef.current = state;
     selectionRef.current = { selectedTileId, selectedPlayerId, selectedTowerId };
     onSelectTileRef.current = onSelectTile;
     onSelectPlayerRef.current = onSelectPlayer;
+    placementModeRef.current = placementMode;
+    onCancelPlacementRef.current = onCancelPlacement;
     disabledRef.current = isInteractionDisabled;
   }, [
     isInteractionDisabled,
     onSelectPlayer,
     onSelectTile,
+    onCancelPlacement,
+    placementMode,
     selectedPlayerId,
     selectedTileId,
     selectedTowerId,
@@ -636,14 +1029,20 @@ export function CivilizationGameMap({
         events: app.renderer.events,
         ticker: app.ticker,
         threshold: 6,
+        passiveWheel: false,
+        stopPropagation: true,
       });
       viewport
-        .drag()
+        .drag({ mouseButtons: "left" })
         .pinch()
-        .wheel({ smooth: 3 })
+        .wheel({ percent: 0.12, smooth: false, trackpadPinch: true })
         .decelerate()
         .clamp({ direction: "all" })
-        .clampZoom({ minScale: 0.3, maxScale: 2.4 });
+        .clampZoom({ minScale: MINIMUM_MAP_ZOOM, maxScale: MAXIMUM_MAP_ZOOM });
+      viewport.on("pointertap", () => {
+        setStructureTooltip(null);
+        onCancelPlacementRef.current();
+      });
       app.stage.addChild(viewport);
 
       const layers: SceneLayers = {
@@ -663,10 +1062,10 @@ export function CivilizationGameMap({
         layers.territory,
         layers.connectivity,
         layers.spawns,
+        layers.legalActions,
         layers.buildings,
         layers.towerProtection,
         layers.players,
-        layers.legalActions,
         layers.selection,
         layers.effects,
       );
@@ -689,16 +1088,32 @@ export function CivilizationGameMap({
       resizeObserver = new ResizeObserver(() => {
         const width = Math.max(host.clientWidth, 320);
         const height = Math.max(host.clientHeight, 420);
+        const center = viewport.center;
         app.renderer.resize(width, height);
         viewport.resize(width, height, viewport.worldWidth, viewport.worldHeight);
+        setMapSize({ width, height });
+        if (scene.hasCentered) {
+          viewport.moveCenter(center);
+        }
       });
       resizeObserver.observe(host);
 
       await renderBaseScene(
         scene,
         stateRef.current,
-        (tileId) => onSelectTileRef.current(tileId),
-        (playerId) => onSelectPlayerRef.current(playerId),
+        (tileId) => {
+          setStructureTooltip(null);
+          onSelectTileRef.current(tileId);
+        },
+        (playerId) => {
+          setStructureTooltip(null);
+          onSelectPlayerRef.current(playerId);
+        },
+        (tileId) => setPlayerStackTileId(tileId),
+        (target, event, isPinned) => showStructureTooltipRef.current(target, event, isPinned),
+        (target) => hideStructureTooltipRef.current(target),
+        selectionRef.current.selectedPlayerId,
+        placementModeRef.current,
         disabledRef.current,
       );
       if (!cancelled && sceneRef.current === scene) {
@@ -733,34 +1148,81 @@ export function CivilizationGameMap({
       scene.renderedStaticMapFingerprint === createStaticMapFingerprint(state) &&
       scene.renderedInteractionDisabled === isInteractionDisabled
     ) {
-      renderLegalActionOverlays(scene, state);
+      renderLegalActionOverlays(
+        scene,
+        state,
+        selectionRef.current.selectedPlayerId,
+        placementMode,
+        (tileId) => onSelectTileRef.current(tileId),
+        isInteractionDisabled,
+      );
       renderSelectionOverlays(scene, state, selectionRef.current);
       return;
     }
     void renderBaseScene(
       scene,
       state,
-      (tileId) => onSelectTileRef.current(tileId),
-      (playerId) => onSelectPlayerRef.current(playerId),
+      (tileId) => {
+        setStructureTooltip(null);
+        onSelectTileRef.current(tileId);
+      },
+      (playerId) => {
+        setStructureTooltip(null);
+        onSelectPlayerRef.current(playerId);
+      },
+      (tileId) => setPlayerStackTileId(tileId),
+      (target, event, isPinned) => showStructureTooltipRef.current(target, event, isPinned),
+      (target) => hideStructureTooltipRef.current(target),
+      selectionRef.current.selectedPlayerId,
+      placementMode,
       isInteractionDisabled,
     ).then(() => {
       if (sceneRef.current === scene) {
         renderSelectionOverlays(scene, stateRef.current, selectionRef.current);
       }
     });
-  }, [isInteractionDisabled, state]);
+  }, [isInteractionDisabled, placementMode, state]);
 
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) {
       return;
     }
+    renderLegalActionOverlays(
+      scene,
+      stateRef.current,
+      selectedPlayerId,
+      placementMode,
+      (tileId) => onSelectTileRef.current(tileId),
+      isInteractionDisabled,
+    );
     renderSelectionOverlays(scene, stateRef.current, {
       selectedTileId,
       selectedPlayerId,
       selectedTowerId,
     });
-  }, [selectedPlayerId, selectedTileId, selectedTowerId]);
+  }, [isInteractionDisabled, placementMode, selectedPlayerId, selectedTileId, selectedTowerId]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const preview = placementPreviewRef.current;
+    const center = placementTileId ? scene?.tileCenters.get(placementTileId) : null;
+    if (!scene || !preview || !center) {
+      return;
+    }
+
+    const positionPreview = (): void => {
+      const position = scene.viewport.toScreen(center);
+      preview.style.transform = `translate(${position.x}px, ${position.y}px)`;
+    };
+    positionPreview();
+    scene.viewport.on("moved", positionPreview);
+    scene.viewport.on("zoomed", positionPreview);
+    return () => {
+      scene.viewport.off("moved", positionPreview);
+      scene.viewport.off("zoomed", positionPreview);
+    };
+  }, [mapSize.height, mapSize.width, placementTileId, state.stateVersion]);
 
   const centerCurrentPlayer = (): void => {
     const scene = sceneRef.current;
@@ -773,52 +1235,236 @@ export function CivilizationGameMap({
     }
   };
 
+  const currentPlayer = state.players.find((player) => player.id === state.access.currentPlayerId);
+  const stackedPlayers = playerStackTileId
+    ? state.players.filter(
+        (player) => player.isActive && player.currentTileId === playerStackTileId,
+      )
+    : [];
+  const currentTeam = currentPlayer
+    ? state.teams.find((team) => team.id === currentPlayer.teamId)
+    : null;
+  const enabledTowerPlacements = state.availableActions.filter(
+    (action) => action.type === "BUILD_TOWER" && action.disabledReason === null,
+  );
+  const towerPlacementUnavailableReason =
+    state.availableActions.find(
+      (action) => action.type === "BUILD_TOWER" && action.disabledReason !== null,
+    )?.disabledReason ?? "No legal tower placement hexes are available.";
+
   return (
     <div
       className={cn(
-        "relative min-h-105 overflow-hidden border bg-slate-950 shadow-inner",
+        "relative min-h-105 touch-none overflow-hidden overscroll-contain border bg-slate-950 shadow-inner select-none",
         className,
       )}
+      onPointerDown={(event) => {
+        if (
+          !(event.target instanceof Element) ||
+          !event.target.closest("[data-structure-tooltip]")
+        ) {
+          setStructureTooltip(null);
+        }
+      }}
     >
       <div
         ref={hostRef}
-        className="absolute inset-0 [&>canvas]:block"
+        className="absolute inset-0 cursor-grab active:cursor-grabbing [&>canvas]:block [&>canvas]:touch-none [&>canvas]:overscroll-contain"
         role="img"
         aria-label="Civilization hex map"
       />
-      <div className="absolute top-3 right-3 flex flex-col gap-2">
-        <Button
-          type="button"
-          size="icon"
-          variant="secondary"
-          aria-label="Zoom in"
-          onClick={() => sceneRef.current?.viewport.zoomPercent(0.18, true)}
+      {currentPlayer && !state.access.isReadOnly ? (
+        <div className="absolute top-3 left-3 flex gap-2" data-map-overlay-control>
+          {BUILDING_PLACEMENT_CONTROLS.map((control) => {
+            const disabled = isInteractionDisabled || enabledTowerPlacements.length === 0;
+            return (
+              <Button
+                key={control.actionType}
+                type="button"
+                size="icon"
+                variant={placementMode === control.actionType ? "default" : "secondary"}
+                aria-label={control.label}
+                aria-pressed={placementMode === control.actionType}
+                disabled={disabled}
+                title={disabled ? towerPlacementUnavailableReason : control.label}
+                onClick={onToggleTowerPlacement}
+              >
+                <Image
+                  src={control.asset.path}
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="h-8 w-auto object-contain"
+                />
+              </Button>
+            );
+          })}
+        </div>
+      ) : null}
+      {structureTooltip ? (
+        <StructureTooltip
+          tooltip={structureTooltip}
+          state={state}
+          mapWidth={mapSize.width}
+          mapHeight={mapSize.height}
+        />
+      ) : null}
+      {playerStackTileId && stackedPlayers.length > 0 ? (
+        <div
+          className="absolute top-1/2 left-1/2 z-30 w-64 max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 border border-white/20 bg-slate-950/95 p-3 text-slate-100 shadow-xl"
+          data-map-overlay-control
+          role="dialog"
+          aria-label="Players on shared spawn"
         >
-          <PlusIcon className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          size="icon"
-          variant="secondary"
-          aria-label="Zoom out"
-          onClick={() => sceneRef.current?.viewport.zoomPercent(-0.18, true)}
-        >
-          <MinusIcon className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          size="icon"
-          variant="secondary"
-          aria-label="Center on current player"
-          disabled={!state.access.currentPlayerId}
-          onClick={centerCurrentPlayer}
-        >
-          <LocateFixedIcon className="size-4" />
-        </Button>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold">Players on this hex</p>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="size-7"
+              aria-label="Close player list"
+              onClick={() => setPlayerStackTileId(null)}
+            >
+              <XIcon className="size-4" />
+            </Button>
+          </div>
+          <div className="max-h-64 space-y-1 overflow-y-auto">
+            {stackedPlayers.map((player) => {
+              const team = state.teams.find((candidate) => candidate.id === player.teamId);
+              return (
+                <button
+                  key={player.id}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 border border-white/10 px-2 py-2 text-left text-xs hover:bg-white/10 disabled:opacity-50"
+                  disabled={isInteractionDisabled}
+                  onClick={() => {
+                    onSelectPlayer(player.id);
+                    setPlayerStackTileId(null);
+                  }}
+                >
+                  <span className="truncate">{player.username}</span>
+                  <span className="shrink-0 text-[10px] text-slate-400">{team?.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+      {placementTileId ? (
+        <div ref={placementPreviewRef} className="pointer-events-none absolute top-0 left-0 z-20">
+          <Image
+            src={CIVILIZATION_ASSETS["tower.active"].path}
+            alt="Defensive tower placement preview"
+            width={72}
+            height={72}
+            className="absolute h-18 w-auto -translate-x-1/2 -translate-y-1/2 object-contain opacity-60"
+          />
+          <div
+            className="pointer-events-auto absolute top-9 left-1/2 flex -translate-x-1/2 gap-1"
+            data-map-overlay-control
+          >
+            <Button
+              type="button"
+              size="icon"
+              className="size-7 bg-emerald-600 hover:bg-emerald-500"
+              aria-label="Confirm defensive tower construction"
+              disabled={isInteractionDisabled}
+              onClick={onConfirmPlacement}
+            >
+              <CheckIcon className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="destructive"
+              className="size-7"
+              aria-label="Choose another tower placement hex"
+              disabled={isInteractionDisabled}
+              onClick={onCancelPlacementPreview}
+            >
+              <XIcon className="size-4" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <div className="absolute top-3 right-3 flex items-start gap-2" data-map-overlay-control>
+        {currentTeam ? (
+          <dl className="grid gap-1 border border-white/20 bg-slate-950/85 px-2 py-1.5 text-[10px] text-slate-100 shadow-sm backdrop-blur-sm">
+            <div
+              className="flex items-center justify-between gap-2"
+              title="Current team gold"
+              aria-label={`Current team gold: ${formatNumber(currentTeam.goldAmount)}`}
+            >
+              <dt>
+                <CoinsIcon className="size-3.5 text-amber-300" aria-hidden="true" />
+              </dt>
+              <dd>{formatNumber(currentTeam.goldAmount)}</dd>
+            </div>
+            <div
+              className="flex items-center justify-between gap-2"
+              title="Current team score"
+              aria-label={`Current team score: ${formatNumber(currentTeam.estimatedScore)}`}
+            >
+              <dt>
+                <TrophyIcon className="size-3.5 text-violet-300" aria-hidden="true" />
+              </dt>
+              <dd>{formatNumber(currentTeam.estimatedScore)}</dd>
+            </div>
+          </dl>
+        ) : null}
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            size="icon"
+            variant="secondary"
+            aria-label="Zoom in"
+            disabled={isInteractionDisabled}
+            onClick={() => sceneRef.current?.viewport.zoomPercent(MAP_ZOOM_STEP, true)}
+          >
+            <PlusIcon className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="secondary"
+            aria-label="Zoom out"
+            disabled={isInteractionDisabled}
+            onClick={() => sceneRef.current?.viewport.zoomPercent(-MAP_ZOOM_STEP, true)}
+          >
+            <MinusIcon className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="secondary"
+            aria-label="Center on current player"
+            disabled={isInteractionDisabled || !state.access.currentPlayerId}
+            onClick={centerCurrentPlayer}
+          >
+            <LocateFixedIcon className="size-4" />
+          </Button>
+        </div>
       </div>
       <div className="pointer-events-none absolute bottom-3 left-3 rounded-sm border border-white/20 bg-slate-950/80 px-3 py-2 text-[10px] text-slate-200 backdrop-blur-sm">
-        Drag to pan · wheel or pinch to zoom
+        Left-drag to pan · wheel to zoom
       </div>
+      {selectedPlayerId === state.access.currentPlayerId ? (
+        <div className="pointer-events-none absolute right-3 bottom-3 grid gap-1 rounded-sm border border-white/20 bg-slate-950/80 px-3 py-2 text-[10px] text-slate-200 backdrop-blur-sm">
+          <span>
+            <span className="mr-1.5 inline-block size-2 bg-green-500" /> Move
+          </span>
+          <span>
+            <span className="mr-1.5 inline-block size-2 bg-red-500" /> Attack
+          </span>
+          <span>
+            <span className="mr-1.5 inline-block size-2 bg-amber-500" /> Capture
+          </span>
+          <span>
+            <span className="mr-1.5 inline-block size-2 bg-cyan-500" /> Build / repair / defend
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

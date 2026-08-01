@@ -416,7 +416,6 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
               value={map}
               teams={teams}
               settings={settings}
-              users={users}
               issues={mapIssues}
               disabled={!isEditable}
               onChange={(nextMap) =>

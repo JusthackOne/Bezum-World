@@ -1,9 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { ForbiddenException } from '@nestjs/common';
 import {
+  CivilizationBuildingStatus,
+  CivilizationBuildingType,
   CivilizationGameStatus,
   CivilizationTeamSide,
   CivilizationTerrainType,
+  CivilizationTowerStatus,
+  Prisma,
 } from '@prisma/client';
 
 import { CivilizationQueryService } from '../src/modules/civilization/civilization-query.service';
@@ -19,6 +23,7 @@ import {
 
 const GAME_ID = '00000000-0000-4000-8000-000000000001';
 const TEAM_A_ID = '00000000-0000-4000-8000-00000000000a';
+const TEAM_B_ID = '00000000-0000-4000-8000-00000000000b';
 const PLAYER_A_ID = '00000000-0000-4000-8000-0000000000a1';
 const USER_A_ID = '00000000-0000-4000-8000-0000000001a1';
 const FIXED_NOW = new Date('2026-08-09T12:00:00.000Z');
@@ -143,9 +148,7 @@ function createQueryState(status: CivilizationGameStatus): CivilizationStateReco
         updatedAt: FIXED_NOW,
       },
     ],
-    spawnPoints: [
-      { id: 'spawn-a', gameId: GAME_ID, teamId: TEAM_A_ID, tileId: 'tile-a', createdAt: FIXED_NOW },
-    ],
+    spawnPoint: { id: 'shared-spawn', gameId: GAME_ID, tileId: 'tile-a', createdAt: FIXED_NOW },
     buildings: [],
     towers: [],
     teamResources: [],
@@ -231,5 +234,204 @@ describe('Civilization query access', () => {
     expect(participant.access).toMatchObject({ isParticipant: true, isReadOnly: false });
     expect(spectator.access).toMatchObject({ isSpectator: true, isReadOnly: true });
     expect(spectator.availableActions).toEqual([]);
+  });
+
+  test('includes map coordinates for enabled building and tower interactions', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.buildings = [
+      {
+        id: 'building-neutral',
+        gameId: GAME_ID,
+        tileId: 'tile-a',
+        buildingType: CivilizationBuildingType.GOLD_BUILDING,
+        attributeKey: null,
+        ownerTeamId: null,
+        captureTeamId: null,
+        captureProgressUnits: 0,
+        captureRequiredUnits: 6,
+        incomePerHour: new Prisma.Decimal(25),
+        status: CivilizationBuildingStatus.ACTIVE,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    state.tiles.push({
+      id: 'tile-b',
+      gameId: GAME_ID,
+      q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_B_ID,
+      isConnected: false,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.towers = [
+      {
+        id: 'tower-b',
+        gameId: GAME_ID,
+        teamId: TEAM_B_ID,
+        tileId: 'tile-b',
+        status: CivilizationTowerStatus.DESTROYED,
+        workKind: null,
+        protectionRadius: 1,
+        constructionStartedAt: FIXED_NOW,
+        constructionCompletesAt: null,
+        destroyedAt: FIXED_NOW,
+        createdByPlayerId: null,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'CAPTURE_BUILDING',
+          buildingId: 'building-neutral',
+          targetCoordinate: { q: 0, r: 0 },
+          disabledReason: null,
+        }),
+        expect.objectContaining({
+          type: 'ATTACK_TOWER',
+          towerId: 'tower-b',
+          targetCoordinate: { q: 1, r: 0 },
+          disabledReason: null,
+        }),
+      ]),
+    );
+  });
+
+  test('returns every enabled tower placement coordinate for owned connected empty ground', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.tiles.push({
+      id: 'tile-a-adjacent',
+      gameId: GAME_ID,
+      q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_A_ID,
+      isConnected: true,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.teamResources = [
+      {
+        id: 'resource-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        goldAmount: new Prisma.Decimal(500),
+        goldIncomePerHour: new Prisma.Decimal(0),
+        lastSettledAt: FIXED_NOW,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(
+      response.availableActions
+        .filter((action) => action.type === 'BUILD_TOWER' && action.disabledReason === null)
+        .map((action) => action.targetCoordinate),
+    ).toEqual([{ q: 1, r: 0 }]);
+  });
+
+  test('offers adjacent enemy town-hall capture instead of movement', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.tiles.push({
+      id: 'town-hall-tile-b',
+      gameId: GAME_ID,
+      q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_B_ID,
+      isConnected: false,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.buildings = [
+      {
+        id: 'town-hall-b',
+        gameId: GAME_ID,
+        tileId: 'town-hall-tile-b',
+        buildingType: CivilizationBuildingType.TOWN_HALL,
+        attributeKey: null,
+        ownerTeamId: TEAM_B_ID,
+        captureTeamId: null,
+        captureProgressUnits: 0,
+        captureRequiredUnits: 16,
+        incomePerHour: new Prisma.Decimal(0),
+        status: CivilizationBuildingStatus.ACTIVE,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'CAPTURE_TOWN_HALL',
+          buildingId: 'town-hall-b',
+          targetCoordinate: { q: 1, r: 0 },
+          disabledReason: null,
+        }),
+      ]),
+    );
+    expect(
+      response.availableActions.some(
+        (action) => action.type === 'MOVE' && action.targetCoordinate?.q === 1,
+      ),
+    ).toBe(false);
+  });
+
+  test('offers adjacent resource-building capture instead of movement', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.tiles.push({
+      id: 'resource-building-tile',
+      gameId: GAME_ID,
+      q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_B_ID,
+      isConnected: false,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.buildings = [
+      {
+        id: 'resource-building-b',
+        gameId: GAME_ID,
+        tileId: 'resource-building-tile',
+        buildingType: CivilizationBuildingType.GOLD_BUILDING,
+        attributeKey: null,
+        ownerTeamId: TEAM_B_ID,
+        captureTeamId: null,
+        captureProgressUnits: 0,
+        captureRequiredUnits: 6,
+        incomePerHour: new Prisma.Decimal(25),
+        status: CivilizationBuildingStatus.ACTIVE,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'CAPTURE_BUILDING',
+          buildingId: 'resource-building-b',
+          targetCoordinate: { q: 1, r: 0 },
+          disabledReason: null,
+        }),
+      ]),
+    );
+    expect(
+      response.availableActions.some(
+        (action) => action.type === 'MOVE' && action.targetCoordinate?.q === 1,
+      ),
+    ).toBe(false);
   });
 });

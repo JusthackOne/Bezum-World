@@ -14,6 +14,7 @@ import { CivilizationLifecycleService } from '../src/modules/civilization/civili
 import { CivilizationQueryService } from '../src/modules/civilization/civilization-query.service';
 import { CivilizationRuntimeService } from '../src/modules/civilization/civilization-runtime.service';
 import { CivilizationScheduleService } from '../src/modules/civilization/civilization-schedule.service';
+import { defaultCivilizationSettings } from '../src/modules/civilization/domain';
 import {
   CivilizationRepository,
   type CivilizationEventInput,
@@ -60,7 +61,27 @@ function createLifecycleHarness(state: CivilizationStateRecord, now = NOW): Life
     async createEvent(input: CivilizationEventInput): Promise<void> {
       events.push(input);
     },
-    async updateGame(): Promise<void> {},
+    async updateGame(_gameId: string, data: Record<string, unknown>): Promise<void> {
+      if (data.status) state.status = data.status as CivilizationGameStatus;
+      state.stateVersion += 1;
+    },
+    async placeActivePlayersAtSharedSpawn(
+      _gameId: string,
+      spawnTileId: string,
+      actionPointUnits: number,
+      placementTime: Date,
+    ): Promise<{ count: number }> {
+      const activePlayers = state.players.filter((player) => player.isActive);
+      activePlayers.forEach((player) => {
+        player.initialTileId = spawnTileId;
+        player.spawnTileId = spawnTileId;
+        player.currentTileId = spawnTileId;
+        player.actionPointUnits = actionPointUnits;
+        player.lastActionPointUpdateAt = placementTime;
+      });
+      return { count: activePlayers.length };
+    },
+    async createSnapshot(): Promise<void> {},
   };
   const completion = {
     async completeGame(
@@ -77,13 +98,21 @@ function createLifecycleHarness(state: CivilizationStateRecord, now = NOW): Life
       return new Date(now);
     },
   };
+  const connectivity = {
+    async recalculate(): Promise<CivilizationStateRecord> {
+      return state;
+    },
+  };
+  const schedule = {
+    async scheduleTower(): Promise<void> {},
+  };
 
   const service = new CivilizationLifecycleService(
     repository as unknown as CivilizationRepository,
-    {} as CivilizationConnectivityService,
+    connectivity as unknown as CivilizationConnectivityService,
     completion as unknown as CivilizationCompletionService,
     {} as CivilizationQueryService,
-    {} as CivilizationScheduleService,
+    schedule as unknown as CivilizationScheduleService,
     runtime as unknown as CivilizationRuntimeService,
   );
 
@@ -97,6 +126,100 @@ function createLifecycleHarness(state: CivilizationStateRecord, now = NOW): Life
     },
   };
 }
+
+function createScheduledLifecycleState(): CivilizationStateRecord {
+  const state = createLifecycleState();
+  state.status = CivilizationGameStatus.SCHEDULED;
+  state.name = 'Shared spawn activation fixture';
+  state.startAt = NOW;
+  state.endAt = new Date('2026-08-08T12:00:00.000Z');
+  state.completedAt = null;
+  state.winnerTeamId = null;
+  state.completionReason = null;
+  state.settingsJson = structuredClone(defaultCivilizationSettings);
+  state.createdByAdminId = 'admin-1';
+  state.stateVersion = 0;
+  state.createdAt = NOW;
+  state.updatedAt = NOW;
+  state.spawnPoint = {
+    id: 'shared-spawn',
+    gameId: GAME_ID,
+    tileId: TILE_ID,
+    createdAt: NOW,
+  };
+  state.towers = [];
+  state.buildings = [];
+  state.teamResources = [];
+  state.attributeResources = [];
+  state.teams = [
+    {
+      id: TEAM_A_ID,
+      gameId: GAME_ID,
+      name: 'Amber',
+      color: '#f59e0b',
+      visualIdentifier: 'amber',
+      side: 'TEAM_A',
+      townHallTileId: null,
+      finalScore: null,
+      createdAt: NOW,
+    },
+  ] as CivilizationStateRecord['teams'];
+  state.players = ['player-one', 'player-two'].map((id, index) => ({
+    id,
+    gameId: GAME_ID,
+    teamId: TEAM_A_ID,
+    userId: `user-${index}`,
+    initialTileId: `legacy-${index}`,
+    spawnTileId: `legacy-${index}`,
+    currentTileId: `legacy-${index}`,
+    actionPointUnits: 0,
+    lastActionPointUpdateAt: new Date('2026-07-31T00:00:00.000Z'),
+    joinedAt: NOW,
+    isActive: true,
+    createdAt: NOW,
+    updatedAt: NOW,
+    user: { id: `user-${index}`, username: `player-${index}`, avatarUrl: null },
+  })) as CivilizationStateRecord['players'];
+  return state;
+}
+
+describe('Civilization game activation', () => {
+  test('atomically places every active participant on the shared spawn', async () => {
+    const state = createScheduledLifecycleState();
+    const harness = createLifecycleHarness(state);
+
+    await harness.service.activateGame(GAME_ID);
+
+    expect(state.status).toBe(CivilizationGameStatus.ACTIVE);
+    expect(
+      state.players.map((player) => ({
+        initialTileId: player.initialTileId,
+        spawnTileId: player.spawnTileId,
+        currentTileId: player.currentTileId,
+        actionPointUnits: player.actionPointUnits,
+      })),
+    ).toEqual([
+      {
+        initialTileId: TILE_ID,
+        spawnTileId: TILE_ID,
+        currentTileId: TILE_ID,
+        actionPointUnits: defaultCivilizationSettings.actionPoints.initialUnits,
+      },
+      {
+        initialTileId: TILE_ID,
+        spawnTileId: TILE_ID,
+        currentTileId: TILE_ID,
+        actionPointUnits: defaultCivilizationSettings.actionPoints.initialUnits,
+      },
+    ]);
+    expect(harness.events).toContainEqual(
+      expect.objectContaining({
+        eventType: CivilizationEventType.GAME_STARTED,
+        payload: expect.objectContaining({ sharedSpawnTileId: TILE_ID, placedPlayerCount: 2 }),
+      }),
+    );
+  });
+});
 
 function createLifecycleState(
   towerOwnerTeamId: string | null = TEAM_A_ID,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock3Icon, MapPinIcon, ShieldIcon, ZapIcon } from "lucide-react";
+import { Clock3Icon, ShieldIcon, ZapIcon } from "lucide-react";
 
 import type { CivilizationGameState, CivilizationPlayer } from "@/entities/civilization";
 import { AvatarImage } from "@/shared/ui";
@@ -31,8 +31,6 @@ export function CivilizationPlayerPanel({
   }
 
   const team = state.teams.find((item) => item.id === player.teamId);
-  const currentTile = state.tiles.find((tile) => tile.id === player.currentTileId);
-  const spawnTile = state.tiles.find((tile) => tile.id === player.spawnTileId);
   const towerActions =
     player.statistics.towerConstructionsStarted +
     player.statistics.towersDestroyed +
@@ -68,15 +66,6 @@ export function CivilizationPlayerPanel({
             <Clock3Icon className="size-3" /> Next point
           </span>
           <span>{nextPoint}</span>
-        </div>
-        <div className="flex items-center justify-between gap-2 border p-2">
-          <span className="flex items-center gap-1 text-muted-foreground">
-            <MapPinIcon className="size-3" /> Current / spawn
-          </span>
-          <span>
-            {currentTile ? `${currentTile.coordinate.q},${currentTile.coordinate.r}` : "—"} /{" "}
-            {spawnTile ? `${spawnTile.coordinate.q},${spawnTile.coordinate.r}` : "—"}
-          </span>
         </div>
         <div className="flex items-center justify-between gap-2 border p-2">
           <span className="flex items-center gap-1 text-muted-foreground">

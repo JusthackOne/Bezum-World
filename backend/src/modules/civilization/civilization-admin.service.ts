@@ -21,7 +21,7 @@ import { CivilizationRuntimeService } from './civilization-runtime.service';
 import { CivilizationScheduleService } from './civilization-schedule.service';
 import { serializeCivilizationSnapshot } from './civilization-snapshot';
 import { CivilizationSettlementService } from './civilization-settlement.service';
-import { defaultCivilizationSettings, hexDistance, parseCivilizationSettings } from './domain';
+import { defaultCivilizationSettings, parseCivilizationSettings } from './domain';
 import type {
   AddActiveCivilizationPlayerDto,
   CreateCivilizationGameDto,
@@ -432,40 +432,25 @@ export class CivilizationAdminService {
         );
       }
       const team = current.teams.find((candidate) => candidate.id === input.teamId);
-      const spawn = current.spawnPoints.find(
-        (candidate) => candidate.teamId === input.teamId && candidate.tileId === input.spawnTileId,
-      );
-      const tile = current.tiles.find((candidate) => candidate.id === input.spawnTileId);
+      const spawn = current.spawnPoint;
+      const tile = spawn
+        ? current.tiles.find((candidate) => candidate.id === spawn.tileId)
+        : undefined;
       if (!team || !spawn || !tile || tile.terrainType === CivilizationTerrainType.MOUNTAIN) {
         throw new CivilizationException(
           CIVILIZATION_ERROR_CODES.INVALID_GAME_CONFIGURATION,
-          'The selected team spawn is invalid',
+          'The shared game spawn is invalid',
         );
       }
       if (
-        current.players.some(
-          (player) =>
-            player.isActive && player.currentTileId === tile.id && player.teamId !== input.teamId,
+        current.buildings.some((building) => building.tileId === tile.id) ||
+        current.towers.some(
+          (tower) => tower.tileId === tile.id && tower.status !== CivilizationTowerStatus.CANCELLED,
         )
       ) {
         throw new CivilizationException(
-          CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY,
-          'The selected spawn is occupied by an active enemy player',
-        );
-      }
-      const protectedByEnemyTower = current.towers.some((tower) => {
-        if (tower.teamId === input.teamId || tower.status !== CivilizationTowerStatus.ACTIVE) {
-          return false;
-        }
-        const towerTile = current.tiles.find((candidate) => candidate.id === tower.tileId);
-        return Boolean(
-          towerTile?.isConnected && hexDistance(tile, towerTile) <= tower.protectionRadius,
-        );
-      });
-      if (protectedByEnemyTower) {
-        throw new CivilizationException(
-          CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER,
-          'The selected spawn is protected by an active connected enemy tower',
+          CIVILIZATION_ERROR_CODES.INVALID_GAME_CONFIGURATION,
+          'The shared game spawn must remain free of structures',
         );
       }
       await this.assertAccountsExist([input.userId], tx);
@@ -475,7 +460,7 @@ export class CivilizationAdminService {
           gameId,
           teamId: input.teamId,
           userId: input.userId,
-          spawnTileId: input.spawnTileId,
+          spawnTileId: tile.id,
           actionPointUnits: settings.actionPoints.initialUnits,
           now,
         },
@@ -486,7 +471,7 @@ export class CivilizationAdminService {
           gameId,
           teamId: input.teamId,
           actorPlayerId: player.id,
-          tileId: input.spawnTileId,
+          tileId: tile.id,
           eventType: CivilizationEventType.PLAYER_ADDED_AFTER_START,
           payload: {
             userId: input.userId,
@@ -507,7 +492,7 @@ export class CivilizationAdminService {
             playerId: player.id,
             userId: input.userId,
             teamId: input.teamId,
-            spawnTileId: input.spawnTileId,
+            spawnTileId: tile.id,
           },
           metadata: { idempotencyKey, requestHash, result: response },
         },
@@ -873,17 +858,10 @@ export class CivilizationAdminService {
           terrainType: tile.terrainType,
           ownerTeamSide: tile.ownerTeamId ? (teamById.get(tile.ownerTeamId)?.side ?? null) : null,
         })),
-        spawnPoints: state.spawnPoints.map((spawn) => {
-          const tile = tileById.get(spawn.tileId)!;
-          return {
-            id: spawn.id,
-            teamId: spawn.teamId,
-            tileId: tile.id,
-            q: tile.q,
-            r: tile.r,
-            teamSide: teamById.get(spawn.teamId)!.side,
-          };
-        }),
+        spawn: (() => {
+          const tile = tileById.get(state.spawnPoint!.tileId)!;
+          return { q: tile.q, r: tile.r };
+        })(),
         buildings: state.buildings.map((building) => {
           const tile = tileById.get(building.tileId)!;
           return {
@@ -897,17 +875,6 @@ export class CivilizationAdminService {
               : null,
             captureRequiredUnits: building.captureRequiredUnits,
             incomePerHour: building.incomePerHour.toString(),
-          };
-        }),
-        playerPlacements: state.players.map((player) => {
-          const tile = tileById.get(player.initialTileId)!;
-          const spawn = tileById.get(player.spawnTileId)!;
-          return {
-            userId: player.userId,
-            teamSide: teamById.get(player.teamId)!.side,
-            q: tile.q,
-            r: tile.r,
-            spawn: { q: spawn.q, r: spawn.r },
           };
         }),
         towers: state.towers.map((tower) => {

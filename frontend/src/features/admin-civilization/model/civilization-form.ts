@@ -6,7 +6,6 @@ import {
   type CivilizationAdminGameInput,
   type CivilizationAdminMapInput,
   type CivilizationSettings,
-  type CivilizationTeamSide,
   type CivilizationValidationIssue,
   type HexCoordinate,
 } from "@/entities/civilization";
@@ -56,7 +55,7 @@ export const civilizationGameFormSchema = z
           ownerTeamSide: z.enum(["TEAM_A", "TEAM_B"]).nullable(),
         }),
       ),
-      spawnPoints: z.array(coordinateSchema.extend({ teamSide: z.enum(["TEAM_A", "TEAM_B"]) })),
+      spawn: coordinateSchema,
       buildings: z.array(
         coordinateSchema.extend({
           type: z.enum(["TOWN_HALL", "GOLD_BUILDING", "ATTRIBUTE_BUILDING"]),
@@ -64,13 +63,6 @@ export const civilizationGameFormSchema = z
           attributeKey: z.enum(CIVILIZATION_ATTRIBUTE_KEYS).nullable(),
           incomePerHour: nonNegativeDecimal,
           captureRequiredUnits: z.number().int().positive(),
-        }),
-      ),
-      playerPlacements: z.array(
-        coordinateSchema.extend({
-          userId: z.string().min(1),
-          teamSide: z.enum(["TEAM_A", "TEAM_B"]),
-          spawn: coordinateSchema,
         }),
       ),
       towers: z.array(
@@ -252,10 +244,7 @@ export function createDefaultCivilizationMap(): CivilizationAdminMapInput {
   }));
   return {
     tiles,
-    spawnPoints: [
-      { q: -2, r: 0, teamSide: "TEAM_A" },
-      { q: 2, r: 0, teamSide: "TEAM_B" },
-    ],
+    spawn: { q: 0, r: 0 },
     buildings: [
       {
         q: -3,
@@ -276,7 +265,6 @@ export function createDefaultCivilizationMap(): CivilizationAdminMapInput {
         captureRequiredUnits: 16,
       },
     ],
-    playerPlacements: [],
     towers: [],
   };
 }
@@ -348,13 +336,13 @@ export function validateCivilizationMap(
     }
   });
 
-  const teamSideByUserId = new Map<string, CivilizationTeamSide>();
+  const assignedUserIds = new Set<string>();
   teams.forEach((team) => {
     team.playerIds.forEach((userId) => {
-      if (teamSideByUserId.has(userId)) {
+      if (assignedUserIds.has(userId)) {
         issues.push(issue("PLAYER_ASSIGNED_TWICE", `Player ${userId} belongs to both teams.`));
       }
-      teamSideByUserId.set(userId, team.side);
+      assignedUserIds.add(userId);
     });
   });
 
@@ -364,9 +352,6 @@ export function validateCivilizationMap(
     );
     if (halls.length !== 1) {
       issues.push(issue("TOWN_HALL_COUNT", `${side} must have exactly one town hall.`));
-    }
-    if (!map.spawnPoints.some((spawn) => spawn.teamSide === side)) {
-      issues.push(issue("SPAWN_REQUIRED", `${side} must have at least one spawn point.`));
     }
   });
   if (map.buildings.filter((building) => building.type === "TOWN_HALL").length !== 2) {
@@ -420,17 +405,11 @@ export function validateCivilizationMap(
       );
     }
   });
-  const spawnSideByCoordinate = new Map<string, CivilizationTeamSide>();
-  map.spawnPoints.forEach((spawn) => {
-    if (!validGround(spawn)) {
-      issues.push(issue("INVALID_SPAWN_TILE", "A spawn must be on playable ground.", spawn));
-    }
-    const key = coordinateKey(spawn);
-    if (spawnSideByCoordinate.has(key)) {
-      issues.push(issue("SPAWN_COLLISION", "Spawn points must use distinct hexes.", spawn));
-    }
-    spawnSideByCoordinate.set(key, spawn.teamSide);
-  });
+  if (!validGround(map.spawn)) {
+    issues.push(
+      issue("INVALID_SPAWN_TILE", "The shared spawn must be on playable ground.", map.spawn),
+    );
+  }
   map.towers.forEach((tower, index) => {
     if (!validGround(tower)) {
       issues.push(issue("INVALID_TOWER_TILE", "A tower must be on playable ground.", tower));
@@ -460,66 +439,8 @@ export function validateCivilizationMap(
     }
   });
 
-  const expectedPlayers = new Set(teamSideByUserId.keys());
-  const placedPlayers = new Set(map.playerPlacements.map((placement) => placement.userId));
-  expectedPlayers.forEach((userId) => {
-    if (!placedPlayers.has(userId)) {
-      issues.push(issue("PLAYER_NOT_PLACED", `Assigned player ${userId} has no initial tile.`));
-    }
-  });
-  const seenPlacedUsers = new Set<string>();
-  const placementSideByCoordinate = new Map<string, CivilizationTeamSide>();
-  map.playerPlacements.forEach((placement) => {
-    if (!expectedPlayers.has(placement.userId)) {
-      issues.push(
-        issue("UNASSIGNED_PLAYER_PLACED", "A placed player is not assigned to a team.", placement),
-      );
-    }
-    if (teamSideByUserId.get(placement.userId) !== placement.teamSide) {
-      issues.push(
-        issue(
-          "PLAYER_TEAM_MISMATCH",
-          "A player's placement must use the assigned team.",
-          placement,
-        ),
-      );
-    }
-    if (seenPlacedUsers.has(placement.userId)) {
-      issues.push(
-        issue("DUPLICATE_PLAYER_PLACEMENT", "Each player may be placed only once.", placement),
-      );
-    }
-    seenPlacedUsers.add(placement.userId);
-    if (!validGround(placement)) {
-      issues.push(
-        issue("INVALID_PLAYER_TILE", "A player must be placed on playable ground.", placement),
-      );
-    }
-    if (spawnSideByCoordinate.get(coordinateKey(placement.spawn)) !== placement.teamSide) {
-      issues.push(
-        issue(
-          "INVALID_PLAYER_SPAWN",
-          "A player's spawn must reference a configured spawn for the same team.",
-          placement,
-        ),
-      );
-    }
-    const placementKey = coordinateKey(placement);
-    const occupyingSide = placementSideByCoordinate.get(placementKey);
-    if (occupyingSide && occupyingSide !== placement.teamSide) {
-      issues.push(
-        issue(
-          "OPPOSING_PLAYER_COLLISION",
-          "Opposing players cannot start on the same hex.",
-          placement,
-        ),
-      );
-    }
-    placementSideByCoordinate.set(placementKey, placement.teamSide);
-  });
-
   const objectCoordinates = new Map<string, number>();
-  [...map.buildings, ...map.spawnPoints, ...map.towers].forEach((object) => {
+  [...map.buildings, map.spawn, ...map.towers].forEach((object) => {
     const key = coordinateKey(object);
     objectCoordinates.set(key, (objectCoordinates.get(key) ?? 0) + 1);
   });

@@ -120,7 +120,6 @@ export interface CivilizationTile {
 
 export interface CivilizationSpawnPoint {
   id: string;
-  teamId: string;
   tileId: string;
 }
 
@@ -145,6 +144,7 @@ export interface CivilizationTower {
   workKind: CivilizationTowerWorkKind | null;
   protectionRadius: number;
   isConnected: boolean;
+  constructionStartedAt: string;
   constructionCompletesAt: string | null;
   destroyedAt: string | null;
 }
@@ -230,7 +230,7 @@ export interface CivilizationGameState {
   game: CivilizationGameSummary & { settings: CivilizationSettings };
   teams: CivilizationTeamState[];
   tiles: CivilizationTile[];
-  spawnPoints: CivilizationSpawnPoint[];
+  spawnPoint: CivilizationSpawnPoint;
   buildings: CivilizationBuilding[];
   towers: CivilizationTower[];
   players: CivilizationPlayer[];
@@ -296,12 +296,7 @@ export interface CivilizationAdminTileInput extends HexCoordinate {
   ownerTeamSide: CivilizationTeamSide | null;
 }
 
-export interface CivilizationAdminSpawnInput extends HexCoordinate {
-  id?: string;
-  teamId?: string;
-  tileId?: string;
-  teamSide: CivilizationTeamSide;
-}
+export type CivilizationAdminSpawnInput = HexCoordinate;
 
 export interface CivilizationAdminBuildingInput extends HexCoordinate {
   id?: string;
@@ -312,12 +307,6 @@ export interface CivilizationAdminBuildingInput extends HexCoordinate {
   captureRequiredUnits: number;
 }
 
-export interface CivilizationAdminPlayerPlacementInput extends HexCoordinate {
-  userId: string;
-  teamSide: CivilizationTeamSide;
-  spawn: HexCoordinate;
-}
-
 export interface CivilizationAdminTowerInput extends HexCoordinate {
   teamSide: CivilizationTeamSide;
   status: Exclude<CivilizationTowerStatus, "CANCELLED">;
@@ -326,9 +315,8 @@ export interface CivilizationAdminTowerInput extends HexCoordinate {
 
 export interface CivilizationAdminMapInput {
   tiles: CivilizationAdminTileInput[];
-  spawnPoints: CivilizationAdminSpawnInput[];
+  spawn: CivilizationAdminSpawnInput;
   buildings: CivilizationAdminBuildingInput[];
-  playerPlacements: CivilizationAdminPlayerPlacementInput[];
   towers: CivilizationAdminTowerInput[];
 }
 
@@ -370,5 +358,4 @@ export interface CivilizationAdminAuditEntry {
 export interface AddCivilizationPlayerInput {
   userId: string;
   teamId: string;
-  spawnTileId: string;
 }

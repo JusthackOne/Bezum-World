@@ -1,5 +1,44 @@
 # Civilization
 
+## Client map interaction
+
+Players inspect the game board by clicking or tapping hexes and character tokens directly. Legal
+actions remain hidden until the current user's character is selected. The map then uses separate
+movement, attack, capture, and contribution colors for every enabled server-provided action target.
+Clicking a target executes its sole interaction immediately; a structure interaction takes precedence
+over movement when both refer to the same hex. Clicking a specifically targeted enemy character
+executes that character's attack action. Selecting the current character again cancels action mode.
+The client locks map interaction while a request is pending, clears all selection after success, and
+keeps the original server state after failure. Dragging pans the map, while the mouse wheel or a pinch
+gesture changes its zoom level.
+
+The upper-left building palette exposes defensive-tower placement and can be extended with additional
+server action types. Placement mode highlights every enabled `BUILD_TOWER` coordinate returned by the
+server. Selecting one shows a translucent preview with confirm and choose-another controls; no request
+is sent until confirmation. The palette toggle, an invalid/background tap, Escape, or successful
+construction exits placement mode. The overlay resource block beside the zoom controls shows the
+current participant team's projected gold and estimated score directly from the latest game state.
+Neutral ground uses a gray base so team territory and action overlays remain distinct.
+
+Every game has exactly one shared spawn hex. All active participants are placed there atomically
+when the game activates, players added later join there, and defeated players return there even when
+it is occupied. The spawn permits unlimited player stacking; regular hexes permit only one active
+player. The map renders up to six compact selectable avatars on a stacked hex and exposes additional
+players through a `+N` list.
+
+The map is the only movement input surface. The client does not render separate hex/player selectors,
+a selection details card, current/spawn coordinates in the player summary, or an event history
+section. Server-side action events remain authoritative but are not fetched as a separate client feed.
+
+Resource buildings and towers use their configured Civilization artwork at a prominent scale while
+retaining a hit area limited to their own hex. Hovering a structure shows its available details on
+desktop. On touch devices, tapping a structure pins that tooltip until another structure or the map
+outside it is tapped. Actionable fields precede descriptive fields: capturable buildings show current
+and required capture progress, capturing team, derived capture status, and owner; timed tower build
+or repair work shows elapsed and required minutes, status, and owner. Tooltip fields are derived from
+the server state. Civilization town halls use capture progress as their defeat mechanic and towers use
+discrete active/destroyed states, so the current model has no structure HP value to display or mutate.
+
 Civilization is an asynchronous, server-authoritative strategy mode played by two administrator-configured teams on an axial hex map. Players may participate at different times; persisted database state is authoritative and the PixiJS client is only a renderer and input surface.
 
 ## Architecture
@@ -11,7 +50,7 @@ Civilization is an asynchronous, server-authoritative strategy mode played by tw
 | Civilization services                      | Administration, player actions, lazy settlement, connectivity/rate recalculation, completion, rewards, and read models            |
 | Civilization BullMQ processor              | Delayed activation, deadline completion, tower completion, startup recovery, and periodic reconciliation                          |
 | `frontend/src/entities/civilization`       | Shared response types, stable asset keys, and display-only map types                                                              |
-| `frontend/src/features/civilization`       | Current game, actions, events, history, spectator mode, and React Query integration                                               |
+| `frontend/src/features/civilization`       | Current game, actions, game history, spectator mode, and React Query integration                                                  |
 | `frontend/src/features/admin-civilization` | Draft configuration, validation, lifecycle controls, audit history, and the map editor                                            |
 | Civilization Pixi components               | Incremental layered rendering, selection, pan/zoom, and editor input; no authoritative rules                                      |
 
@@ -38,7 +77,7 @@ The Prisma schema stores normalized current state rather than reconstructing it 
 - `CivilizationTeam`: the two sides, visual identity, town hall, and final score.
 - `CivilizationGamePlayer`: team assignment, initial/spawn/current tiles, AP units, and join state; current display data comes from the related account.
 - `CivilizationTile`: axial `q/r`, terrain, current owner, and productive-connectivity flag.
-- `CivilizationSpawnPoint`: configured valid respawn/add-player positions.
+- `CivilizationSpawnPoint`: the game's single shared activation, join, and respawn position.
 - `CivilizationBuilding`: town halls and gold/attribute buildings, ownership, capture state, income, and progress in half units.
 - `CivilizationTower`: construction/repair work kind, construction/active/destroyed/cancelled state, timestamps, and protection radius.
 - `CivilizationTeamResource`: precise team gold, current rate, and last settlement time.
@@ -49,7 +88,7 @@ The Prisma schema stores normalized current state rather than reconstructing it 
 - `CivilizationAdminAuditLog`: administrator lifecycle, assignment, and correction audit.
 - `CivilizationGameSnapshot`: immutable started/final audit snapshots; history reads the frozen normalized state.
 
-Resource columns use PostgreSQL `DECIMAL`; timestamps use `TIMESTAMPTZ(3)`. Coordinates are unique per game. Player assignment, team side, resources, spawn points, action idempotency, and reward rows have database uniqueness guarantees.
+Resource columns use PostgreSQL `DECIMAL`; timestamps use `TIMESTAMPTZ(3)`. Coordinates are unique per game. Player assignment, team side, resources, the single spawn row, action idempotency, and reward rows have database uniqueness guarantees.
 
 Scheduled and active date ranges use a half-open PostgreSQL range (`[startAt, endAt)`) under a GiST exclusion constraint. A partial unique index separately enforces at most one `ACTIVE` game. This means one game may start exactly when another ends, but two effective ranges cannot overlap even under concurrent administrator requests.
 
@@ -88,7 +127,15 @@ All AP and capture values are persisted as integer half units. Decimal strings a
 
 AP regeneration is lazy. Before any action the server settles the acting player from `lastActionPointUpdateAt`, caps the result at the configured maximum, and retains only the unconsumed regeneration remainder while below the cap. No per-player jobs are created.
 
-The server validates adjacency, AP cost, ownership, occupancy, protection, targets, capture state, and game lifecycle inside the same transaction that deducts AP. The client may display server-provided legal actions but cannot submit a coordinate-derived cost or outcome.
+The server validates adjacency, AP cost, gold cost, ownership, team restrictions, occupancy,
+protection, targets, capture state, and game lifecycle inside the same transaction that deducts AP.
+Every available action includes its display target coordinate, but the client submits only the action's
+target identifier or coordinate and never submits a derived cost or outcome.
+
+A move can finish only on an empty regular ground hex, except that any number of players may occupy
+the shared spawn. Building and non-cancelled tower hexes are never movement destinations. Their
+capture, attack, repair, defense, or construction-contribution actions are performed from the
+actor's valid adjacent/current position without moving the actor onto the structure.
 
 ## Income and connectivity
 
@@ -117,11 +164,20 @@ Combat uses a cryptographically secure server roll. The integer roll, configured
 
 ## Towers and town halls
 
-Tower centers must be farther apart than the sum of their protection radii. For two radius-1 towers the minimum center distance is 3 hexes. Construction creates an `UNDER_CONSTRUCTION` row and delayed completion job. Database time/status checks make completion idempotent. Capturing the construction tile cancels it without a refund.
+Tower centers must be farther apart than the sum of their protection radii. For two radius-1 towers
+the minimum center distance is 3 hexes. Construction may target any empty, connected, owned ground
+tile returned by the legal-action read model; the mutation repeats ownership, connectivity, structure
+occupancy, player occupancy, shared-spawn exclusion, radius-overlap, and team-gold validation in its transaction. Construction creates an
+`UNDER_CONSTRUCTION` row and delayed completion job. Database time/status checks make completion
+idempotent. Players cannot move onto its construction tile.
 
 Only active, connected towers protect their radius. One valid adjacent tower attack spends the configured AP and makes the tower `DESTROYED`. A destroyed tower may be repaired only when its tile remains owned and connected, no enemy occupies it, the actor is in a valid position, and the team can pay both costs. Repair duration is configurable: zero restores it immediately, while a positive duration records `REPAIR` work and completes through the same idempotent tower scheduler.
 
-Town-hall progress is stored in half units. Capture completes the game immediately; deadline completion uses weighted remaining resources and permits a draw. Defense spends locked team gold and AP before removing the configured progress, never below zero.
+Town-hall progress is stored in half units. An attacker may contribute from the Town Hall hex or an
+adjacent hex; an adjacent enemy Town Hall is therefore exposed as `CAPTURE_TOWN_HALL`, not `MOVE`.
+Capture completes the game immediately; deadline completion uses weighted remaining resources and
+permits a draw. Defense spends locked team gold and AP before removing the configured progress, never
+below zero.
 
 ## Completion and rewards
 
@@ -160,15 +216,25 @@ Constraints: original isolated opaque object; uniform removable background; cris
 
 Subject prompts were: fortified crystal town hall; royal mint/mine; strength forge; charisma pavilion; endurance bastion; intelligence observatory; crystal defensive tower; matched under-construction and destroyed tower edits; teleport spawn dais; jagged impassable mountain; and dormant neutral resource pedestal. Chroma was removed locally, images were resized with containment to 512×512, and all four corner alpha values were validated as transparent.
 
+## Player map controls
+
+On desktop, left-button drag pans the map and the mouse wheel zooms around the pointer without scrolling the surrounding page. The map is fitted and centered on its world bounds when it first renders, while later container resizes preserve the current camera center. The on-map zoom controls change scale around the current camera center, and the locate control moves the camera to the current player.
+
+Action responses update the authoritative React Query state immediately. Current-game, state, and event refreshes continue in the background and do not keep action controls in a pending state after the action request has settled.
+
 ## Administrator workflow
 
 1. Open **Admin → Civilization** and create a draft.
 2. Configure name, half-open schedule, two teams, colors/identifiers, and all balance settings.
 3. Assign players to exactly one team.
-4. Use the visual map editor to create playable axial cells within axial radius 25, paint ground/mountains/ownership, place one town hall and at least one spawn per team, configure resource-building ownership and income, and place every initial player.
+4. Use the visual map editor to create playable axial cells within axial radius 25, paint ground/mountains/ownership, place one town hall per team and one shared spawn, and configure resource-building ownership and income. Initial player placement is automatic.
 5. Use undo/redo and preview, then run server validation.
 6. Resolve every reported map/settings error and schedule the game. Database overlap protection is rechecked transactionally.
-7. To add a player after activation, open the active game, choose team and a valid configured team spawn, and submit the audited add-player operation. The player receives configured initial AP.
+7. To add a player after activation, open the active game, choose a team, and submit the audited add-player operation. The player receives configured initial AP on the shared spawn.
+
+The editor applies the selected tool directly through map clicks. Pointer conversion uses Pixi's logical screen size, so high-DPI displays select the hex under the cursor. **Place selected player** only accepts existing playable, non-mountain cells and never creates a new cell implicitly. **Move object** uses two clicks: select a placed object, then select a playable non-mountain destination; an invalid destination keeps the source selected. On desktop, left-button drag pans and the mouse wheel zooms without scrolling the page. **Clear map** requires confirmation, removes all playable cells and placed objects, and records the change in editor history so it can be undone before leaving the form.
+
+Administrator mutations take their PostgreSQL advisory lock through an execute-only raw query. The lock function returns PostgreSQL `void`, which must not be deserialized as a result column by Prisma. Unexpected HTTP exceptions are logged server-side with their error name, code, message, and stack while the API continues to return the standard safe 500 response.
 
 Draft/scheduled configuration may be edited before start. Active-state corrections require an explicit audited administrator operation. Cancellation and force completion require confirmation.
 

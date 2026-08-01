@@ -1,9 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Application, Container, Graphics, Sprite, Text } from "pixi.js";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { Application, Container, Graphics, Polygon, Sprite } from "pixi.js";
 import { Viewport } from "pixi-viewport";
-import { CopyIcon, EyeIcon, EyeOffIcon, Redo2Icon, RotateCcwIcon, Undo2Icon } from "lucide-react";
+import {
+  CopyIcon,
+  EyeIcon,
+  EyeOffIcon,
+  Redo2Icon,
+  RotateCcwIcon,
+  Trash2Icon,
+  Undo2Icon,
+} from "lucide-react";
 
 import {
   CIVILIZATION_ASSETS,
@@ -24,6 +38,16 @@ import {
 } from "@/features/civilization/model";
 import { cn } from "@/shared/lib/utils";
 import { clearPixiContainer, safelyLoadPixiTexture } from "@/shared/lib/pixi";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
 import { Button } from "@/shared/ui/8bit";
 
 type EditorTool =
@@ -35,11 +59,9 @@ type EditorTool =
   | "OWNER_NEUTRAL"
   | "TOWN_HALL_TEAM_A"
   | "TOWN_HALL_TEAM_B"
-  | "SPAWN_TEAM_A"
-  | "SPAWN_TEAM_B"
+  | "SPAWN"
   | "GOLD_BUILDING"
   | `ATTRIBUTE_${Uppercase<CivilizationAttributeKey>}`
-  | "PLAYER"
   | "TOWER_TEAM_A"
   | "TOWER_TEAM_B"
   | "MOVE"
@@ -59,7 +81,6 @@ interface CivilizationMapEditorProps {
   value: CivilizationAdminMapInput;
   teams: CivilizationAdminGameInput["teams"];
   settings: CivilizationSettings;
-  users: Array<{ id: string; username: string; avatarUrl: string | null }>;
   issues: CivilizationValidationIssue[];
   disabled?: boolean;
   onChange: (value: CivilizationAdminMapInput) => void;
@@ -74,14 +95,12 @@ const toolOptions: Array<{ value: EditorTool; label: string }> = [
   { value: "OWNER_NEUTRAL", label: "Ownership: neutral" },
   { value: "TOWN_HALL_TEAM_A", label: "Town hall: team A" },
   { value: "TOWN_HALL_TEAM_B", label: "Town hall: team B" },
-  { value: "SPAWN_TEAM_A", label: "Spawn: team A" },
-  { value: "SPAWN_TEAM_B", label: "Spawn: team B" },
+  { value: "SPAWN", label: "Shared player spawn" },
   { value: "GOLD_BUILDING", label: "Gold building" },
   { value: "ATTRIBUTE_STRENGTH", label: "Strength building" },
   { value: "ATTRIBUTE_CHARISMA", label: "Charisma building" },
   { value: "ATTRIBUTE_ENDURANCE", label: "Endurance building" },
   { value: "ATTRIBUTE_INTELLIGENCE", label: "Intelligence building" },
-  { value: "PLAYER", label: "Place selected player" },
   { value: "TOWER_TEAM_A", label: "Tower: team A" },
   { value: "TOWER_TEAM_B", label: "Tower: team B" },
   { value: "MOVE", label: "Move object (two clicks)" },
@@ -114,18 +133,22 @@ function ensureGround(map: CivilizationAdminMapInput, coordinate: HexCoordinate)
 function removeObjectsAt(map: CivilizationAdminMapInput, coordinate: HexCoordinate): void {
   const key = coordinateKey(coordinate);
   map.buildings = map.buildings.filter((item) => coordinateKey(item) !== key);
-  map.spawnPoints = map.spawnPoints.filter((item) => coordinateKey(item) !== key);
-  map.playerPlacements = map.playerPlacements.filter((item) => coordinateKey(item) !== key);
   map.towers = map.towers.filter((item) => coordinateKey(item) !== key);
+}
+
+function hasMovableObjectAt(map: CivilizationAdminMapInput, coordinate: HexCoordinate): boolean {
+  const key = coordinateKey(coordinate);
+  return (
+    map.buildings.some((item) => coordinateKey(item) === key) ||
+    coordinateKey(map.spawn) === key ||
+    map.towers.some((item) => coordinateKey(item) === key)
+  );
 }
 
 function applyPaintingTool(
   current: CivilizationAdminMapInput,
   coordinate: HexCoordinate,
   tool: EditorTool,
-  selectedUserId: string,
-  selectedSpawnKey: string,
-  teams: CivilizationAdminGameInput["teams"],
   settings: CivilizationSettings,
 ): CivilizationAdminMapInput {
   const map = cloneMap(current);
@@ -161,6 +184,7 @@ function applyPaintingTool(
   } else if (tool === "OWNER_NEUTRAL") {
     ensuredTile.ownerTeamSide = null;
   } else if (tool.startsWith("TOWN_HALL_")) {
+    if (coordinateKey(map.spawn) === key) return current;
     const side = sideFromTool(tool)!;
     map.buildings = map.buildings.filter(
       (item) =>
@@ -176,18 +200,12 @@ function applyPaintingTool(
       captureRequiredUnits: settings.townHall.captureRequiredUnits,
     });
     ensuredTile.ownerTeamSide = side;
-  } else if (tool.startsWith("SPAWN_")) {
-    const side = sideFromTool(tool)!;
-    const alreadyExists = map.spawnPoints.some(
-      (item) => item.teamSide === side && coordinateKey(item) === key,
-    );
-    map.spawnPoints = map.spawnPoints.filter(
-      (item) => !(item.teamSide === side && coordinateKey(item) === key),
-    );
-    if (!alreadyExists) {
-      map.spawnPoints.push({ ...coordinate, teamSide: side });
-    }
+  } else if (tool === "SPAWN") {
+    map.buildings = map.buildings.filter((item) => coordinateKey(item) !== key);
+    map.towers = map.towers.filter((item) => coordinateKey(item) !== key);
+    map.spawn = { ...coordinate };
   } else if (tool === "GOLD_BUILDING" || tool.startsWith("ATTRIBUTE_")) {
+    if (coordinateKey(map.spawn) === key) return current;
     const attributeKey = tool.startsWith("ATTRIBUTE_")
       ? (tool.slice("ATTRIBUTE_".length).toLowerCase() as CivilizationAttributeKey)
       : null;
@@ -203,23 +221,8 @@ function applyPaintingTool(
         : settings.goldBuildingIncomePerHour,
       captureRequiredUnits: settings.buildingCapture.requiredUnits,
     });
-  } else if (tool === "PLAYER" && selectedUserId) {
-    const team = teams.find((item) => item.playerIds.includes(selectedUserId));
-    const spawn = team
-      ? map.spawnPoints.find(
-          (item) => item.teamSide === team.side && coordinateKey(item) === selectedSpawnKey,
-        )
-      : undefined;
-    if (team && spawn) {
-      map.playerPlacements = map.playerPlacements.filter((item) => item.userId !== selectedUserId);
-      map.playerPlacements.push({
-        ...coordinate,
-        userId: selectedUserId,
-        teamSide: team.side,
-        spawn: { q: spawn.q, r: spawn.r },
-      });
-    }
   } else if (tool === "TOWER_TEAM_A" || tool === "TOWER_TEAM_B") {
+    if (coordinateKey(map.spawn) === key) return current;
     const side = sideFromTool(tool)!;
     map.buildings = map.buildings.filter((item) => coordinateKey(item) !== key);
     map.towers = map.towers.filter((item) => coordinateKey(item) !== key);
@@ -243,12 +246,9 @@ function moveObjects(
   const map = cloneMap(current);
   const sourceKey = coordinateKey(from);
   const sourceBuilding = map.buildings.find((item) => coordinateKey(item) === sourceKey);
-  const sourceSpawn = map.spawnPoints.find((item) => coordinateKey(item) === sourceKey);
+  const sourceIsSpawn = coordinateKey(map.spawn) === sourceKey;
   const sourceTower = map.towers.find((item) => coordinateKey(item) === sourceKey);
-  const hasSourceObject =
-    Boolean(sourceBuilding || sourceSpawn || sourceTower) ||
-    map.playerPlacements.some((item) => coordinateKey(item) === sourceKey);
-  if (!hasSourceObject) {
+  if (!hasMovableObjectAt(map, from)) {
     return current;
   }
 
@@ -260,18 +260,7 @@ function moveObjects(
   map.buildings = map.buildings.map((item) =>
     coordinateKey(item) === sourceKey ? { ...item, ...to } : item,
   );
-  map.spawnPoints = map.spawnPoints.map((item) =>
-    coordinateKey(item) === sourceKey ? { ...item, ...to } : item,
-  );
-  map.playerPlacements = map.playerPlacements.map((item) =>
-    coordinateKey(item) === sourceKey
-      ? { ...item, ...to }
-      : sourceSpawn &&
-          item.teamSide === sourceSpawn.teamSide &&
-          coordinateKey(item.spawn) === sourceKey
-        ? { ...item, spawn: { ...to } }
-        : item,
-  );
+  if (sourceIsSpawn) map.spawn = { ...to };
   map.towers = map.towers.map((item) =>
     coordinateKey(item) === sourceKey ? { ...item, ...to } : item,
   );
@@ -315,12 +304,10 @@ async function renderEditor(
   scene: EditorScene,
   map: CivilizationAdminMapInput,
   teams: CivilizationAdminGameInput["teams"],
-  users: CivilizationMapEditorProps["users"],
   issues: CivilizationValidationIssue[],
   showValidation: boolean,
   preview: boolean,
   moveSource: HexCoordinate | null,
-  onHexClick: (coordinate: HexCoordinate) => void,
 ): Promise<void> {
   const version = ++scene.renderVersion;
   clearPixiContainer(scene.gridLayer);
@@ -330,8 +317,8 @@ async function renderEditor(
   const candidateCoordinates = createHexagonalMap(mapRadius(map));
   const layout = createHexLayout(candidateCoordinates);
   scene.viewport.resize(
-    scene.app.renderer.width / scene.app.renderer.resolution,
-    scene.app.renderer.height / scene.app.renderer.resolution,
+    scene.app.renderer.screen.width,
+    scene.app.renderer.screen.height,
     layout.width,
     layout.height,
   );
@@ -356,16 +343,15 @@ async function renderEditor(
         width: tile ? 2 : 1,
         alpha: tile ? 0.9 : 0.45,
       });
-    hex.eventMode = preview ? "none" : "static";
-    hex.cursor = preview ? "default" : "crosshair";
-    hex.on("pointertap", () => onHexClick(coordinate));
+    hex.eventMode = "none";
     scene.gridLayer.addChild(hex);
+
     if (tile?.ownerTeamSide) {
-      scene.gridLayer.addChild(
-        new Graphics()
-          .poly(item.corners, true)
-          .fill({ color: colors[tile.ownerTeamSide], alpha: 0.28 }),
-      );
+      const ownership = new Graphics()
+        .poly(item.corners, true)
+        .fill({ color: colors[tile.ownerTeamSide], alpha: 0.28 });
+      ownership.eventMode = "none";
+      scene.gridLayer.addChild(ownership);
     }
     if (moveSource && coordinateKey(moveSource) === coordinateKey(coordinate)) {
       scene.validationLayer.addChild(
@@ -408,9 +394,7 @@ async function renderEditor(
             : "resource.neutral";
     assetEntries.push({ key, coordinate: building, side: building.ownerTeamSide });
   });
-  map.spawnPoints.forEach((spawn) =>
-    assetEntries.push({ key: "spawnPoint", coordinate: spawn, side: spawn.teamSide }),
-  );
+  assetEntries.push({ key: "spawnPoint", coordinate: map.spawn, side: null });
   map.towers.forEach((tower) =>
     assetEntries.push({
       key:
@@ -435,6 +419,7 @@ async function renderEditor(
       return;
     }
     const sprite = new Sprite(entry.texture);
+    sprite.eventMode = "none";
     sprite.anchor.set(0.5);
     sprite.position.set(item.center.x, item.center.y - 4);
     sprite.width = 58;
@@ -443,25 +428,6 @@ async function renderEditor(
       sprite.tint = colors[entry.side];
     }
     scene.objectLayer.addChild(sprite);
-  });
-
-  map.playerPlacements.forEach((placement) => {
-    const item = layout.items.get(coordinateKey(placement));
-    if (!item) {
-      return;
-    }
-    const user = users.find((candidate) => candidate.id === placement.userId);
-    const marker = new Graphics()
-      .circle(item.center.x, item.center.y, 16)
-      .fill({ color: colors[placement.teamSide] })
-      .stroke({ color: "#ffffff", width: 2 });
-    const label = new Text({
-      text: user?.username.slice(0, 4) ?? "P",
-      style: { fill: "#ffffff", fontFamily: "Arial", fontSize: 9, fontWeight: "700" },
-    });
-    label.anchor.set(0.5);
-    label.position.set(item.center.x, item.center.y);
-    scene.objectLayer.addChild(marker, label);
   });
 
   if (showValidation) {
@@ -492,40 +458,23 @@ export function CivilizationMapEditor({
   value,
   teams,
   settings,
-  users,
   issues,
   disabled = false,
   onChange,
 }: CivilizationMapEditorProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<EditorScene | null>(null);
+  const pointerDownRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const historyRef = useRef<CivilizationAdminMapInput[]>([cloneMap(value)]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [historyLength, setHistoryLength] = useState(1);
   const [tool, setTool] = useState<EditorTool>("TOGGLE_HEX");
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [selectedSpawnKey, setSelectedSpawnKey] = useState("");
   const [preview, setPreview] = useState(false);
   const [showValidation, setShowValidation] = useState(true);
   const [moveSource, setMoveSource] = useState<HexCoordinate | null>(null);
-  const [keyboardCoordinate, setKeyboardCoordinate] = useState<HexCoordinate>({ q: 0, r: 0 });
-  const assignedUsers = useMemo(
-    () => users.filter((user) => teams.some((team) => team.playerIds.includes(user.id))),
-    [teams, users],
-  );
-  const selectedTeamSpawns = useMemo(() => {
-    const selectedPlayerTeam = teams.find((team) => team.playerIds.includes(selectedUserId));
-    return selectedPlayerTeam
-      ? value.spawnPoints.filter((spawn) => spawn.teamSide === selectedPlayerTeam.side)
-      : [];
-  }, [selectedUserId, teams, value.spawnPoints]);
-  const effectiveSelectedSpawnKey = selectedTeamSpawns.some(
-    (spawn) => coordinateKey(spawn) === selectedSpawnKey,
-  )
-    ? selectedSpawnKey
-    : selectedTeamSpawns[0]
-      ? coordinateKey(selectedTeamSpawns[0])
-      : "";
+  const [clearConfirmationOpen, setClearConfirmationOpen] = useState(false);
+  const hasMapContent =
+    value.tiles.length > 0 || value.buildings.length > 0 || value.towers.length > 0;
   const commit = useCallback(
     (next: CivilizationAdminMapInput): void => {
       const nextHistory = historyRef.current.slice(0, historyIndex + 1);
@@ -545,43 +494,30 @@ export function CivilizationMapEditor({
       }
       if (tool === "MOVE") {
         if (!moveSource) {
-          setMoveSource(coordinate);
+          if (hasMovableObjectAt(value, coordinate)) {
+            setMoveSource(coordinate);
+          }
           return;
         }
-        commit(moveObjects(value, moveSource, coordinate));
+        const next = moveObjects(value, moveSource, coordinate);
+        if (next === value) {
+          return;
+        }
+        commit(next);
         setMoveSource(null);
         return;
       }
-      commit(
-        applyPaintingTool(
-          value,
-          coordinate,
-          tool,
-          selectedUserId,
-          effectiveSelectedSpawnKey,
-          teams,
-          settings,
-        ),
-      );
+      const next = applyPaintingTool(value, coordinate, tool, settings);
+      if (next !== value) {
+        commit(next);
+      }
     },
-    [
-      commit,
-      disabled,
-      moveSource,
-      preview,
-      effectiveSelectedSpawnKey,
-      selectedUserId,
-      settings,
-      teams,
-      tool,
-      value,
-    ],
+    [commit, disabled, moveSource, preview, settings, tool, value],
   );
 
   const renderPropsRef = useRef({
     value,
     teams,
-    users,
     issues,
     showValidation,
     preview,
@@ -593,14 +529,13 @@ export function CivilizationMapEditor({
     renderPropsRef.current = {
       value,
       teams,
-      users,
       issues,
       showValidation,
       preview,
       moveSource,
     };
     handleHexClickRef.current = handleHexClick;
-  }, [handleHexClick, issues, moveSource, preview, showValidation, teams, users, value]);
+  }, [handleHexClick, issues, moveSource, preview, showValidation, teams, value]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -609,6 +544,7 @@ export function CivilizationMapEditor({
     }
     let cancelled = false;
     let observer: ResizeObserver | null = null;
+    let ownedScene: EditorScene | null = null;
     const initialize = async (): Promise<void> => {
       const app = new Application();
       await app.init({
@@ -632,11 +568,13 @@ export function CivilizationMapEditor({
         events: app.renderer.events,
         ticker: app.ticker,
         threshold: 7,
+        passiveWheel: false,
+        stopPropagation: true,
       });
       viewport
-        .drag()
+        .drag({ mouseButtons: "left" })
         .pinch()
-        .wheel({ smooth: 3 })
+        .wheel({ percent: 0.12, smooth: false, trackpadPinch: true })
         .decelerate()
         .clamp({ direction: "all" })
         .clampZoom({ minScale: 0.25, maxScale: 2.5 });
@@ -650,6 +588,9 @@ export function CivilizationMapEditor({
         renderVersion: 0,
         initializedView: false,
       };
+      scene.objectLayer.eventMode = "none";
+      scene.validationLayer.eventMode = "none";
+      ownedScene = scene;
       viewport.addChild(scene.gridLayer, scene.objectLayer, scene.validationLayer);
       sceneRef.current = scene;
       observer = new ResizeObserver(() => {
@@ -664,24 +605,26 @@ export function CivilizationMapEditor({
         scene,
         current.value,
         current.teams,
-        current.users,
         current.issues,
         current.showValidation,
         current.preview,
         current.moveSource,
-        (coordinate) => handleHexClickRef.current(coordinate),
       );
     };
     void initialize();
     return () => {
       cancelled = true;
       observer?.disconnect();
-      const scene = sceneRef.current;
-      sceneRef.current = null;
+      const scene = ownedScene;
+      if (sceneRef.current === scene) {
+        sceneRef.current = null;
+      }
       if (scene) {
         scene.renderVersion += 1;
+        scene.app.stage.removeChild(scene.viewport);
+        scene.viewport.destroy({ children: true });
+        scene.app.destroy(true, { children: true });
       }
-      scene?.app.destroy(true, { children: true });
       host.replaceChildren();
     };
   }, []);
@@ -689,19 +632,9 @@ export function CivilizationMapEditor({
   useEffect(() => {
     const scene = sceneRef.current;
     if (scene) {
-      void renderEditor(
-        scene,
-        value,
-        teams,
-        users,
-        issues,
-        showValidation,
-        preview,
-        moveSource,
-        handleHexClick,
-      );
+      void renderEditor(scene, value, teams, issues, showValidation, preview, moveSource);
     }
-  }, [handleHexClick, issues, moveSource, preview, showValidation, teams, users, value]);
+  }, [handleHexClick, issues, moveSource, preview, showValidation, teams, value]);
 
   const undo = (): void => {
     if (historyIndex <= 0) {
@@ -754,6 +687,47 @@ export function CivilizationMapEditor({
     next.towers[towerIndex] = { ...next.towers[towerIndex]!, ...patch };
     commit(next);
   };
+  const handleMapPointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.button !== 0 || !event.isPrimary) {
+      return;
+    }
+    pointerDownRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    };
+  };
+  const handleMapPointerUp = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const pointerDown = pointerDownRef.current;
+    pointerDownRef.current = null;
+    if (
+      !pointerDown ||
+      pointerDown.pointerId !== event.pointerId ||
+      Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y) > 7
+    ) {
+      return;
+    }
+
+    const host = hostRef.current;
+    const scene = sceneRef.current;
+    if (!host || !scene) {
+      return;
+    }
+    const bounds = host.getBoundingClientRect();
+    const screenWidth = scene.app.renderer.screen.width;
+    const screenHeight = scene.app.renderer.screen.height;
+    const worldPoint = scene.viewport.toWorld(
+      ((event.clientX - bounds.left) / bounds.width) * screenWidth,
+      ((event.clientY - bounds.top) / bounds.height) * screenHeight,
+    );
+    const layout = createHexLayout(createHexagonalMap(mapRadius(renderPropsRef.current.value)));
+    const coordinate = [...layout.items.values()].find((item) =>
+      new Polygon(item.corners).contains(worldPoint.x, worldPoint.y),
+    )?.coordinate;
+    if (coordinate) {
+      handleHexClickRef.current(coordinate);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -776,90 +750,7 @@ export function CivilizationMapEditor({
             ))}
           </select>
         </label>
-        {tool === "PLAYER" ? (
-          <label className="flex min-w-56 flex-1 flex-col gap-1 text-[10px]">
-            Assigned player
-            <select
-              className="h-9 border bg-background px-3 text-xs"
-              value={selectedUserId}
-              onChange={(event) => {
-                const userId = event.target.value;
-                const team = teams.find((item) => item.playerIds.includes(userId));
-                const spawn = value.spawnPoints.find((item) => item.teamSide === team?.side);
-                setSelectedUserId(userId);
-                setSelectedSpawnKey(spawn ? coordinateKey(spawn) : "");
-              }}
-            >
-              <option value="">Select a player</option>
-              {assignedUsers.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.username}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        {tool === "PLAYER" ? (
-          <label className="flex min-w-48 flex-1 flex-col gap-1 text-[10px]">
-            Assigned spawn
-            <select
-              className="h-9 border bg-background px-3 text-xs"
-              value={effectiveSelectedSpawnKey}
-              disabled={!selectedUserId || selectedTeamSpawns.length === 0}
-              onChange={(event) => setSelectedSpawnKey(event.target.value)}
-            >
-              <option value="">Select a team spawn</option>
-              {selectedTeamSpawns.map((spawn) => {
-                const key = coordinateKey(spawn);
-                return (
-                  <option key={key} value={key}>
-                    {spawn.q}, {spawn.r}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
-        ) : null}
-        <label className="flex w-20 flex-col gap-1 text-[10px]">
-          Hex q
-          <input
-            type="number"
-            className="h-9 border bg-background px-2 text-xs"
-            value={keyboardCoordinate.q}
-            disabled={disabled || preview}
-            onChange={(event) =>
-              setKeyboardCoordinate((current) => ({
-                ...current,
-                q: Number.parseInt(event.target.value, 10) || 0,
-              }))
-            }
-          />
-        </label>
-        <label className="flex w-20 flex-col gap-1 text-[10px]">
-          Hex r
-          <input
-            type="number"
-            className="h-9 border bg-background px-2 text-xs"
-            value={keyboardCoordinate.r}
-            disabled={disabled || preview}
-            onChange={(event) =>
-              setKeyboardCoordinate((current) => ({
-                ...current,
-                r: Number.parseInt(event.target.value, 10) || 0,
-              }))
-            }
-          />
-        </label>
-        <Button
-          type="button"
-          variant="outline"
-          className="self-end"
-          disabled={disabled || preview}
-          onClick={() => handleHexClick(keyboardCoordinate)}
-        >
-          Apply tool at hex
-        </Button>
-        <div className="flex items-end gap-2 self-end">
+        <div className="flex flex-wrap items-end gap-2 self-end">
           <Button
             type="button"
             size="icon"
@@ -890,6 +781,14 @@ export function CivilizationMapEditor({
           </Button>
           <Button
             type="button"
+            variant="destructive"
+            disabled={disabled || preview || !hasMapContent}
+            onClick={() => setClearConfirmationOpen(true)}
+          >
+            <Trash2Icon className="size-4" /> Clear map
+          </Button>
+          <Button
+            type="button"
             variant="outline"
             onClick={() => setShowValidation((current) => !current)}
           >
@@ -912,24 +811,58 @@ export function CivilizationMapEditor({
       </div>
       <div
         className={cn(
-          "relative min-h-130 overflow-hidden border bg-slate-950",
+          "relative min-h-130 touch-none overflow-hidden overscroll-contain border bg-slate-950 select-none",
           preview && "ring-2 ring-primary/40",
         )}
       >
         <div
           ref={hostRef}
-          className="absolute inset-0 [&>canvas]:block"
+          className="absolute inset-0 cursor-crosshair [&>canvas]:block [&>canvas]:touch-none [&>canvas]:overscroll-contain"
           role="img"
           aria-label="Civilization visual hex-map editor"
+          onPointerDown={handleMapPointerDown}
+          onPointerUp={handleMapPointerUp}
+          onPointerCancel={() => {
+            pointerDownRef.current = null;
+          }}
         />
         <div className="pointer-events-none absolute bottom-3 left-3 border border-white/20 bg-slate-950/85 px-3 py-2 text-[9px] text-slate-200">
           {preview
             ? "Preview mode: map editing is locked"
-            : tool === "MOVE" && moveSource
-              ? "Choose the destination hex"
-              : "Click to paint · drag to pan · wheel or pinch to zoom"}
+            : tool === "MOVE"
+              ? moveSource
+                ? "Choose the destination hex"
+                : "Click an object to move it"
+              : "Click to paint · left-drag to pan · wheel to zoom"}
         </div>
       </div>
+      <AlertDialog open={clearConfirmationOpen} onOpenChange={setClearConfirmationOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear the entire map?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes every playable hex, building, and tower. The shared spawn remains
+              configured and must be placed on a new playable hex before saving.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                commit({
+                  tiles: [],
+                  spawn: { ...value.spawn },
+                  buildings: [],
+                  towers: [],
+                });
+                setMoveSource(null);
+              }}
+            >
+              Clear map
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {value.buildings.length > 0 || value.towers.length > 0 ? (
         <div className="space-y-3 border bg-muted/10 p-3">
           <div>
@@ -1036,8 +969,7 @@ export function CivilizationMapEditor({
       ) : null}
       <div className="flex flex-wrap justify-between gap-2 text-[9px] text-muted-foreground">
         <span>
-          {value.tiles.length} playable hexes · {value.buildings.length} buildings ·{" "}
-          {value.spawnPoints.length} spawns · {value.playerPlacements.length} players
+          {value.tiles.length} playable hexes · {value.buildings.length} buildings · 1 shared spawn
         </span>
         <span className={issues.length > 0 ? "text-destructive" : "text-emerald-400"}>
           {issues.length > 0 ? `${issues.length} validation issues` : "Local map checks passed"}

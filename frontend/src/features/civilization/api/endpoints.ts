@@ -4,7 +4,6 @@ export const civilizationEndpoints = {
   current: "/civilization/current",
   history: "/civilization/history",
   state: (gameId: string) => gameBase(gameId),
-  events: (gameId: string) => `${gameBase(gameId)}/events`,
   move: (gameId: string) => `${gameBase(gameId)}/actions/move`,
   attackPlayer: (gameId: string) => `${gameBase(gameId)}/actions/attack-player`,
   captureBuilding: (gameId: string) => `${gameBase(gameId)}/actions/capture-building`,

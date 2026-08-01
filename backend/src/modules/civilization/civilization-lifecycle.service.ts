@@ -10,10 +10,12 @@ import {
 
 import { CivilizationCompletionService } from './civilization-completion.service';
 import { CivilizationConnectivityService } from './civilization-connectivity.service';
+import { CIVILIZATION_ERROR_CODES, CivilizationException } from './civilization.errors';
 import { CivilizationQueryService } from './civilization-query.service';
 import { CivilizationRuntimeService } from './civilization-runtime.service';
 import { CivilizationScheduleService } from './civilization-schedule.service';
 import { serializeCivilizationSnapshot } from './civilization-snapshot';
+import { parseCivilizationSettings } from './domain';
 import { CivilizationRepository } from './repositories';
 
 @Injectable()
@@ -73,6 +75,22 @@ export class CivilizationLifecycleService implements OnModuleInit {
       const now = this.runtime.now();
       if (now.getTime() < state.startAt.getTime()) return [];
 
+      const spawnTileId = state.spawnPoint?.tileId;
+      if (!spawnTileId || !state.tiles.some((tile) => tile.id === spawnTileId)) {
+        throw new CivilizationException(
+          CIVILIZATION_ERROR_CODES.INVALID_GAME_CONFIGURATION,
+          'Civilization game has no valid shared spawn tile',
+        );
+      }
+      const settings = parseCivilizationSettings(state.settingsJson);
+      const placement = await this.repository.placeActivePlayersAtSharedSpawn(
+        gameId,
+        spawnTileId,
+        settings.actionPoints.initialUnits,
+        state.startAt,
+        tx,
+      );
+
       await this.repository.updateGame(
         gameId,
         { status: CivilizationGameStatus.ACTIVE, stateVersion: { increment: 1 } },
@@ -130,6 +148,8 @@ export class CivilizationLifecycleService implements OnModuleInit {
           payload: {
             scheduledStartAt: state.startAt.toISOString(),
             activatedAt: now.toISOString(),
+            sharedSpawnTileId: spawnTileId,
+            placedPlayerCount: placement.count,
           },
         },
         tx,

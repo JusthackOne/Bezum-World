@@ -107,22 +107,7 @@ export class CivilizationTileInputDto extends HexCoordinateDto {
   ownerTeamSide?: (typeof TEAM_SIDES)[number] | null;
 }
 
-export class CivilizationSpawnPointInputDto extends HexCoordinateDto {
-  @IsOptional()
-  @IsUUID()
-  id?: string;
-
-  @IsOptional()
-  @IsUUID()
-  teamId?: string;
-
-  @IsOptional()
-  @IsUUID()
-  tileId?: string;
-
-  @IsIn(TEAM_SIDES)
-  teamSide!: (typeof TEAM_SIDES)[number];
-}
+export class CivilizationSpawnPointInputDto extends HexCoordinateDto {}
 
 export class CivilizationBuildingInputDto extends HexCoordinateDto {
   @IsOptional()
@@ -152,18 +137,6 @@ export class CivilizationBuildingInputDto extends HexCoordinateDto {
   incomePerHour?: string;
 }
 
-export class CivilizationPlayerPlacementInputDto extends HexCoordinateDto {
-  @IsUUID()
-  userId!: string;
-
-  @IsIn(TEAM_SIDES)
-  teamSide!: (typeof TEAM_SIDES)[number];
-
-  @ValidateNested()
-  @Type(() => HexCoordinateDto)
-  spawn!: HexCoordinateDto;
-}
-
 export class CivilizationTowerInputDto extends HexCoordinateDto {
   @IsIn(TEAM_SIDES)
   teamSide!: (typeof TEAM_SIDES)[number];
@@ -186,22 +159,15 @@ export class CivilizationMapInputDto {
   @Type(() => CivilizationTileInputDto)
   tiles!: CivilizationTileInputDto[];
 
-  @IsArray()
-  @ArrayMinSize(2)
-  @ValidateNested({ each: true })
+  @ValidateNested()
   @Type(() => CivilizationSpawnPointInputDto)
-  spawnPoints!: CivilizationSpawnPointInputDto[];
+  spawn!: CivilizationSpawnPointInputDto;
 
   @IsArray()
   @ArrayMinSize(2)
   @ValidateNested({ each: true })
   @Type(() => CivilizationBuildingInputDto)
   buildings!: CivilizationBuildingInputDto[];
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CivilizationPlayerPlacementInputDto)
-  playerPlacements!: CivilizationPlayerPlacementInputDto[];
 
   @IsOptional()
   @IsArray()
@@ -313,9 +279,6 @@ export class AddActiveCivilizationPlayerDto {
 
   @IsUUID()
   teamId!: string;
-
-  @IsUUID()
-  spawnTileId!: string;
 }
 
 export class ForceCompleteCivilizationGameDto {

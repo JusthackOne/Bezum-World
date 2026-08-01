@@ -38,12 +38,13 @@ export function serializeCivilizationSnapshot(
       createdAt: tile.createdAt.toISOString(),
       updatedAt: tile.updatedAt.toISOString(),
     })),
-    spawnPoints: state.spawnPoints.map((spawn) => ({
-      id: spawn.id,
-      teamId: spawn.teamId,
-      tileId: spawn.tileId,
-      createdAt: spawn.createdAt.toISOString(),
-    })),
+    spawnPoint: state.spawnPoint
+      ? {
+          id: state.spawnPoint.id,
+          tileId: state.spawnPoint.tileId,
+          createdAt: state.spawnPoint.createdAt.toISOString(),
+        }
+      : null,
     buildings: state.buildings.map((building) => ({
       id: building.id,
       tileId: building.tileId,

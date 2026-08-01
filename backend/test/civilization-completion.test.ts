@@ -228,7 +228,12 @@ function createCompletionState(): CivilizationStateRecord {
     teams,
     players,
     tiles: [completionTile('tile-a', 0, TEAM_A_ID), completionTile('tile-b', 1, TEAM_B_ID)],
-    spawnPoints: [],
+    spawnPoint: {
+      id: 'shared-spawn',
+      gameId: GAME_ID,
+      tileId: 'tile-a',
+      createdAt: COMPLETED_AT,
+    },
     buildings: [],
     towers: [],
     teamResources: [

@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { EyeIcon, HistoryIcon, RefreshCwIcon, SwordsIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import type { CivilizationActionType, CivilizationLegalAction } from "@/entities/civilization";
+import type {
+  CivilizationActionType,
+  CivilizationGameState,
+  CivilizationLegalAction,
+} from "@/entities/civilization";
 import { getApiRequestErrorMessage } from "@/shared/lib/api-request";
 import { formatDateTime } from "@/shared/lib/date-time";
 import {
@@ -22,12 +26,10 @@ import {
 import { Button, Card, CardContent, Skeleton } from "@/shared/ui/8bit";
 
 import { useCivilizationActionMutation, useCivilizationGameStateQuery } from "../api";
-import { useCivilizationUiStore } from "../model";
+import { coordinateKey, useCivilizationUiStore } from "../model";
 import { civilizationRoutes } from "../routes";
 import type { CivilizationActionPayload } from "../api/requests";
-import { CivilizationEventLog } from "./civilization-event-log";
 import { CivilizationPlayerPanel } from "./civilization-player-panel";
-import { CivilizationSelectionPanel } from "./civilization-selection-panel";
 import { CivilizationStatusBadge } from "./civilization-status-badge";
 import { CivilizationTeamStatistics } from "./civilization-team-statistics";
 
@@ -80,6 +82,32 @@ function buildActionPayload(action: CivilizationLegalAction): CivilizationAction
   return builders[action.type]();
 }
 
+function actionsForTile(state: CivilizationGameState, tileId: string): CivilizationLegalAction[] {
+  const tile = state.tiles.find((item) => item.id === tileId);
+  if (!tile) {
+    return [];
+  }
+
+  return state.availableActions.filter(
+    (action) =>
+      action.disabledReason === null &&
+      action.targetCoordinate !== undefined &&
+      coordinateKey(action.targetCoordinate) === coordinateKey(tile.coordinate),
+  );
+}
+
+function automaticActionForTile(
+  state: CivilizationGameState,
+  tileId: string,
+): CivilizationLegalAction | null {
+  const actions = actionsForTile(state, tileId).filter((action) => action.type !== "BUILD_TOWER");
+  const interactions = actions.filter((action) => action.type !== "MOVE");
+  if (interactions.length === 1) {
+    return interactions[0] ?? null;
+  }
+  return actions.length === 1 ? (actions[0] ?? null) : null;
+}
+
 export function CivilizationGameView({
   gameId,
   isHistorical = false,
@@ -89,16 +117,37 @@ export function CivilizationGameView({
 }) {
   const query = useCivilizationGameStateQuery(gameId, isHistorical);
   const actionMutation = useCivilizationActionMutation(gameId);
-  const [eventPage, setEventPage] = useState(1);
   const [confirmationAction, setConfirmationAction] = useState<CivilizationLegalAction | null>(
     null,
   );
+  const [placementMode, setPlacementMode] = useState<"BUILD_TOWER" | null>(null);
+  const [placementTileId, setPlacementTileId] = useState<string | null>(null);
+  const actionRequestPendingRef = useRef(false);
   const selectedTileId = useCivilizationUiStore((state) => state.selectedTileId);
   const selectedPlayerId = useCivilizationUiStore((state) => state.selectedPlayerId);
   const selectedTowerId = useCivilizationUiStore((state) => state.selectedTowerId);
   const setSelectedTile = useCivilizationUiStore((state) => state.setSelectedTile);
   const setSelectedPlayer = useCivilizationUiStore((state) => state.setSelectedPlayer);
   const setSelectedTower = useCivilizationUiStore((state) => state.setSelectedTower);
+  const clearSelection = useCivilizationUiStore((state) => state.clearSelection);
+
+  const cancelPlacement = useCallback((): void => {
+    setPlacementMode(null);
+    setPlacementTileId(null);
+  }, []);
+
+  useEffect(() => {
+    if (!placementMode) {
+      return;
+    }
+    const cancelOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        cancelPlacement();
+      }
+    };
+    window.addEventListener("keydown", cancelOnEscape);
+    return () => window.removeEventListener("keydown", cancelOnEscape);
+  }, [cancelPlacement, placementMode]);
 
   const currentPlayer = useMemo(
     () =>
@@ -113,14 +162,33 @@ export function CivilizationGameView({
         toast.error("The server action is missing its target.");
         return;
       }
+      if (actionRequestPendingRef.current) {
+        return;
+      }
+      actionRequestPendingRef.current = true;
       actionMutation.mutate(payload, {
         onSuccess: (result) => {
           toast.success(result.event.type.toLowerCase().replaceAll("_", " "));
+          clearSelection();
+          cancelPlacement();
           setConfirmationAction(null);
+        },
+        onError: (error) => {
+          toast.error(
+            getApiRequestErrorMessage(
+              error,
+              action.type === "MOVE"
+                ? "Unable to move the player."
+                : "Unable to complete the action.",
+            ),
+          );
+        },
+        onSettled: () => {
+          actionRequestPendingRef.current = false;
         },
       });
     },
-    [actionMutation],
+    [actionMutation, cancelPlacement, clearSelection],
   );
 
   if (query.isPending) {
@@ -163,6 +231,30 @@ export function CivilizationGameView({
   };
 
   const selectPlayer = (playerId: string): void => {
+    if (placementMode) {
+      cancelPlacement();
+      return;
+    }
+    if (selectedPlayerId === state.access.currentPlayerId && playerId !== selectedPlayerId) {
+      const attackAction = state.availableActions.find(
+        (action) =>
+          action.type === "ATTACK_PLAYER" &&
+          action.targetPlayerId === playerId &&
+          action.disabledReason === null,
+      );
+      if (attackAction) {
+        requestAction(attackAction);
+      }
+      return;
+    }
+    if (playerId !== state.access.currentPlayerId) {
+      return;
+    }
+    if (selectedPlayerId === playerId) {
+      clearSelection();
+      return;
+    }
+
     const player = state.players.find((item) => item.id === playerId);
     if (player) {
       selectTile(player.currentTileId);
@@ -171,7 +263,7 @@ export function CivilizationGameView({
   };
 
   const requestAction = (action: CivilizationLegalAction): void => {
-    if (readOnly || state.access.isSpectator) {
+    if (readOnly || state.access.isSpectator || actionMutation.isPending) {
       return;
     }
     if (action.requiresConfirmation || Number(action.goldCost) > 0) {
@@ -179,6 +271,51 @@ export function CivilizationGameView({
       return;
     }
     submitAction(action);
+  };
+
+  const selectTileOrAct = (tileId: string): void => {
+    if (placementMode === "BUILD_TOWER") {
+      const buildAction = actionsForTile(state, tileId).find(
+        (action) => action.type === "BUILD_TOWER",
+      );
+      if (buildAction) {
+        setPlacementTileId(tileId);
+      } else {
+        cancelPlacement();
+      }
+      return;
+    }
+    if (selectedPlayerId === state.access.currentPlayerId) {
+      const action = automaticActionForTile(state, tileId);
+      if (action) {
+        requestAction(action);
+      }
+      return;
+    }
+
+    selectTile(tileId);
+  };
+
+  const toggleTowerPlacement = (): void => {
+    if (placementMode === "BUILD_TOWER") {
+      cancelPlacement();
+      return;
+    }
+    clearSelection();
+    setPlacementMode("BUILD_TOWER");
+    setPlacementTileId(null);
+  };
+
+  const confirmTowerPlacement = (): void => {
+    if (!placementTileId || actionMutation.isPending) {
+      return;
+    }
+    const action = actionsForTile(state, placementTileId).find(
+      (candidate) => candidate.type === "BUILD_TOWER",
+    );
+    if (action) {
+      submitAction(action);
+    }
   };
 
   return (
@@ -227,66 +364,26 @@ export function CivilizationGameView({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="space-y-2 xl:col-start-1 xl:row-start-1">
-          <div className="grid gap-2 border bg-muted/20 p-2 sm:grid-cols-2">
-            <label className="flex items-center gap-2 text-[9px]">
-              <span className="shrink-0 text-muted-foreground">Select hex</span>
-              <select
-                className="h-8 min-w-0 flex-1 border bg-background px-2"
-                value={selectedTileId ?? ""}
-                onChange={(event) => event.target.value && selectTile(event.target.value)}
-              >
-                <option value="">Choose a coordinate</option>
-                {state.tiles.map((tile) => (
-                  <option key={tile.id} value={tile.id}>
-                    {tile.coordinate.q}, {tile.coordinate.r} · {tile.terrainType}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 text-[9px]">
-              <span className="shrink-0 text-muted-foreground">Select player</span>
-              <select
-                className="h-8 min-w-0 flex-1 border bg-background px-2"
-                value={selectedPlayerId ?? ""}
-                onChange={(event) => {
-                  if (event.target.value) {
-                    selectPlayer(event.target.value);
-                  } else {
-                    setSelectedPlayer(null);
-                  }
-                }}
-              >
-                <option value="">Choose a player</option>
-                {state.players.map((player) => (
-                  <option key={player.id} value={player.id}>
-                    {player.username} ·{" "}
-                    {state.teams.find((team) => team.id === player.teamId)?.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
           <CivilizationGameMap
             state={state}
             selectedTileId={selectedTileId}
             selectedPlayerId={selectedPlayerId}
             selectedTowerId={selectedTowerId}
-            isInteractionDisabled={false}
-            onSelectTile={selectTile}
+            placementMode={placementMode}
+            placementTileId={placementTileId}
+            isInteractionDisabled={actionMutation.isPending}
+            onSelectTile={selectTileOrAct}
             onSelectPlayer={selectPlayer}
+            onToggleTowerPlacement={toggleTowerPlacement}
+            onCancelPlacement={cancelPlacement}
+            onCancelPlacementPreview={() => setPlacementTileId(null)}
+            onConfirmPlacement={confirmTowerPlacement}
             className="min-h-130"
           />
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-18 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:self-start">
           <CivilizationPlayerPanel player={currentPlayer} state={state} />
-          <CivilizationSelectionPanel
-            state={state}
-            selectedTileId={selectedTileId}
-            selectedPlayerId={selectedPlayerId}
-            onAction={requestAction}
-            isPending={actionMutation.isPending || readOnly || state.access.isSpectator}
-          />
           <Card>
             <CardContent className="p-4 text-[9px] text-muted-foreground">
               <p className="flex items-center gap-2 text-foreground">
@@ -300,19 +397,10 @@ export function CivilizationGameView({
           </Card>
         </aside>
 
-        <div className="space-y-4 xl:col-start-1 xl:row-start-2">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {state.teams.map((team) => (
-              <CivilizationTeamStatistics key={team.id} team={team} />
-            ))}
-          </div>
-
-          <CivilizationEventLog
-            gameId={gameId}
-            page={eventPage}
-            isActive={state.game.status === "ACTIVE"}
-            onPageChange={setEventPage}
-          />
+        <div className="grid gap-4 lg:grid-cols-2 xl:col-start-1 xl:row-start-2">
+          {state.teams.map((team) => (
+            <CivilizationTeamStatistics key={team.id} team={team} />
+          ))}
         </div>
       </div>
 

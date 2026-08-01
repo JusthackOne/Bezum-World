@@ -284,6 +284,7 @@ export class CivilizationQueryService {
         workKind: tower.workKind,
         protectionRadius: tower.protectionRadius,
         isConnected: tileById.get(tower.tileId)?.isConnected ?? false,
+        constructionStartedAt: tower.constructionStartedAt.toISOString(),
         constructionCompletesAt: tower.constructionCompletesAt?.toISOString() ?? null,
         destroyedAt: tower.destroyedAt?.toISOString() ?? null,
       })),
@@ -309,11 +310,12 @@ export class CivilizationQueryService {
           statistics: playerStatistics.get(player.id) ?? this.emptyPlayerStatistics(),
         };
       }),
-      spawnPoints: state.spawnPoints.map((spawn) => ({
-        id: spawn.id,
-        teamId: spawn.teamId,
-        tileId: spawn.tileId,
-      })),
+      spawnPoint: state.spawnPoint
+        ? {
+            id: state.spawnPoint.id,
+            tileId: state.spawnPoint.tileId,
+          }
+        : null,
       access: {
         isParticipant: Boolean(currentPlayer),
         isSpectator: !currentPlayer,
@@ -456,6 +458,7 @@ export class CivilizationQueryService {
         }
         continue;
       }
+      const destinationBuilding = buildingByTileId.get(tile.id);
       const protectedByTower = state.towers.some((tower) => {
         const towerTile = state.tiles.find((candidate) => candidate.id === tower.tileId);
         return (
@@ -465,6 +468,61 @@ export class CivilizationQueryService {
           hexDistance(tile, towerTile) <= tower.protectionRadius
         );
       });
+      if (
+        destinationBuilding?.buildingType === CivilizationBuildingType.TOWN_HALL &&
+        destinationBuilding.ownerTeamId !== player.teamId
+      ) {
+        actions.push({
+          type: 'CAPTURE_TOWN_HALL',
+          buildingId: destinationBuilding.id,
+          targetCoordinate: { q: tile.q, r: tile.r },
+          actionPointUnits: settings.costs.townHallCaptureUnits,
+          goldCost: '0',
+          label: 'Capture town hall',
+          requiresConfirmation: false,
+          disabledReason: protectedByTower
+            ? CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED
+            : actionPointDisabledReason(settings.costs.townHallCaptureUnits),
+        });
+        continue;
+      }
+      if (destinationBuilding) {
+        if (
+          destinationBuilding.ownerTeamId !== player.teamId ||
+          (destinationBuilding.captureTeamId !== null &&
+            destinationBuilding.captureTeamId !== player.teamId)
+        ) {
+          actions.push({
+            type: 'CAPTURE_BUILDING',
+            buildingId: destinationBuilding.id,
+            targetCoordinate: { q: tile.q, r: tile.r },
+            actionPointUnits: settings.costs.buildingCaptureUnits,
+            goldCost: '0',
+            label: 'Contribute to building capture',
+            requiresConfirmation: false,
+            disabledReason: protectedByTower
+              ? CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER
+              : actionPointDisabledReason(settings.costs.buildingCaptureUnits),
+          });
+        }
+        continue;
+      }
+      if (
+        state.towers.some(
+          (tower) => tower.tileId === tile.id && tower.status !== CivilizationTowerStatus.CANCELLED,
+        )
+      ) {
+        continue;
+      }
+      if (
+        tile.id !== state.spawnPoint?.tileId &&
+        state.players.some(
+          (candidate) =>
+            candidate.id !== player.id && candidate.isActive && candidate.currentTileId === tile.id,
+        )
+      ) {
+        continue;
+      }
       const environmentalDisabledReason =
         tile.terrainType === 'MOUNTAIN'
           ? CIVILIZATION_ERROR_CODES.TILE_IMPASSABLE
@@ -516,6 +574,7 @@ export class CivilizationQueryService {
         actions.push({
           type: isOwned ? 'DEFEND_TOWN_HALL' : 'CAPTURE_TOWN_HALL',
           buildingId: currentBuilding.id,
+          targetCoordinate: { q: currentTile.q, r: currentTile.r },
           actionPointUnits: costUnits,
           goldCost: isOwned ? settings.townHall.defenseGoldCost : '0',
           label: isOwned ? 'Defend town hall' : 'Capture town hall',
@@ -542,6 +601,7 @@ export class CivilizationQueryService {
       actions.push({
         type: 'CAPTURE_BUILDING',
         buildingId: currentBuilding.id,
+        targetCoordinate: { q: currentTile.q, r: currentTile.r },
         actionPointUnits: settings.costs.buildingCaptureUnits,
         goldCost: '0',
         label: 'Contribute to building capture',
@@ -550,34 +610,41 @@ export class CivilizationQueryService {
           ? CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER
           : actionPointDisabledReason(settings.costs.buildingCaptureUnits),
       });
-    } else if (
-      !currentBuilding &&
-      currentTile.ownerTeamId === player.teamId &&
-      currentTile.isConnected &&
-      currentTile.terrainType !== 'MOUNTAIN' &&
-      !state.towers.some(
-        (tower) =>
-          tower.tileId === currentTile.id && tower.status !== CivilizationTowerStatus.CANCELLED,
-      )
-    ) {
+    }
+
+    const teamGold = new Prisma.Decimal(projectedGoldByTeamId.get(player.teamId) ?? '0');
+    for (const placementTile of state.tiles) {
+      if (
+        placementTile.ownerTeamId !== player.teamId ||
+        !placementTile.isConnected ||
+        placementTile.terrainType === 'MOUNTAIN' ||
+        buildingByTileId.has(placementTile.id) ||
+        state.towers.some(
+          (tower) =>
+            tower.tileId === placementTile.id && tower.status !== CivilizationTowerStatus.CANCELLED,
+        ) ||
+        placementTile.id === state.spawnPoint?.tileId ||
+        state.players.some(
+          (candidate) => candidate.isActive && candidate.currentTileId === placementTile.id,
+        )
+      ) {
+        continue;
+      }
       const overlapsTower = state.towers.some((tower) => {
         if (tower.status === CivilizationTowerStatus.CANCELLED) return false;
         const towerTile = state.tiles.find((tile) => tile.id === tower.tileId);
         return Boolean(
           towerTile &&
           towerProtectionAreasOverlap(
-            { center: currentTile, radius: settings.tower.protectionRadius },
+            { center: placementTile, radius: settings.tower.protectionRadius },
             { center: towerTile, radius: tower.protectionRadius },
           ),
         );
       });
-      const gold = projectedGoldByTeamId.get(player.teamId) ?? '0';
-      const lacksGold = new Prisma.Decimal(gold).lessThan(
-        new Prisma.Decimal(settings.tower.buildGoldCost),
-      );
+      const lacksGold = teamGold.lessThan(new Prisma.Decimal(settings.tower.buildGoldCost));
       actions.push({
         type: 'BUILD_TOWER',
-        targetCoordinate: { q: currentTile.q, r: currentTile.r },
+        targetCoordinate: { q: placementTile.q, r: placementTile.r },
         actionPointUnits: 0,
         goldCost: settings.tower.buildGoldCost,
         label: 'Build tower',
@@ -602,6 +669,7 @@ export class CivilizationQueryService {
         actions.push({
           type: 'ATTACK_TOWER',
           towerId: tower.id,
+          targetCoordinate: { q: towerTile.q, r: towerTile.r },
           actionPointUnits: settings.costs.towerAttackUnits,
           goldCost: '0',
           label: 'Attack tower',
@@ -628,6 +696,7 @@ export class CivilizationQueryService {
         actions.push({
           type: 'REPAIR_TOWER',
           towerId: tower.id,
+          targetCoordinate: { q: towerTile.q, r: towerTile.r },
           actionPointUnits: settings.costs.towerRepairUnits,
           goldCost: settings.tower.repairGoldCost,
           label: 'Repair tower',
@@ -662,6 +731,7 @@ export class CivilizationQueryService {
       actions.push({
         type: 'DEFEND_TOWN_HALL',
         buildingId: defendingTownHall.id,
+        targetCoordinate: { q: defendingTownHallTile.q, r: defendingTownHallTile.r },
         actionPointUnits: settings.costs.townHallDefenseUnits,
         goldCost: settings.townHall.defenseGoldCost,
         label: 'Defend town hall',

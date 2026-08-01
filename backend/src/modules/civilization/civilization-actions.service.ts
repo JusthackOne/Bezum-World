@@ -280,16 +280,34 @@ export class CivilizationActionsService {
       );
     }
     if (
-      context.state.players.some(
-        (candidate) =>
-          candidate.currentTileId === destination.id &&
-          candidate.teamId !== context.player.teamId &&
-          candidate.isActive,
+      context.state.buildings.some((building) => building.tileId === destination.id) ||
+      context.state.towers.some(
+        (tower) =>
+          tower.tileId === destination.id && tower.status !== CivilizationTowerStatus.CANCELLED,
       )
     ) {
       throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY,
-        'Attack an occupying enemy player instead of moving',
+        CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_STRUCTURE,
+        'Interact with the building or tower without moving onto its tile',
+      );
+    }
+    const isSharedSpawn = destination.id === context.state.spawnPoint?.tileId;
+    const occupyingPlayer = !isSharedSpawn
+      ? context.state.players.find(
+          (candidate) =>
+            candidate.id !== context.player.id &&
+            candidate.currentTileId === destination.id &&
+            candidate.isActive,
+        )
+      : undefined;
+    if (occupyingPlayer) {
+      throw new CivilizationException(
+        occupyingPlayer.teamId === context.player.teamId
+          ? CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_PLAYER
+          : CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY,
+        occupyingPlayer.teamId === context.player.teamId
+          ? 'Only the shared spawn may contain more than one active player'
+          : 'Attack the occupying enemy player instead of moving',
       );
     }
     if (this.isProtectedByEnemyTower(context.state, destination, context.player.teamId)) {
@@ -387,30 +405,16 @@ export class CivilizationActionsService {
     let respawnTileId: string | null = null;
 
     if (attackerWon) {
-      const assignedSpawn = context.state.tiles.find((tile) => tile.id === defender.spawnTileId);
-      const validAssignedSpawn =
-        assignedSpawn &&
-        assignedSpawn.terrainType !== CivilizationTerrainType.MOUNTAIN &&
-        context.state.spawnPoints.some(
-          (spawn) => spawn.tileId === assignedSpawn.id && spawn.teamId === defender.teamId,
-        ) &&
-        !this.hasEnemyOnTile(context.state, assignedSpawn.id, defender.teamId);
-      const fallbackSpawn = context.state.spawnPoints
-        .filter((spawn) => spawn.teamId === defender.teamId)
-        .map((spawn) => context.state.tiles.find((tile) => tile.id === spawn.tileId))
-        .find((tile) => {
-          if (!tile || tile.terrainType === CivilizationTerrainType.MOUNTAIN) return false;
-          return !this.hasEnemyOnTile(context.state, tile.id, defender.teamId);
-        });
-      const respawn = validAssignedSpawn ? assignedSpawn : fallbackSpawn;
+      const respawn = context.state.tiles.find(
+        (tile) => tile.id === context.state.spawnPoint?.tileId,
+      );
       if (!respawn) {
         throw new CivilizationException(
           CIVILIZATION_ERROR_CODES.INVALID_GAME_CONFIGURATION,
-          'Defender team has no valid spawn tile without an active enemy player',
+          'The game has no valid shared spawn tile',
         );
       }
       respawnTileId = respawn.id;
-      const fallbackSpawnUsed = !validAssignedSpawn;
       await this.repository.updatePlayer(defender.id, { currentTileId: respawn.id }, context.tx);
 
       const otherDefendersRemain = context.state.players.some(
@@ -423,7 +427,12 @@ export class CivilizationActionsService {
       if (
         !otherDefendersRemain &&
         respawn.id !== defenderTile.id &&
-        !this.isProtectedByEnemyTower(context.state, defenderTile, context.player.teamId)
+        !this.isProtectedByEnemyTower(context.state, defenderTile, context.player.teamId) &&
+        !context.state.buildings.some((building) => building.tileId === defenderTile.id) &&
+        !context.state.towers.some(
+          (tower) =>
+            tower.tileId === defenderTile.id && tower.status !== CivilizationTowerStatus.CANCELLED,
+        )
       ) {
         attackerMoved = true;
         await this.repository.updatePlayer(
@@ -495,28 +504,10 @@ export class CivilizationActionsService {
           targetPlayerId: defender.id,
           tileId: respawn.id,
           eventType: CivilizationEventType.PLAYER_RESPAWNED,
-          payload: { fallbackSpawnUsed, originalSpawnTileId: defender.spawnTileId },
+          payload: { sharedSpawnTileId: respawn.id },
         },
         context.tx,
       );
-      if (fallbackSpawnUsed) {
-        await this.repository.createEvent(
-          {
-            gameId: context.gameId,
-            teamId: defender.teamId,
-            actorPlayerId: context.player.id,
-            targetPlayerId: defender.id,
-            tileId: respawn.id,
-            eventType: CivilizationEventType.ADMIN_STATE_CORRECTION,
-            payload: {
-              reason: 'INVALID_ASSIGNED_SPAWN_FALLBACK',
-              originalSpawnTileId: defender.spawnTileId,
-              fallbackSpawnTileId: respawn.id,
-            },
-          },
-          context.tx,
-        );
-      }
     }
 
     const event = await this.repository.createEvent(
@@ -552,10 +543,12 @@ export class CivilizationActionsService {
         'Target is not a capturable resource building',
       );
     }
-    if (context.player.currentTileId !== building.tileId) {
+    const playerTile = this.tile(context.state, context.player.currentTileId);
+    const buildingTile = this.tile(context.state, building.tileId);
+    if (playerTile.id !== buildingTile.id && !areHexesAdjacent(playerTile, buildingTile)) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
-        'The player must occupy the building tile',
+        'The player must occupy or be adjacent to the building tile',
       );
     }
     if (this.hasEnemyOnTile(context.state, building.tileId, context.player.teamId)) {
@@ -564,7 +557,6 @@ export class CivilizationActionsService {
         'Enemy players on the building tile must be defeated first',
       );
     }
-    const buildingTile = this.tile(context.state, building.tileId);
     if (this.isProtectedByEnemyTower(context.state, buildingTile, context.player.teamId)) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER,
@@ -690,7 +682,9 @@ export class CivilizationActionsService {
       context.state.buildings.some((building) => building.tileId === tile.id) ||
       context.state.towers.some(
         (tower) => tower.tileId === tile.id && tower.status !== CivilizationTowerStatus.CANCELLED,
-      )
+      ) ||
+      tile.id === context.state.spawnPoint?.tileId ||
+      context.state.players.some((player) => player.isActive && player.currentTileId === tile.id)
     ) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.TOWER_PLACEMENT_INVALID,
@@ -930,13 +924,14 @@ export class CivilizationActionsService {
         'Target must be the enemy town hall',
       );
     }
-    if (context.player.currentTileId !== townHall.tileId) {
+    const tile = this.tile(context.state, townHall.tileId);
+    const playerTile = this.tile(context.state, context.player.currentTileId);
+    if (playerTile.id !== tile.id && !areHexesAdjacent(playerTile, tile)) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
-        'The attacker must occupy the town-hall tile',
+        'The attacker must occupy or be adjacent to the town-hall tile',
       );
     }
-    const tile = this.tile(context.state, townHall.tileId);
     if (this.hasEnemyOnTile(context.state, tile.id, context.player.teamId)) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY,

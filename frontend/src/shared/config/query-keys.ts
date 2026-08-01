@@ -38,8 +38,6 @@ export const queryKeys = {
   civilizationState: (gameId: string) => ["civilization", "games", gameId, "state"] as const,
   civilizationHistory: (page: number, limit: number) =>
     ["civilization", "history", page, limit] as const,
-  civilizationEvents: (gameId: string, page: number, limit: number) =>
-    ["civilization", "games", gameId, "events", page, limit] as const,
   adminCivilizationGames: ["admin", "civilization", "games"] as const,
   adminCivilizationGamesPage: (page: number, limit: number, search: string, status?: string) =>
     ["admin", "civilization", "games", "page", page, limit, search, status ?? "ALL"] as const,

@@ -66,7 +66,6 @@ export function CivilizationGameDetails({ gameId }: { gameId: string }) {
   const [newPlayer, setNewPlayer] = useState<AddCivilizationPlayerInput>({
     userId: "",
     teamId: "",
-    spawnTileId: "",
   });
   const users = useMemo(
     () =>
@@ -158,7 +157,7 @@ export function CivilizationGameDetails({ gameId }: { gameId: string }) {
     try {
       await addPlayerMutation.mutateAsync(newPlayer);
       toast.success("Player added to the active game and audit log.");
-      setNewPlayer({ userId: "", teamId: "", spawnTileId: "" });
+      setNewPlayer({ userId: "", teamId: "" });
     } catch {
       // React Query retains the structured error for the add-player panel.
     }
@@ -291,7 +290,6 @@ export function CivilizationGameDetails({ gameId }: { gameId: string }) {
             value={game.map}
             teams={editorTeams}
             settings={game.settings}
-            users={users}
             issues={visibleValidation}
             disabled
             onChange={() => undefined}
@@ -336,7 +334,6 @@ export function CivilizationGameDetails({ gameId }: { gameId: string }) {
                     setNewPlayer((current) => ({
                       ...current,
                       teamId: event.target.value,
-                      spawnTileId: "",
                     }))
                   }
                 >
@@ -348,46 +345,17 @@ export function CivilizationGameDetails({ gameId }: { gameId: string }) {
                   ))}
                 </select>
               </label>
-              <label className="space-y-2 text-xs">
-                <span className="block text-muted-foreground">Spawn point</span>
-                <select
-                  className="h-9 w-full border bg-background px-3"
-                  value={newPlayer.spawnTileId}
-                  onChange={(event) =>
-                    setNewPlayer((current) => ({ ...current, spawnTileId: event.target.value }))
-                  }
-                >
-                  <option value="">Select spawn</option>
-                  {game.map.spawnPoints
-                    .filter(
-                      (spawn) =>
-                        game.teams.find((team) => team.id === newPlayer.teamId)?.side ===
-                        spawn.teamSide,
-                    )
-                    .map((spawn) => (
-                      <option
-                        key={`${spawn.q}:${spawn.r}`}
-                        value={spawn.tileId ?? ""}
-                        disabled={!spawn.tileId}
-                      >
-                        {spawn.q}, {spawn.r}
-                        {spawn.tileId ? "" : " (tile ID unavailable)"}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              <p className="self-end text-xs text-muted-foreground">
+                The player will join on the shared spawn at ({game.map.spawn.q}, {game.map.spawn.r}
+                ).
+              </p>
             </div>
             {addPlayerMutation.isError ? (
               <p className="text-xs text-destructive">{addPlayerMutation.error.message}</p>
             ) : null}
             <Button
               type="button"
-              disabled={
-                !newPlayer.userId ||
-                !newPlayer.teamId ||
-                !newPlayer.spawnTileId ||
-                addPlayerMutation.isPending
-              }
+              disabled={!newPlayer.userId || !newPlayer.teamId || addPlayerMutation.isPending}
               onClick={() => void addPlayer()}
             >
               {addPlayerMutation.isPending ? "Adding..." : "Add player and audit"}
