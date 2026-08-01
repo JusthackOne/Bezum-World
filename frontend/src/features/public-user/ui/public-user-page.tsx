@@ -10,28 +10,18 @@ import {
   ShirtIcon,
   SwordIcon,
 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import { useClientAuthStore } from "@/features/auth/model/client-auth.store";
 import {
-  useEquipUserItemMutation,
-  useListUserItemForSaleMutation,
-  usePublicUserItemsQuery,
   usePublicUserProfileQuery,
-  useRemoveUserItemFromSaleMutation,
-  useUnequipUserItemMutation,
   useUserEquipmentQuery,
 } from "@/features/public-user/api";
 import type {
   PublicUserEquipment,
-  PublicUserItem,
   PublicUserProfile,
 } from "@/features/public-user/model/public-user.types";
-import { queryKeys } from "@/shared/config/query-keys";
 import { formatBalance } from "@/shared/lib/item-display";
 import { useClickTooltip } from "@/shared/lib/use-click-tooltip";
-import type { ItemDisplay } from "@/shared/model/item-display.types";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/8bit/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/8bit/card";
@@ -40,20 +30,14 @@ import {
   AttributeBadge,
   attributeVisuals,
   GameScoreIcon,
-  ItemDetailsModal,
-  ItemDisplayCard,
   ProfileItemSlot,
 } from "@/shared/ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/8bit/tooltip";
 import { Separator } from "@/shared/ui/8bit";
 
-import { ItemMarketplaceDialogs } from "./item-marketplace-dialogs";
-
 interface PublicUserPageProps {
   username: string;
 }
-
-type MobileProfileSection = "profile" | "inventory";
 
 const hiddenScrollbarClass =
   "overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
@@ -274,200 +258,12 @@ function UserInfoCard({
   );
 }
 
-function UserItemsCard({
-  profileUsername,
-  items,
-  equipment,
-  canEquip,
-  isEquipmentActionPending,
-  isMarketplaceActionPending,
-  equipmentActionError,
-  onEquipmentAction,
-  onListForSale,
-  onRemoveFromSale,
-  isPending,
-}: {
-  profileUsername: string;
-  items: PublicUserItem[];
-  equipment: PublicUserEquipment;
-  canEquip: boolean;
-  isEquipmentActionPending: boolean;
-  isMarketplaceActionPending: boolean;
-  equipmentActionError: string | null;
-  onEquipmentAction: (itemId: string, isEquipped: boolean) => void;
-  onListForSale: (itemId: string, price: number) => Promise<void>;
-  onRemoveFromSale: (itemId: string) => Promise<void>;
-  isPending: boolean;
-}) {
-  const [selectedItem, setSelectedItem] = useState<ItemDisplay | null>(null);
-  const [itemToList, setItemToList] = useState<PublicUserItem | null>(null);
-  const [itemToRemove, setItemToRemove] = useState<PublicUserItem | null>(null);
-  const equippedItemIds = useMemo(() => {
-    return new Set(
-      [
-        equipment.helmet?.id,
-        equipment.chest?.id,
-        equipment.pants?.id,
-        equipment.boots?.id,
-        equipment.leftWeapon?.id,
-        equipment.rightWeapon?.id,
-        ...(equipment.accessories ?? []).map((accessory) => accessory.id),
-      ].filter((itemId): itemId is string => Boolean(itemId)),
-    );
-  }, [equipment]);
-
-  return (
-    <>
-      <Card className="flex h-full min-h-0 flex-col lg:max-h-full">
-        <CardHeader>
-          <CardTitle>{profileUsername} Items</CardTitle>
-          <CardDescription>
-            {isPending
-              ? "Loading items..."
-              : `${items.length} item${items.length === 1 ? "" : "s"} in inventory`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent
-          className={cn("min-h-0 flex-1 space-y-4 overflow-x-hidden pr-4", hiddenScrollbarClass)}
-        >
-          {equipmentActionError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {equipmentActionError}
-            </p>
-          ) : null}
-          {isPending ? (
-            <p className="text-sm text-muted-foreground">Loading items...</p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No items found for this user.</p>
-          ) : (
-            <div className="grid gap-5 sm:grid-cols-2">
-              {items.map((item) => {
-                const isEquipped = equippedItemIds.has(item.id);
-                const actionLabel = isEquipped ? "Unequip" : "Equip";
-
-                return (
-                  <ItemDisplayCard
-                    key={item.id}
-                    item={item}
-                    onOpenDetails={setSelectedItem}
-                    pricePosition="left-when-new"
-                    actionLabel={canEquip ? actionLabel : undefined}
-                    onAction={
-                      canEquip
-                        ? (clickedItem) => onEquipmentAction(clickedItem.id, isEquipped)
-                        : undefined
-                    }
-                    actionDisabled={isEquipmentActionPending}
-                    actionAriaLabel={`${actionLabel} ${item.name}`}
-                    secondaryActionLabel={
-                      canEquip ? (
-                        item.isListedForSale ? (
-                          <span className="inline-flex items-center justify-center gap-1">
-                            <span>Remove from Sale</span>
-                            <span aria-hidden="true">(</span>
-                            <span className="inline-flex items-center gap-1">
-                              <CoinsIcon className="size-3 text-amber-300" />
-                              <span className="bg-linear-to-r from-amber-200 to-yellow-400 bg-clip-text font-semibold text-transparent tabular-nums">
-                                {formatBalance(item.listingPrice ?? 0)}
-                              </span>
-                            </span>
-                            <span aria-hidden="true">)</span>
-                          </span>
-                        ) : (
-                          "List for Sale"
-                        )
-                      ) : undefined
-                    }
-                    onSecondaryAction={
-                      canEquip
-                        ? () => {
-                            if (item.isListedForSale) {
-                              setItemToRemove(item);
-                            } else {
-                              setItemToList(item);
-                            }
-                          }
-                        : undefined
-                    }
-                    secondaryActionDisabled={isMarketplaceActionPending}
-                    secondaryActionAriaLabel={
-                      item.isListedForSale
-                        ? `Remove ${item.name} from sale`
-                        : `List ${item.name} for sale`
-                    }
-                  />
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <ItemDetailsModal
-        item={selectedItem}
-        open={selectedItem !== null}
-        onOpenChange={(open) => !open && setSelectedItem(null)}
-      />
-      <ItemMarketplaceDialogs
-        itemToList={itemToList}
-        itemToRemove={itemToRemove}
-        isPending={isMarketplaceActionPending}
-        onListOpenChange={(open) => !open && setItemToList(null)}
-        onRemoveOpenChange={(open) => !open && setItemToRemove(null)}
-        onList={onListForSale}
-        onRemove={onRemoveFromSale}
-      />
-    </>
-  );
-}
-
-function updateEquipmentCache(
-  queryClient: ReturnType<typeof useQueryClient>,
-  profile: PublicUserProfile,
-  response: { equipped: PublicUserEquipment },
-) {
-  queryClient.setQueryData(queryKeys.userEquipment(profile.id), response.equipped);
-
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.userEquipment(profile.id),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.publicUserProfile(profile.username),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.publicUserItems(profile.username),
-  });
-}
-
 export function PublicUserPage({ username }: PublicUserPageProps) {
-  const queryClient = useQueryClient();
-
-  const initializeSession = useClientAuthStore((state) => state.initializeSession);
-  const isSessionInitialized = useClientAuthStore((state) => state.isInitialized);
-  const session = useClientAuthStore((state) => state.session);
-
-  useEffect(() => {
-    initializeSession();
-  }, [initializeSession]);
-
   const profileQuery = usePublicUserProfileQuery(username);
-  const itemsQuery = usePublicUserItemsQuery(username);
-  const [activeMobileSection, setActiveMobileSection] = useState<MobileProfileSection>("profile");
-  const [equipmentActionError, setEquipmentActionError] = useState<string | null>(null);
   const equipmentQuery = useUserEquipmentQuery(
     profileQuery.data?.id ?? "",
     Boolean(profileQuery.data?.id),
   );
-  const equipMutation = useEquipUserItemMutation();
-  const unequipMutation = useUnequipUserItemMutation();
-  const listForSaleMutation = useListUserItemForSaleMutation(username);
-  const removeFromSaleMutation = useRemoveUserItemFromSaleMutation(username);
-
-  const isOwnProfile =
-    isSessionInitialized &&
-    Boolean(session?.user.id) &&
-    Boolean(profileQuery.data?.id) &&
-    session?.user.id === profileQuery.data?.id;
 
   if (profileQuery.isPending && !profileQuery.data) {
     return (
@@ -506,32 +302,8 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
 
   return (
     <section className="min-h-screen overflow-x-hidden p-4 sm:p-6 lg:h-dvh lg:overflow-hidden lg:p-8">
-      <div className="mx-auto grid w-full max-w-[110rem] gap-6 lg:h-full lg:grid-cols-[26rem_minmax(0,1fr)]">
-        <div className="lg:hidden">
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant={activeMobileSection === "profile" ? "default" : "outline"}
-              onClick={() => setActiveMobileSection("profile")}
-            >
-              Profile
-            </Button>
-            <Button
-              type="button"
-              variant={activeMobileSection === "inventory" ? "default" : "outline"}
-              onClick={() => setActiveMobileSection("inventory")}
-            >
-              Inventory
-            </Button>
-          </div>
-        </div>
-
-        <div
-          className={cn(
-            activeMobileSection === "profile" ? "block" : "hidden",
-            "min-h-0 lg:block lg:h-full",
-          )}
-        >
+      <div className="mx-auto h-full w-full max-w-2xl">
+        <div className="min-h-0 lg:h-full">
           <UserInfoCard
             profile={profileQuery.data}
             equipment={equipmentQuery.data ?? {}}
@@ -542,68 +314,6 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
             onRetry={() => profileQuery.refetch()}
             isRetrying={profileQuery.isRefetching}
           />
-        </div>
-
-        <div
-          className={cn(
-            activeMobileSection === "inventory" ? "block" : "hidden",
-            "min-h-0 lg:block lg:h-full",
-          )}
-        >
-          {itemsQuery.isError ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Failed to load items</CardTitle>
-                <CardDescription>
-                  {itemsQuery.error instanceof Error
-                    ? itemsQuery.error.message
-                    : "Unable to fetch user items."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button type="button" onClick={() => itemsQuery.refetch()}>
-                  Retry
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <UserItemsCard
-              profileUsername={profileQuery.data.username}
-              items={itemsQuery.data?.items ?? []}
-              equipment={equipmentQuery.data ?? {}}
-              canEquip={isOwnProfile}
-              isEquipmentActionPending={equipMutation.isPending || unequipMutation.isPending}
-              isMarketplaceActionPending={
-                listForSaleMutation.isPending || removeFromSaleMutation.isPending
-              }
-              equipmentActionError={equipmentActionError}
-              onEquipmentAction={(itemId, isEquipped) => {
-                if (!profileQuery.data) {
-                  return;
-                }
-
-                const mutation = isEquipped ? unequipMutation : equipMutation;
-                setEquipmentActionError(null);
-                mutation.mutate(itemId, {
-                  onSuccess: (response) =>
-                    profileQuery.data
-                      ? updateEquipmentCache(queryClient, profileQuery.data, response)
-                      : undefined,
-                  onError: (error) =>
-                    setEquipmentActionError(
-                      error instanceof Error ? error.message : "Failed to update equipment.",
-                    ),
-                });
-              }}
-              onListForSale={async (itemId, price) => {
-                await listForSaleMutation.mutateAsync({ itemId, price });
-              }}
-              onRemoveFromSale={async (itemId) => {
-                await removeFromSaleMutation.mutateAsync(itemId);
-              }}
-              isPending={itemsQuery.isPending}
-            />
-          )}
         </div>
       </div>
     </section>
