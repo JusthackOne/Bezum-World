@@ -1302,123 +1302,16 @@ export class CivilizationActionsService {
     return { event };
   }
 
-  private async captureTownHallInTransaction(
-    context: ActionExecutionContext,
-    input: CivilizationTownHallActionDto,
+  private captureTownHallInTransaction(
+    _context: ActionExecutionContext,
+    _input: CivilizationTownHallActionDto,
   ): Promise<ActionMutationResult> {
-    const townHall = context.state.buildings.find(
-      (building) =>
-        building.id === input.townHallBuildingId &&
-        building.buildingType === CivilizationBuildingType.TOWN_HALL,
+    return Promise.reject(
+      new CivilizationException(
+        CIVILIZATION_ERROR_CODES.TOWN_HALL_REQUIRES_CATAPULT,
+        'The town hall can only be attacked with a Catapult',
+      ),
     );
-    if (!townHall || !townHall.ownerTeamId || townHall.ownerTeamId === context.player.teamId) {
-      throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
-        'Target must be the enemy town hall',
-      );
-    }
-    const tile = this.tile(context.state, townHall.tileId);
-    const playerTile = this.tile(context.state, context.player.currentTileId);
-    if (playerTile.id !== tile.id && !areHexesAdjacent(playerTile, tile)) {
-      throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
-        'The attacker must occupy or be adjacent to the town-hall tile',
-      );
-    }
-    if (this.hasEnemyOnTile(context.state, tile.id, context.player.teamId)) {
-      throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY,
-        'Defending players on the town hall must be defeated first',
-      );
-    }
-    if (this.isProtectedByEnemyTower(context.state, tile, context.player.teamId)) {
-      throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED,
-        'The town hall is protected by an active connected tower',
-      );
-    }
-    await this.spendActionPoints(
-      context.player,
-      context.settings.costs.townHallCaptureUnits,
-      context.tx,
-    );
-    const previousProgress =
-      townHall.captureTeamId && townHall.captureTeamId !== context.player.teamId
-        ? 0
-        : townHall.captureProgressUnits;
-    const progress = Math.min(
-      townHall.captureRequiredUnits,
-      previousProgress + context.settings.townHall.contributionUnits,
-    );
-    const captured = progress >= townHall.captureRequiredUnits;
-    await this.repository.updateBuilding(
-      townHall.id,
-      {
-        ownerTeamId: townHall.ownerTeamId,
-        status: captured ? CivilizationBuildingStatus.CAPTURED : townHall.status,
-        captureTeamId: captured ? null : context.player.teamId,
-        captureProgressUnits: captured ? 0 : progress,
-      },
-      context.tx,
-    );
-    if (captured) {
-      const previousOwnerTeamId = townHall.ownerTeamId;
-      await this.repository.updateTile(
-        townHall.tileId,
-        { ownerTeamId: context.player.teamId, isConnected: false },
-        context.tx,
-      );
-      await this.repository.createEvent(
-        {
-          gameId: context.gameId,
-          teamId: context.player.teamId,
-          actorPlayerId: context.player.id,
-          tileId: townHall.tileId,
-          eventType: CivilizationEventType.TILE_CAPTURED,
-          payload: {
-            previousOwnerTeamId,
-            ownerTeamId: context.player.teamId,
-            source: 'TOWN_HALL_CAPTURED',
-          },
-        },
-        context.tx,
-      );
-    }
-    const event = await this.repository.createEvent(
-      {
-        gameId: context.gameId,
-        teamId: context.player.teamId,
-        actorPlayerId: context.player.id,
-        tileId: townHall.tileId,
-        eventType: captured
-          ? CivilizationEventType.TOWN_HALL_CAPTURED
-          : CivilizationEventType.TOWN_HALL_CAPTURE_PROGRESS,
-        payload: {
-          townHallBuildingId: townHall.id,
-          previousOwnerTeamId: townHall.ownerTeamId,
-          ownerTeamId: townHall.ownerTeamId,
-          capturedByTeamId: captured ? context.player.teamId : null,
-          captureProgressUnits: captured ? townHall.captureRequiredUnits : progress,
-          captureRequiredUnits: townHall.captureRequiredUnits,
-          contributionUnits: Math.min(
-            context.settings.townHall.contributionUnits,
-            townHall.captureRequiredUnits - previousProgress,
-          ),
-          actionPointUnitsSpent: context.settings.costs.townHallCaptureUnits,
-        },
-      },
-      context.tx,
-    );
-    if (captured) {
-      await this.completionService.completeInTransaction(
-        context.gameId,
-        CivilizationCompletionReason.TOWN_HALL_CAPTURED,
-        context.player.teamId,
-        context.now,
-        context.tx,
-      );
-    }
-    return { event };
   }
 
   private async defendTownHallInTransaction(

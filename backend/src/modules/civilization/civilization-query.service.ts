@@ -498,25 +498,14 @@ export class CivilizationQueryService {
         destinationBuilding?.buildingType === CivilizationBuildingType.TOWN_HALL &&
         destinationBuilding.ownerTeamId !== player.teamId
       ) {
-        actions.push({
-          type: 'CAPTURE_TOWN_HALL',
-          buildingId: destinationBuilding.id,
-          targetCoordinate: { q: tile.q, r: tile.r },
-          actionPointUnits: settings.costs.townHallCaptureUnits,
-          goldCost: '0',
-          label: 'Capture town hall',
-          requiresConfirmation: false,
-          disabledReason: protectedByTower
-            ? CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED
-            : actionPointDisabledReason(settings.costs.townHallCaptureUnits),
-        });
         continue;
       }
       if (destinationBuilding) {
         if (
-          destinationBuilding.ownerTeamId !== player.teamId ||
-          (destinationBuilding.captureTeamId !== null &&
-            destinationBuilding.captureTeamId !== player.teamId)
+          destinationBuilding.buildingType !== CivilizationBuildingType.TOWN_HALL &&
+          (destinationBuilding.ownerTeamId !== player.teamId ||
+            (destinationBuilding.captureTeamId !== null &&
+              destinationBuilding.captureTeamId !== player.teamId))
         ) {
           actions.push({
             type: 'CAPTURE_BUILDING',
@@ -586,32 +575,8 @@ export class CivilizationQueryService {
 
     const currentBuilding = buildingByTileId.get(currentTile.id);
     if (
-      currentBuilding?.buildingType === CivilizationBuildingType.TOWN_HALL &&
-      currentBuilding.ownerTeamId !== player.teamId
-    ) {
-      const protectedByTower = state.towers.some((tower) => {
-        const towerTile = state.tiles.find((tile) => tile.id === tower.tileId);
-        return (
-          tower.teamId !== player.teamId &&
-          tower.status === CivilizationTowerStatus.ACTIVE &&
-          towerTile?.isConnected &&
-          hexDistance(currentTile, towerTile) <= tower.protectionRadius
-        );
-      });
-      actions.push({
-        type: 'CAPTURE_TOWN_HALL',
-        buildingId: currentBuilding.id,
-        targetCoordinate: { q: currentTile.q, r: currentTile.r },
-        actionPointUnits: settings.costs.townHallCaptureUnits,
-        goldCost: '0',
-        label: 'Capture town hall',
-        requiresConfirmation: false,
-        disabledReason: protectedByTower
-          ? CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED
-          : actionPointDisabledReason(settings.costs.townHallCaptureUnits),
-      });
-    } else if (
       currentBuilding &&
+      currentBuilding.buildingType !== CivilizationBuildingType.TOWN_HALL &&
       (currentBuilding.ownerTeamId !== player.teamId ||
         (currentBuilding.captureTeamId !== null && currentBuilding.captureTeamId !== player.teamId))
     ) {

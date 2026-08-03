@@ -762,7 +762,7 @@ describe('Civilization query access', () => {
     );
   });
 
-  test('offers adjacent enemy town-hall capture instead of movement', () => {
+  test('offers only Catapult against an adjacent enemy town hall', () => {
     const state = createQueryState(CivilizationGameStatus.ACTIVE);
     state.tiles.push({
       id: 'town-hall-tile-b',
@@ -809,12 +809,6 @@ describe('Civilization query access', () => {
     expect(response.availableActions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          type: 'CAPTURE_TOWN_HALL',
-          buildingId: 'town-hall-b',
-          targetCoordinate: { q: 1, r: 0 },
-          disabledReason: null,
-        }),
-        expect.objectContaining({
           type: 'CATAPULT_ATTACK',
           buildingId: 'town-hall-b',
           targetCoordinate: { q: 1, r: 0 },
@@ -824,6 +818,12 @@ describe('Civilization query access', () => {
         }),
       ]),
     );
+    expect(
+      response.availableActions.some(
+        (action) =>
+          action.type === 'CAPTURE_TOWN_HALL' && action.buildingId === 'town-hall-b',
+      ),
+    ).toBe(false);
     expect(
       response.availableActions.some(
         (action) => action.type === 'MOVE' && action.targetCoordinate?.q === 1,

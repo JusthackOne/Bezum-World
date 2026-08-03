@@ -1451,7 +1451,7 @@ describe('Civilization tower actions', () => {
 });
 
 describe('Civilization town-hall actions', () => {
-  test('captures an adjacent enemy town hall without moving onto its hex', async () => {
+  test('rejects ordinary capture because a town hall requires a Catapult', async () => {
     const state = createState();
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
     const townHall = createBuilding(
@@ -1465,96 +1465,17 @@ describe('Civilization town-hall actions', () => {
     state.buildings.push(townHall);
     const harness = createActionHarness(state);
 
-    await harness.service.captureTownHall(GAME_ID, USER_A_ID, {
-      actionId: '00000000-0000-4000-8000-000000050000',
-      townHallBuildingId: townHall.id,
-    });
-
+    await expectCivilizationError(
+      harness.service.captureTownHall(GAME_ID, USER_A_ID, {
+        actionId: '00000000-0000-4000-8000-000000050000',
+        townHallBuildingId: townHall.id,
+      }),
+      CIVILIZATION_ERROR_CODES.TOWN_HALL_REQUIRES_CATAPULT,
+    );
     expect(player(state, PLAYER_A_ID).currentTileId).toBe(ORIGIN_TILE_ID);
-    expect(findBuilding(state, townHall.id).captureProgressUnits).toBe(2);
-  });
-
-  test('combines several players contributions, completes the game, and rejects later actions', async () => {
-    const state = createState();
-    player(state, PLAYER_B_ID).currentTileId = TEAM_A_SPAWN_TILE_ID;
-    state.players.push(
-      createPlayer(
-        PLAYER_A_TWO_ID,
-        USER_A_TWO_ID,
-        TEAM_A_ID,
-        TEAM_B_SPAWN_TILE_ID,
-        TEAM_A_SPAWN_TILE_ID,
-      ),
-    );
-    const townHall = createBuilding(
-      'town-hall-b',
-      CivilizationBuildingType.TOWN_HALL,
-      TEAM_B_ID,
-      12,
-      TEAM_A_ID,
-      16,
-    );
-    state.buildings.push(townHall);
-    const harness = createActionHarness(state);
-
-    await harness.service.captureTownHall(GAME_ID, USER_A_ID, {
-      actionId: '00000000-0000-4000-8000-000000050001',
-      townHallBuildingId: townHall.id,
-    });
-    expect(findBuilding(state, townHall.id).captureProgressUnits).toBe(14);
-
-    await harness.service.captureTownHall(GAME_ID, USER_A_TWO_ID, {
-      actionId: '00000000-0000-4000-8000-000000050002',
-      townHallBuildingId: townHall.id,
-    });
-    expect(harness.completionCalls).toEqual([
-      {
-        gameId: GAME_ID,
-        reason: CivilizationCompletionReason.TOWN_HALL_CAPTURED,
-        winnerTeamId: TEAM_A_ID,
-      },
-    ]);
-    expect(state.status).toBe(CivilizationGameStatus.COMPLETED);
-
-    await expectCivilizationError(
-      harness.service.captureTownHall(GAME_ID, USER_A_ID, {
-        actionId: '00000000-0000-4000-8000-000000050003',
-        townHallBuildingId: townHall.id,
-      }),
-      CIVILIZATION_ERROR_CODES.GAME_NOT_ACTIVE,
-    );
-  });
-
-  test('rejects capture while a connected active tower protects the town hall', async () => {
-    const state = createState();
-    player(state, PLAYER_A_ID).currentTileId = TARGET_TILE_ID;
-    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
-    const townHall = createBuilding(
-      'town-hall-protected',
-      CivilizationBuildingType.TOWN_HALL,
-      TEAM_B_ID,
-      0,
-      null,
-      16,
-    );
-    state.buildings.push(townHall);
-    state.towers.push(
-      createTower(
-        'town-hall-tower',
-        TEAM_B_ID,
-        TEAM_B_SPAWN_TILE_ID,
-        CivilizationTowerStatus.ACTIVE,
-      ),
-    );
-    const harness = createActionHarness(state);
-
-    await expectCivilizationError(
-      harness.service.captureTownHall(GAME_ID, USER_A_ID, {
-        actionId: '00000000-0000-4000-8000-000000050004',
-        townHallBuildingId: townHall.id,
-      }),
-      CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED,
-    );
+    expect(findBuilding(state, townHall.id).captureProgressUnits).toBe(0);
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(16);
+    expect(harness.completionCalls).toEqual([]);
   });
 
   test('Repair Kit removes one displayed progress point from an adjacent allied town hall', async () => {
