@@ -127,7 +127,6 @@ Settings are copied into `settingsJson` and validated with Zod whenever loaded. 
 | Tower construction AP          |                                  1 AP / 2 units |
 | Tower attack                   |                                  3 AP / 6 units |
 | Town-hall contribution         |                                  1 AP / 2 units |
-| Town-hall defense              |                                  1 AP / 2 units |
 | Tower repair                   |                                  1 AP / 2 units |
 | Ordinary connected tile income |                                     5 gold/hour |
 | Gold building income           |                                    25 gold/hour |
@@ -135,10 +134,9 @@ Settings are copied into `settingsJson` and validated with Zod whenever loaded. 
 | Resource capture requirement   |                              3 points / 6 units |
 | Attacker / defender chance     |                                       30% / 70% |
 | Tower construction             |                 200 gold, 180 minutes, radius 1 |
-| Repair Kit                     |           75 gold, repairs 1 destruction action |
+| Repair Kit                     |  75 gold, repairs 1 tower/Town Hall damage unit |
 | Catapult                       | 150 gold, 2 AP / 4 units, 2 destruction actions |
 | Town-hall capture requirement  |                             8 points / 16 units |
-| Town-hall defense              |             50 gold, removes 0.5 point / 1 unit |
 | Score weights                  |                   gold × 1; each attribute × 25 |
 | Winner bonus                   |                                               0 |
 
@@ -211,13 +209,16 @@ damage. Against a Town Hall, `catapult.damage` adds capture-progress units and c
 the building's configured requirement is reached. The action row prevents the same Catapult request
 from being consumed twice. A successful event carries source/target tiles and damage so every polling
 client can play the short cannonball/impact animation; reduced-motion clients use an impact flash.
-The Repair Kit uses the same target-selection pattern for adjacent allied damaged towers.
+The Repair Kit uses the same target-selection pattern for adjacent allied damaged towers and Town
+Halls. For a Town Hall it removes `repairKit.repairActions` hostile capture-progress units. No direct
+Town Hall defense action is exposed; compatible calls to the legacy defense endpoint consume the same
+Repair Kit AP, gold, and repair amount.
 
 Town-hall progress is stored in half units. An attacker may contribute from the Town Hall hex or an
 adjacent hex; an adjacent enemy Town Hall is therefore exposed as `CAPTURE_TOWN_HALL`, not `MOVE`.
 Capture completes the game immediately; deadline completion uses weighted remaining resources and
-permits a draw. Defense spends locked team gold and AP before removing the configured progress, never
-below zero.
+permits a draw. Repair Kit defense spends locked team gold and AP before removing the configured
+progress, never below zero.
 
 ## Completion and rewards
 

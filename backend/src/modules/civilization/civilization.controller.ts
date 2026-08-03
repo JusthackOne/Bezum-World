@@ -24,6 +24,7 @@ import {
   CivilizationCatapultActionDto,
   CivilizationGameIdParamsDto,
   CivilizationPaginationDto,
+  CivilizationRepairActionDto,
   CivilizationTowerActionDto,
   CivilizationTownHallActionDto,
   MoveCivilizationPlayerDto,
@@ -148,7 +149,7 @@ export class CivilizationController {
   @UseGuards(CivilizationRateLimitGuard)
   async repairTower(
     @Param() params: CivilizationGameIdParamsDto,
-    @Body() body: CivilizationTowerActionDto,
+    @Body() body: CivilizationRepairActionDto,
     @Req() request: RequestWithAuthUser,
   ): Promise<unknown> {
     return this.actionsService.repairTower(params.gameId, this.requireUserId(request), body);

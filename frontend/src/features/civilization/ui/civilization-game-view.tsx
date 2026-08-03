@@ -96,7 +96,15 @@ function buildActionPayload(action: CivilizationLegalAction): CivilizationAction
             }
           : null,
     REPAIR_TOWER: () =>
-      action.towerId ? { type: "REPAIR_TOWER", actionId, towerId: action.towerId } : null,
+      action.towerId
+        ? { type: "REPAIR_TOWER", actionId, towerId: action.towerId }
+        : action.buildingId
+          ? {
+              type: "REPAIR_TOWER",
+              actionId,
+              townHallBuildingId: action.buildingId,
+            }
+          : null,
     CAPTURE_TOWN_HALL: () =>
       action.buildingId
         ? {
@@ -583,7 +591,7 @@ export function CivilizationGameView({
                   ? `Build on an adjacent allied hex. Protects territory within ${state.game.settings.tower.protectionRadius} hexes and takes ${state.game.settings.tower.destructionRequiredActions} successful attacks to destroy.`
                   : selectedItem === "CATAPULT_ATTACK"
                     ? `Strike an enemy tower or an adjacent enemy Town Hall. Adds ${state.game.settings.catapult.damage} destruction or capture-progress units to the target.`
-                    : `Repair an adjacent allied damaged tower. Removes ${state.game.settings.repairKit.repairActions} destruction actions from the tower.`}
+                    : `Repair an adjacent allied damaged tower or Town Hall. Removes ${state.game.settings.repairKit.repairActions} damage or hostile capture-progress units.`}
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-px border bg-border text-[10px]">
@@ -616,7 +624,7 @@ export function CivilizationGameView({
                     ? `${state.game.settings.tower.destructionRequiredActions} attacks to destroy`
                     : selectedItem === "CATAPULT_ATTACK"
                       ? `${state.game.settings.catapult.damage} damage units per strike`
-                      : `${state.game.settings.repairKit.repairActions} damage actions repaired`}
+                      : `${state.game.settings.repairKit.repairActions} repair units per use`}
                 </span>
               </div>
             </div>

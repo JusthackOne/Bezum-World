@@ -1436,7 +1436,7 @@ export function CivilizationGameMap({
   const repairUnavailableReason =
     state.availableActions.find(
       (action) => action.type === "REPAIR_TOWER" && action.disabledReason !== null,
-    )?.disabledReason ?? "No damaged adjacent allied towers are available.";
+    )?.disabledReason ?? "No damaged adjacent allied towers or Town Halls are available.";
 
   return (
     <div
@@ -1534,7 +1534,7 @@ export function CivilizationGameMap({
             size="sm"
             variant={placementMode === "REPAIR_TOWER" ? "default" : "secondary"}
             className="h-auto min-w-18 flex-col gap-1 p-2"
-            aria-label="Repair an adjacent allied tower with a Repair Kit"
+            aria-label="Repair an adjacent allied tower or Town Hall with a Repair Kit"
             aria-pressed={placementMode === "REPAIR_TOWER"}
             disabled={isInteractionDisabled || enabledRepairTargets.length === 0}
             title={

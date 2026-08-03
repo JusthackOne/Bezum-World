@@ -550,6 +550,67 @@ describe('Civilization query access', () => {
     expect(response.game.settings.repairKit.repairActions).toBe(2);
   });
 
+  test('offers Repair Kit for an adjacent allied town hall with hostile capture progress', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.tiles.push({
+      id: 'damaged-town-hall-tile',
+      gameId: GAME_ID,
+      q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_A_ID,
+      isConnected: true,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.buildings = [
+      {
+        id: 'damaged-town-hall-a',
+        gameId: GAME_ID,
+        tileId: 'damaged-town-hall-tile',
+        buildingType: CivilizationBuildingType.TOWN_HALL,
+        attributeKey: null,
+        ownerTeamId: TEAM_A_ID,
+        captureTeamId: TEAM_B_ID,
+        captureProgressUnits: 3,
+        captureRequiredUnits: 16,
+        incomePerHour: new Prisma.Decimal(0),
+        status: CivilizationBuildingStatus.ACTIVE,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    state.teamResources = [
+      {
+        id: 'repair-town-hall-resource-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        goldAmount: new Prisma.Decimal(500),
+        goldIncomePerHour: new Prisma.Decimal(0),
+        lastSettledAt: FIXED_NOW,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'REPAIR_TOWER',
+          buildingId: 'damaged-town-hall-a',
+          targetCoordinate: { q: 1, r: 0 },
+          goldCost: defaultCivilizationSettings.repairKit.goldPrice,
+          disabledReason: null,
+        }),
+      ]),
+    );
+    expect(response.availableActions.some((action) => action.type === 'DEFEND_TOWN_HALL')).toBe(
+      false,
+    );
+  });
+
   test("marks movement onto another team's spawn as unavailable", () => {
     const state = createQueryState(CivilizationGameStatus.ACTIVE);
     state.tiles.push({

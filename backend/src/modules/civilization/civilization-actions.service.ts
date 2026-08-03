@@ -34,6 +34,7 @@ import type {
   CaptureCivilizationBuildingDto,
   CivilizationActionDto,
   CivilizationCatapultActionDto,
+  CivilizationRepairActionDto,
   CivilizationTowerActionDto,
   CivilizationTownHallActionDto,
   MoveCivilizationPlayerDto,
@@ -127,7 +128,11 @@ export class CivilizationActionsService {
     );
   }
 
-  repairTower(gameId: string, userId: string, input: CivilizationTowerActionDto): Promise<unknown> {
+  repairTower(
+    gameId: string,
+    userId: string,
+    input: CivilizationRepairActionDto,
+  ): Promise<unknown> {
     return this.execute(gameId, userId, input, CivilizationActionType.REPAIR_TOWER, (context) =>
       this.repairTowerInTransaction(context, input),
     );
@@ -1103,13 +1108,22 @@ export class CivilizationActionsService {
 
   private async repairTowerInTransaction(
     context: ActionExecutionContext,
-    input: CivilizationTowerActionDto,
+    input: CivilizationRepairActionDto,
   ): Promise<ActionMutationResult> {
     if (!context.settings.repairKit.enabled) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.TOWER_NOT_REPAIRABLE,
         'Repair kits are disabled for this game',
       );
+    }
+    if (Boolean(input.towerId) === Boolean(input.townHallBuildingId)) {
+      throw new CivilizationException(
+        CIVILIZATION_ERROR_CODES.TOWER_NOT_REPAIRABLE,
+        'Choose exactly one allied tower or town hall target',
+      );
+    }
+    if (input.townHallBuildingId) {
+      return this.repairTownHallWithKitInTransaction(context, input.townHallBuildingId);
     }
     const tower = context.state.towers.find((candidate) => candidate.id === input.towerId);
     if (
@@ -1172,6 +1186,89 @@ export class CivilizationActionsService {
           destructionRequiredActions: tower.destructionRequiredActions,
           actionPointUnitsSpent: context.settings.costs.towerRepairUnits,
           goldSpent: context.settings.repairKit.goldPrice,
+        },
+      },
+      context.tx,
+    );
+    return { event };
+  }
+
+  private async repairTownHallWithKitInTransaction(
+    context: ActionExecutionContext,
+    townHallBuildingId: string,
+  ): Promise<ActionMutationResult> {
+    if (!context.settings.repairKit.enabled) {
+      throw new CivilizationException(
+        CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
+        'Repair kits are disabled for this game',
+      );
+    }
+    const townHall = context.state.buildings.find(
+      (building) =>
+        building.id === townHallBuildingId &&
+        building.buildingType === CivilizationBuildingType.TOWN_HALL,
+    );
+    if (
+      !townHall ||
+      townHall.ownerTeamId !== context.player.teamId ||
+      townHall.captureProgressUnits <= 0
+    ) {
+      throw new CivilizationException(
+        CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
+        'Target must be a damaged allied town hall',
+      );
+    }
+    const playerTile = this.tile(context.state, context.player.currentTileId);
+    const townHallTile = this.tile(context.state, townHall.tileId);
+    if (
+      !areHexesAdjacent(playerTile, townHallTile) ||
+      !townHallTile.isConnected ||
+      this.hasEnemyOnTile(context.state, townHallTile.id, context.player.teamId)
+    ) {
+      throw new CivilizationException(
+        CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
+        'The player must stand next to their connected undefended town hall',
+      );
+    }
+    await this.spendActionPoints(
+      context.player,
+      context.settings.costs.towerRepairUnits,
+      context.tx,
+    );
+    await this.spendGold(
+      context,
+      context.settings.repairKit.goldPrice,
+      'REPAIR_KIT',
+      townHall.tileId,
+    );
+    const repairActions = Math.min(
+      context.settings.repairKit.repairActions,
+      townHall.captureProgressUnits,
+    );
+    const captureProgressUnits = townHall.captureProgressUnits - repairActions;
+    await this.repository.updateBuilding(
+      townHall.id,
+      {
+        captureProgressUnits,
+        captureTeamId: captureProgressUnits === 0 ? null : townHall.captureTeamId,
+      },
+      context.tx,
+    );
+    const event = await this.repository.createEvent(
+      {
+        gameId: context.gameId,
+        teamId: context.player.teamId,
+        actorPlayerId: context.player.id,
+        tileId: townHall.tileId,
+        eventType: CivilizationEventType.TOWN_HALL_DEFENDED,
+        payload: {
+          townHallBuildingId: townHall.id,
+          repairActions,
+          captureProgressUnits,
+          captureRequiredUnits: townHall.captureRequiredUnits,
+          actionPointUnitsSpent: context.settings.costs.towerRepairUnits,
+          goldSpent: context.settings.repairKit.goldPrice,
+          source: 'REPAIR_KIT',
         },
       },
       context.tx,
@@ -1302,76 +1399,7 @@ export class CivilizationActionsService {
     context: ActionExecutionContext,
     input: CivilizationTownHallActionDto,
   ): Promise<ActionMutationResult> {
-    const townHall = context.state.buildings.find(
-      (building) =>
-        building.id === input.townHallBuildingId &&
-        building.buildingType === CivilizationBuildingType.TOWN_HALL,
-    );
-    if (
-      !townHall ||
-      townHall.ownerTeamId !== context.player.teamId ||
-      townHall.captureProgressUnits <= 0
-    ) {
-      throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
-        'This town hall has no hostile capture progress to defend',
-      );
-    }
-    const townHallTile = this.tile(context.state, townHall.tileId);
-    const playerTile = this.tile(context.state, context.player.currentTileId);
-    const validPosition =
-      playerTile.id === townHallTile.id ||
-      (areHexesAdjacent(playerTile, townHallTile) &&
-        playerTile.ownerTeamId === context.player.teamId &&
-        playerTile.isConnected);
-    if (!validPosition) {
-      throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
-        'Defenders must be on the town hall or an adjacent connected owned tile',
-      );
-    }
-    await this.spendActionPoints(
-      context.player,
-      context.settings.costs.townHallDefenseUnits,
-      context.tx,
-    );
-    await this.spendGold(
-      context,
-      context.settings.townHall.defenseGoldCost,
-      'TOWN_HALL_DEFENSE',
-      townHall.tileId,
-    );
-    const progress = Math.max(
-      0,
-      townHall.captureProgressUnits - context.settings.townHall.defenseReductionUnits,
-    );
-    await this.repository.updateBuilding(
-      townHall.id,
-      {
-        captureProgressUnits: progress,
-        captureTeamId: progress === 0 ? null : townHall.captureTeamId,
-      },
-      context.tx,
-    );
-    const event = await this.repository.createEvent(
-      {
-        gameId: context.gameId,
-        teamId: context.player.teamId,
-        actorPlayerId: context.player.id,
-        tileId: townHall.tileId,
-        eventType: CivilizationEventType.TOWN_HALL_DEFENDED,
-        payload: {
-          townHallBuildingId: townHall.id,
-          previousProgressUnits: townHall.captureProgressUnits,
-          captureProgressUnits: progress,
-          reducedByUnits: townHall.captureProgressUnits - progress,
-          actionPointUnitsSpent: context.settings.costs.townHallDefenseUnits,
-          goldSpent: context.settings.townHall.defenseGoldCost,
-        },
-      },
-      context.tx,
-    );
-    return { event };
+    return this.repairTownHallWithKitInTransaction(context, input.townHallBuildingId);
   }
 
   private async spendActionPoints(

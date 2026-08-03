@@ -290,6 +290,16 @@ export class CivilizationCatapultActionDto extends CivilizationActionDto {
   townHallBuildingId?: string;
 }
 
+export class CivilizationRepairActionDto extends CivilizationActionDto {
+  @IsOptional()
+  @IsUUID()
+  towerId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  townHallBuildingId?: string;
+}
+
 export class CivilizationTownHallActionDto extends CivilizationActionDto {
   @IsUUID()
   townHallBuildingId!: string;

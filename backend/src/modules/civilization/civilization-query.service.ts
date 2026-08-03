@@ -585,8 +585,10 @@ export class CivilizationQueryService {
     }
 
     const currentBuilding = buildingByTileId.get(currentTile.id);
-    if (currentBuilding?.buildingType === CivilizationBuildingType.TOWN_HALL) {
-      const isOwned = currentBuilding.ownerTeamId === player.teamId;
+    if (
+      currentBuilding?.buildingType === CivilizationBuildingType.TOWN_HALL &&
+      currentBuilding.ownerTeamId !== player.teamId
+    ) {
       const protectedByTower = state.towers.some((tower) => {
         const towerTile = state.tiles.find((tile) => tile.id === tower.tileId);
         return (
@@ -596,29 +598,18 @@ export class CivilizationQueryService {
           hexDistance(currentTile, towerTile) <= tower.protectionRadius
         );
       });
-      if (
-        (!isOwned && !protectedByTower) ||
-        (isOwned && currentBuilding.captureProgressUnits > 0)
-      ) {
-        const costUnits = isOwned
-          ? settings.costs.townHallDefenseUnits
-          : settings.costs.townHallCaptureUnits;
-        const teamGold = new Prisma.Decimal(projectedGoldByTeamId.get(player.teamId) ?? '0');
-        const lacksDefenseGold =
-          isOwned && teamGold.lessThan(new Prisma.Decimal(settings.townHall.defenseGoldCost));
-        actions.push({
-          type: isOwned ? 'DEFEND_TOWN_HALL' : 'CAPTURE_TOWN_HALL',
-          buildingId: currentBuilding.id,
-          targetCoordinate: { q: currentTile.q, r: currentTile.r },
-          actionPointUnits: costUnits,
-          goldCost: isOwned ? settings.townHall.defenseGoldCost : '0',
-          label: isOwned ? 'Defend town hall' : 'Capture town hall',
-          requiresConfirmation: isOwned,
-          disabledReason: lacksDefenseGold
-            ? CIVILIZATION_ERROR_CODES.NOT_ENOUGH_TEAM_GOLD
-            : actionPointDisabledReason(costUnits),
-        });
-      }
+      actions.push({
+        type: 'CAPTURE_TOWN_HALL',
+        buildingId: currentBuilding.id,
+        targetCoordinate: { q: currentTile.q, r: currentTile.r },
+        actionPointUnits: settings.costs.townHallCaptureUnits,
+        goldCost: '0',
+        label: 'Capture town hall',
+        requiresConfirmation: false,
+        disabledReason: protectedByTower
+          ? CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED
+          : actionPointDisabledReason(settings.costs.townHallCaptureUnits),
+      });
     } else if (
       currentBuilding &&
       (currentBuilding.ownerTeamId !== player.teamId ||
@@ -748,6 +739,42 @@ export class CivilizationQueryService {
       }
     }
 
+    for (const townHall of state.buildings.filter(
+      (building) =>
+        building.buildingType === CivilizationBuildingType.TOWN_HALL &&
+        building.ownerTeamId === player.teamId &&
+        building.captureProgressUnits > 0,
+    )) {
+      const townHallTile = state.tiles.find((tile) => tile.id === townHall.tileId);
+      if (
+        !townHallTile ||
+        !townHallTile.isConnected ||
+        !areHexesAdjacent(currentTile, townHallTile) ||
+        state.players.some(
+          (candidate) =>
+            candidate.isActive &&
+            candidate.currentTileId === townHall.tileId &&
+            candidate.teamId !== player.teamId,
+        )
+      ) {
+        continue;
+      }
+      actions.push({
+        type: 'REPAIR_TOWER',
+        buildingId: townHall.id,
+        targetCoordinate: { q: townHallTile.q, r: townHallTile.r },
+        actionPointUnits: settings.costs.towerRepairUnits,
+        goldCost: settings.repairKit.goldPrice,
+        label: 'Use Repair Kit on Town Hall',
+        requiresConfirmation: true,
+        disabledReason: !settings.repairKit.enabled
+          ? 'REPAIR_KIT_DISABLED'
+          : teamGold.lessThan(new Prisma.Decimal(settings.repairKit.goldPrice))
+            ? CIVILIZATION_ERROR_CODES.NOT_ENOUGH_TEAM_GOLD
+            : actionPointDisabledReason(settings.costs.towerRepairUnits),
+      });
+    }
+
     const catapultTowerTargets = state.towers.filter((tower) => {
       if (
         tower.teamId === player.teamId ||
@@ -847,40 +874,8 @@ export class CivilizationQueryService {
         label: 'Use Repair Kit',
         requiresConfirmation: true,
         disabledReason: settings.repairKit.enabled
-          ? 'NO_DAMAGED_ADJACENT_ALLIED_TOWERS'
+          ? 'NO_DAMAGED_ADJACENT_ALLIED_STRUCTURES'
           : 'REPAIR_KIT_DISABLED',
-      });
-    }
-
-    const defendingTownHall = state.buildings.find(
-      (building) =>
-        building.buildingType === CivilizationBuildingType.TOWN_HALL &&
-        building.ownerTeamId === player.teamId &&
-        building.captureProgressUnits > 0 &&
-        building.tileId !== currentTile.id,
-    );
-    const defendingTownHallTile = defendingTownHall
-      ? state.tiles.find((tile) => tile.id === defendingTownHall.tileId)
-      : undefined;
-    if (
-      defendingTownHall &&
-      defendingTownHallTile &&
-      areHexesAdjacent(currentTile, defendingTownHallTile) &&
-      currentTile.ownerTeamId === player.teamId &&
-      currentTile.isConnected
-    ) {
-      const teamGold = new Prisma.Decimal(projectedGoldByTeamId.get(player.teamId) ?? '0');
-      actions.push({
-        type: 'DEFEND_TOWN_HALL',
-        buildingId: defendingTownHall.id,
-        targetCoordinate: { q: defendingTownHallTile.q, r: defendingTownHallTile.r },
-        actionPointUnits: settings.costs.townHallDefenseUnits,
-        goldCost: settings.townHall.defenseGoldCost,
-        label: 'Defend town hall',
-        requiresConfirmation: true,
-        disabledReason: teamGold.lessThan(new Prisma.Decimal(settings.townHall.defenseGoldCost))
-          ? CIVILIZATION_ERROR_CODES.NOT_ENOUGH_TEAM_GOLD
-          : actionPointDisabledReason(settings.costs.townHallDefenseUnits),
       });
     }
     return actions;

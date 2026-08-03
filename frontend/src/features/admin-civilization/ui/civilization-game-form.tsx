@@ -510,11 +510,6 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 register={form.register}
               />
               <NumberField
-                label="Town hall defense cost (units)"
-                name="settings.costs.townHallDefenseUnits"
-                register={form.register}
-              />
-              <NumberField
                 label="Repair Kit cost (units)"
                 name="settings.costs.towerRepairUnits"
                 register={form.register}
@@ -658,16 +653,6 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
               <NumberField
                 label="Capture units / action"
                 name="settings.townHall.contributionUnits"
-                register={form.register}
-              />
-              <DecimalField
-                label="Defense gold"
-                name="settings.townHall.defenseGoldCost"
-                register={form.register}
-              />
-              <NumberField
-                label="Defense reduction (half-units)"
-                name="settings.townHall.defenseReductionUnits"
                 register={form.register}
               />
               <DecimalField

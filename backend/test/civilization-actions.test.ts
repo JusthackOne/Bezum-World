@@ -1459,8 +1459,14 @@ describe('Civilization town-hall actions', () => {
     );
   });
 
-  test('defense removes half a point, spends one AP and 50 team gold', async () => {
+  test('Repair Kit removes configured hostile progress from an adjacent allied town hall', async () => {
     const state = createState();
+    const settings = structuredClone(defaultCivilizationSettings);
+    settings.repairKit.repairActions = 2;
+    settings.repairKit.goldPrice = '90';
+    state.settingsJson = settings;
+    tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_A_ID;
+    tile(state, TARGET_TILE_ID).isConnected = true;
     const townHall = createBuilding(
       'town-hall-a',
       CivilizationBuildingType.TOWN_HALL,
@@ -1473,25 +1479,31 @@ describe('Civilization town-hall actions', () => {
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
     const harness = createActionHarness(state);
 
-    await harness.service.defendTownHall(GAME_ID, USER_A_ID, {
+    await harness.service.repairTower(GAME_ID, USER_A_ID, {
       actionId: '00000000-0000-4000-8000-000000050005',
       townHallBuildingId: townHall.id,
     });
 
-    expect(findBuilding(state, townHall.id).captureProgressUnits).toBe(2);
+    expect(findBuilding(state, townHall.id).captureProgressUnits).toBe(1);
     expect(findBuilding(state, townHall.id).captureTeamId).toBe(TEAM_B_ID);
     expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(14);
-    expect(state.teamResources[0]!.goldAmount.toString()).toBe('450');
+    expect(state.teamResources[0]!.goldAmount.toString()).toBe('410');
     expect(harness.repository.events).toContainEqual(
       expect.objectContaining({
         eventType: CivilizationEventType.TEAM_GOLD_SPENT,
         payloadJson: expect.objectContaining({
-          amount: '50',
+          amount: '90',
           previousBalance: '500',
-          resultingBalance: '450',
+          resultingBalance: '410',
         }),
       }),
     );
+    expect(harness.repository.events.at(-1)?.payloadJson).toMatchObject({
+      townHallBuildingId: townHall.id,
+      repairActions: 2,
+      captureProgressUnits: 1,
+      source: 'REPAIR_KIT',
+    });
   });
 });
 
