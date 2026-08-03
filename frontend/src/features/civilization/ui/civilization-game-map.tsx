@@ -1005,6 +1005,8 @@ export function CivilizationGameMap({
   const [itemPaletteOpen, setItemPaletteOpen] = useState(false);
   const [mapSize, setMapSize] = useState({ width: 320, height: 420 });
   const showStructureTooltipRef = useRef<ShowStructureTooltip>((target, event, isPinned) => {
+    setItemPaletteOpen(false);
+    setPlayerStackTileId(null);
     setStructureTooltip({
       ...target,
       x: event.global.x,
@@ -1158,7 +1160,11 @@ export function CivilizationGameMap({
           setStructureTooltip(null);
           onSelectPlayerRef.current(playerId);
         },
-        (tileId) => setPlayerStackTileId(tileId),
+        (tileId) => {
+          setItemPaletteOpen(false);
+          setStructureTooltip(null);
+          setPlayerStackTileId(tileId);
+        },
         (target, event, isPinned) => showStructureTooltipRef.current(target, event, isPinned),
         (target) => hideStructureTooltipRef.current(target),
         selectionRef.current.selectedPlayerId,
@@ -1223,7 +1229,11 @@ export function CivilizationGameMap({
         setStructureTooltip(null);
         onSelectPlayerRef.current(playerId);
       },
-      (tileId) => setPlayerStackTileId(tileId),
+      (tileId) => {
+        setItemPaletteOpen(false);
+        setStructureTooltip(null);
+        setPlayerStackTileId(tileId);
+      },
       (target, event, isPinned) => showStructureTooltipRef.current(target, event, isPinned),
       (target) => hideStructureTooltipRef.current(target),
       selectionRef.current.selectedPlayerId,
@@ -1508,7 +1518,11 @@ export function CivilizationGameMap({
             className="min-w-28 justify-between bg-slate-900/95 text-slate-100 shadow-lg backdrop-blur-sm lg:hidden"
             aria-expanded={itemPaletteOpen}
             aria-controls="civilization-item-palette"
-            onClick={() => setItemPaletteOpen((current) => !current)}
+            onClick={() => {
+              setStructureTooltip(null);
+              setPlayerStackTileId(null);
+              setItemPaletteOpen((current) => !current);
+            }}
           >
             <span className="flex items-center gap-2">
               <PackageIcon className="size-4" /> Items
@@ -1727,7 +1741,9 @@ export function CivilizationGameMap({
           </Button>
         </div>
       </div>
-      {selectedPlayerId === state.access.currentPlayerId ? (
+      {selectedPlayerId === state.access.currentPlayerId &&
+      !structureTooltip &&
+      !playerStackTileId ? (
         <div className="pointer-events-none absolute right-3 bottom-3 grid gap-1 rounded-sm border border-white/20 bg-slate-950/80 px-3 py-2 text-[10px] text-slate-200 backdrop-blur-sm">
           <span>
             <span className="mr-1.5 inline-block size-2 bg-green-500" /> Move

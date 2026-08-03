@@ -29,7 +29,10 @@ The upper-left item palette exposes defensive-tower placement, the single-use Ca
 single-use Repair Kit. Each control keeps a short English name below the artwork and shows gold (`G`)
 and action-point (`AP`) prices in separate high-contrast cells. On mobile, an `Items` button opens and
 collapses the controls as a height-limited vertical list. From the `lg` desktop breakpoint, the
-toggle is hidden and a smaller horizontal row with reduced artwork, spacing, and type stays visible. Placement
+toggle is hidden and a smaller horizontal row with reduced artwork, spacing, and type stays visible.
+Opening the mobile item list, a structure tooltip, or a stacked-player dialog closes the other
+overlays, and the action legend hides while a tooltip or player dialog is visible so map sections do
+not cover one another. Placement
 buttons first open an item dialog with its purpose, cost, and relevant combat values. `Use` enters
 the corresponding placement or targeting mode, while `Back` returns to the map. There is no second
 team-resource confirmation dialog after a target is chosen. Tower placement mode highlights every enabled `BUILD_TOWER` coordinate returned by the
