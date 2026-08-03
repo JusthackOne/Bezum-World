@@ -590,7 +590,7 @@ export function CivilizationGameView({
                 {selectedItem === "BUILD_TOWER"
                   ? `Build on an adjacent allied hex. Protects territory within ${state.game.settings.tower.protectionRadius} hexes and takes ${state.game.settings.tower.destructionRequiredActions} successful attacks to destroy.`
                   : selectedItem === "CATAPULT_ATTACK"
-                    ? `Strike an enemy structure for ${state.game.settings.catapult.damage} damage ${state.game.settings.catapult.damage === 1 ? "point" : "points"}. Resource buildings remain capturable normally without a Catapult.`
+                    ? `Strike an enemy structure for ${state.game.settings.catapult.damage} damage ${state.game.settings.catapult.damage === 1 ? "point" : "points"}. A defensive tower under construction is destroyed in one strike. Resource buildings remain capturable normally without a Catapult.`
                     : `Repair any adjacent allied damaged structure for ${state.game.settings.repairKit.repairActions} repair ${state.game.settings.repairKit.repairActions === 1 ? "point" : "points"}.`}
               </DialogDescription>
             </DialogHeader>

@@ -232,6 +232,9 @@ function StructureTooltip({
       label: "Destruction progress",
       value: `${tower.destructionProgressActions} / ${tower.destructionRequiredActions}`,
     });
+    if (tower.status === "UNDER_CONSTRUCTION") {
+      rows.push({ label: "Catapult", value: "destroys in one strike" });
+    }
     if (tower.status === "UNDER_CONSTRUCTION" && tower.constructionCompletesAt) {
       const startedAt = new Date(tower.constructionStartedAt).getTime();
       const completesAt = new Date(tower.constructionCompletesAt).getTime();
