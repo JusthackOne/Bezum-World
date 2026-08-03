@@ -1010,9 +1010,10 @@ export class CivilizationActionsService {
       townHall.captureTeamId && townHall.captureTeamId !== context.player.teamId
         ? 0
         : townHall.captureProgressUnits;
+    const damageCaptureProgressUnits = context.settings.catapult.damage * 2;
     const progress = Math.min(
       townHall.captureRequiredUnits,
-      previousProgress + context.settings.catapult.damage,
+      previousProgress + damageCaptureProgressUnits,
     );
     const captured = progress >= townHall.captureRequiredUnits;
     await this.repository.updateBuilding(
@@ -1064,7 +1065,7 @@ export class CivilizationActionsService {
           captureProgressUnits: captured ? townHall.captureRequiredUnits : progress,
           captureRequiredUnits: townHall.captureRequiredUnits,
           contributionUnits: Math.min(
-            context.settings.catapult.damage,
+            damageCaptureProgressUnits,
             townHall.captureRequiredUnits - previousProgress,
           ),
           actionPointUnitsSpent: context.settings.catapult.actionPointUnits,
@@ -1094,6 +1095,7 @@ export class CivilizationActionsService {
           sourceTileId: playerTile.id,
           targetTileId: townHall.tileId,
           damageActions: context.settings.catapult.damage,
+          damageCaptureProgressUnits,
           captureProgressUnits: captured ? townHall.captureRequiredUnits : progress,
           captureRequiredUnits: townHall.captureRequiredUnits,
           captured,
@@ -1241,11 +1243,11 @@ export class CivilizationActionsService {
       'REPAIR_KIT',
       townHall.tileId,
     );
-    const repairActions = Math.min(
-      context.settings.repairKit.repairActions,
+    const repairedCaptureProgressUnits = Math.min(
+      context.settings.repairKit.repairActions * 2,
       townHall.captureProgressUnits,
     );
-    const captureProgressUnits = townHall.captureProgressUnits - repairActions;
+    const captureProgressUnits = townHall.captureProgressUnits - repairedCaptureProgressUnits;
     await this.repository.updateBuilding(
       townHall.id,
       {
@@ -1263,7 +1265,8 @@ export class CivilizationActionsService {
         eventType: CivilizationEventType.TOWN_HALL_DEFENDED,
         payload: {
           townHallBuildingId: townHall.id,
-          repairActions,
+          repairActions: context.settings.repairKit.repairActions,
+          repairedCaptureProgressUnits,
           captureProgressUnits,
           captureRequiredUnits: townHall.captureRequiredUnits,
           actionPointUnitsSpent: context.settings.costs.towerRepairUnits,

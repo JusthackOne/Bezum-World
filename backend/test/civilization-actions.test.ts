@@ -1142,10 +1142,10 @@ describe('Civilization tower actions', () => {
     ).toHaveLength(1);
   });
 
-  test('uses Catapult damage as capture progress against an adjacent enemy town hall', async () => {
+  test('applies full displayed Catapult damage against an adjacent enemy town hall', async () => {
     const state = createState();
     const settings = structuredClone(defaultCivilizationSettings);
-    settings.catapult.damage = 4;
+    settings.catapult.damage = 2;
     state.settingsJson = settings;
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
     tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_B_ID;
@@ -1198,7 +1198,8 @@ describe('Civilization tower actions', () => {
     ).toHaveLength(2);
     expect(harness.repository.events.at(-1)?.payloadJson).toMatchObject({
       townHallBuildingId: townHall.id,
-      damageActions: 4,
+      damageActions: 2,
+      damageCaptureProgressUnits: 4,
       captureProgressUnits: 6,
       captureRequiredUnits: 6,
       captured: true,
@@ -1459,10 +1460,10 @@ describe('Civilization town-hall actions', () => {
     );
   });
 
-  test('Repair Kit removes configured hostile progress from an adjacent allied town hall', async () => {
+  test('Repair Kit removes one displayed progress point from an adjacent allied town hall', async () => {
     const state = createState();
     const settings = structuredClone(defaultCivilizationSettings);
-    settings.repairKit.repairActions = 2;
+    settings.repairKit.repairActions = 1;
     settings.repairKit.goldPrice = '90';
     state.settingsJson = settings;
     tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_A_ID;
@@ -1500,7 +1501,8 @@ describe('Civilization town-hall actions', () => {
     );
     expect(harness.repository.events.at(-1)?.payloadJson).toMatchObject({
       townHallBuildingId: townHall.id,
-      repairActions: 2,
+      repairActions: 1,
+      repairedCaptureProgressUnits: 2,
       captureProgressUnits: 1,
       source: 'REPAIR_KIT',
     });

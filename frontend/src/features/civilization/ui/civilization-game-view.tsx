@@ -590,8 +590,8 @@ export function CivilizationGameView({
                 {selectedItem === "BUILD_TOWER"
                   ? `Build on an adjacent allied hex. Protects territory within ${state.game.settings.tower.protectionRadius} hexes and takes ${state.game.settings.tower.destructionRequiredActions} successful attacks to destroy.`
                   : selectedItem === "CATAPULT_ATTACK"
-                    ? `Strike an enemy tower or an adjacent enemy Town Hall. Adds ${state.game.settings.catapult.damage} destruction or capture-progress units to the target.`
-                    : `Repair an adjacent allied damaged tower or Town Hall. Removes ${state.game.settings.repairKit.repairActions} damage or hostile capture-progress units.`}
+                    ? `Strike an enemy tower or an adjacent enemy Town Hall for ${state.game.settings.catapult.damage} tower damage actions or Town Hall capture-progress points.`
+                    : `Repair an adjacent allied damaged tower or Town Hall. Restores ${state.game.settings.repairKit.repairActions} tower damage actions or Town Hall capture-progress points.`}
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-px border bg-border text-[10px]">
@@ -623,8 +623,8 @@ export function CivilizationGameView({
                   {selectedItem === "BUILD_TOWER"
                     ? `${state.game.settings.tower.destructionRequiredActions} attacks to destroy`
                     : selectedItem === "CATAPULT_ATTACK"
-                      ? `${state.game.settings.catapult.damage} damage units per strike`
-                      : `${state.game.settings.repairKit.repairActions} repair units per use`}
+                      ? `${state.game.settings.catapult.damage} damage ${state.game.settings.catapult.damage === 1 ? "point" : "points"} per strike`
+                      : `${state.game.settings.repairKit.repairActions} repair ${state.game.settings.repairKit.repairActions === 1 ? "point" : "points"} per use`}
                 </span>
               </div>
             </div>

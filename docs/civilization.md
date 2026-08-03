@@ -205,20 +205,22 @@ player is exactly on its configured protection-radius boundary. A Town Hall requ
 player position, no defender on the building, and no active connected tower protection. In one
 serializable transaction the action validates game state, ownership, target type, feature enablement,
 team gold, AP, and the idempotency key; then it deducts the configured costs and applies configured
-damage. Against a Town Hall, `catapult.damage` adds capture-progress units and completes the game when
-the building's configured requirement is reached. The action row prevents the same Catapult request
-from being consumed twice. A successful event carries source/target tiles and damage so every polling
+damage. Against a Town Hall, each configured `catapult.damage` point adds two stored half-units, so
+the applied damage matches the progress displayed to players, and completes the game when the
+building's configured requirement is reached. The action row prevents the same Catapult request from
+being consumed twice. A successful event carries source/target tiles and damage so every polling
 client can play the short cannonball/impact animation; reduced-motion clients use an impact flash.
 The Repair Kit uses the same target-selection pattern for adjacent allied damaged towers and Town
-Halls. For a Town Hall it removes `repairKit.repairActions` hostile capture-progress units. No direct
-Town Hall defense action is exposed; compatible calls to the legacy defense endpoint consume the same
-Repair Kit AP, gold, and repair amount.
+Halls. For a Town Hall it removes `repairKit.repairActions` player-visible hostile capture-progress
+points. No direct Town Hall defense action is exposed; compatible calls to the legacy defense
+endpoint consume the same Repair Kit AP, gold, and repair amount.
 
 Town-hall progress is stored in half units. An attacker may contribute from the Town Hall hex or an
 adjacent hex; an adjacent enemy Town Hall is therefore exposed as `CAPTURE_TOWN_HALL`, not `MOVE`.
 Capture completes the game immediately; deadline completion uses weighted remaining resources and
-permits a draw. Repair Kit defense spends locked team gold and AP before removing the configured
-progress, never below zero.
+permits a draw. Each configured Repair Kit repair point removes two stored Town Hall half-units, so
+the configured amount matches the progress displayed to players. Repair Kit defense spends locked
+team gold and AP before removing progress, never below zero.
 
 ## Completion and rewards
 
