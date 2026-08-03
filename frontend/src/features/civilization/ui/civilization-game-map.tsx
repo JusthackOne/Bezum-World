@@ -1429,14 +1429,14 @@ export function CivilizationGameMap({
   const catapultUnavailableReason =
     state.availableActions.find(
       (action) => action.type === "CATAPULT_ATTACK" && action.disabledReason !== null,
-    )?.disabledReason ?? "No valid enemy tower or Town Hall targets are available.";
+    )?.disabledReason ?? "No valid enemy structure targets are available.";
   const enabledRepairTargets = state.availableActions.filter(
     (action) => action.type === "REPAIR_TOWER" && action.disabledReason === null,
   );
   const repairUnavailableReason =
     state.availableActions.find(
       (action) => action.type === "REPAIR_TOWER" && action.disabledReason !== null,
-    )?.disabledReason ?? "No damaged adjacent allied towers or Town Halls are available.";
+    )?.disabledReason ?? "No damaged adjacent allied structures are available.";
 
   return (
     <div
@@ -1460,7 +1460,10 @@ export function CivilizationGameMap({
         aria-label="Civilization hex map"
       />
       {currentPlayer && !state.access.isReadOnly ? (
-        <div className="absolute top-3 left-3 flex gap-2" data-map-overlay-control>
+        <div
+          className="absolute top-3 left-3 flex flex-col gap-2 sm:flex-row"
+          data-map-overlay-control
+        >
           {BUILDING_PLACEMENT_CONTROLS.map((control) => {
             const disabled = isInteractionDisabled || enabledTowerPlacements.length === 0;
             return (
@@ -1501,7 +1504,7 @@ export function CivilizationGameMap({
             size="sm"
             variant={placementMode === "CATAPULT_ATTACK" ? "default" : "secondary"}
             className="h-auto min-w-18 flex-col gap-1 p-2"
-            aria-label="Target an enemy tower or Town Hall with a Catapult"
+            aria-label="Target an enemy structure with a Catapult"
             aria-pressed={placementMode === "CATAPULT_ATTACK"}
             disabled={isInteractionDisabled || enabledCatapultTargets.length === 0}
             title={
@@ -1534,7 +1537,7 @@ export function CivilizationGameMap({
             size="sm"
             variant={placementMode === "REPAIR_TOWER" ? "default" : "secondary"}
             className="h-auto min-w-18 flex-col gap-1 p-2"
-            aria-label="Repair an adjacent allied tower or Town Hall with a Repair Kit"
+            aria-label="Repair an adjacent allied structure with a Repair Kit"
             aria-pressed={placementMode === "REPAIR_TOWER"}
             disabled={isInteractionDisabled || enabledRepairTargets.length === 0}
             title={

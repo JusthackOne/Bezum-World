@@ -1206,6 +1206,58 @@ describe('Civilization tower actions', () => {
     });
   });
 
+  test('applies the same displayed Catapult damage to an enemy resource building', async () => {
+    const state = createState();
+    const settings = structuredClone(defaultCivilizationSettings);
+    settings.catapult.damage = 2;
+    state.settingsJson = settings;
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_B_ID;
+    const building = createBuilding(
+      'catapult-gold-building-target',
+      CivilizationBuildingType.GOLD_BUILDING,
+      TEAM_B_ID,
+      0,
+      null,
+      6,
+    );
+    state.buildings.push(building);
+    const harness = createActionHarness(state);
+
+    await harness.service.catapultAttack(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000040021',
+      buildingId: building.id,
+    });
+
+    expect(findBuilding(state, building.id)).toMatchObject({
+      ownerTeamId: TEAM_B_ID,
+      status: CivilizationBuildingStatus.ACTIVE,
+      captureTeamId: TEAM_A_ID,
+      captureProgressUnits: 4,
+    });
+    expect(harness.repository.events.at(-1)?.payloadJson).toMatchObject({
+      buildingId: building.id,
+      damageActions: 2,
+      damageCaptureProgressUnits: 4,
+      captureProgressUnits: 4,
+      captured: false,
+    });
+
+    await harness.service.catapultAttack(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000040022',
+      buildingId: building.id,
+    });
+
+    expect(findBuilding(state, building.id)).toMatchObject({
+      ownerTeamId: TEAM_A_ID,
+      status: CivilizationBuildingStatus.ACTIVE,
+      captureTeamId: null,
+      captureProgressUnits: 0,
+    });
+    expect(tile(state, TARGET_TILE_ID).ownerTeamId).toBe(TEAM_A_ID);
+    expect(harness.completionCalls).toEqual([]);
+  });
+
   test('rejects a Catapult request with more than one target before charging resources', async () => {
     const state = createState();
     const harness = createActionHarness(state);
@@ -1505,6 +1557,47 @@ describe('Civilization town-hall actions', () => {
       repairedCaptureProgressUnits: 2,
       captureProgressUnits: 1,
       source: 'REPAIR_KIT',
+    });
+  });
+
+  test('Repair Kit restores the same displayed amount on an allied attribute building', async () => {
+    const state = createState();
+    const settings = structuredClone(defaultCivilizationSettings);
+    settings.repairKit.repairActions = 1;
+    state.settingsJson = settings;
+    tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_A_ID;
+    tile(state, TARGET_TILE_ID).isConnected = true;
+    const building = createBuilding(
+      'repair-attribute-building-target',
+      CivilizationBuildingType.ATTRIBUTE_BUILDING,
+      TEAM_A_ID,
+      3,
+      TEAM_B_ID,
+      6,
+    );
+    state.buildings.push(building);
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    const harness = createActionHarness(state);
+
+    await harness.service.repairTower(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000050006',
+      buildingId: building.id,
+    });
+
+    expect(findBuilding(state, building.id)).toMatchObject({
+      ownerTeamId: TEAM_A_ID,
+      captureTeamId: TEAM_B_ID,
+      captureProgressUnits: 1,
+    });
+    expect(harness.repository.events.at(-1)).toMatchObject({
+      eventType: CivilizationEventType.BUILDING_CAPTURE_PROGRESS,
+      payloadJson: expect.objectContaining({
+        buildingId: building.id,
+        repairActions: 1,
+        repairedCaptureProgressUnits: 2,
+        captureProgressUnits: 1,
+        source: 'REPAIR_KIT',
+      }),
     });
   });
 });

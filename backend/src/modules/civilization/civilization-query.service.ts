@@ -739,21 +739,18 @@ export class CivilizationQueryService {
       }
     }
 
-    for (const townHall of state.buildings.filter(
-      (building) =>
-        building.buildingType === CivilizationBuildingType.TOWN_HALL &&
-        building.ownerTeamId === player.teamId &&
-        building.captureProgressUnits > 0,
+    for (const building of state.buildings.filter(
+      (building) => building.ownerTeamId === player.teamId && building.captureProgressUnits > 0,
     )) {
-      const townHallTile = state.tiles.find((tile) => tile.id === townHall.tileId);
+      const buildingTile = state.tiles.find((tile) => tile.id === building.tileId);
       if (
-        !townHallTile ||
-        !townHallTile.isConnected ||
-        !areHexesAdjacent(currentTile, townHallTile) ||
+        !buildingTile ||
+        !buildingTile.isConnected ||
+        !areHexesAdjacent(currentTile, buildingTile) ||
         state.players.some(
           (candidate) =>
             candidate.isActive &&
-            candidate.currentTileId === townHall.tileId &&
+            candidate.currentTileId === building.tileId &&
             candidate.teamId !== player.teamId,
         )
       ) {
@@ -761,11 +758,11 @@ export class CivilizationQueryService {
       }
       actions.push({
         type: 'REPAIR_TOWER',
-        buildingId: townHall.id,
-        targetCoordinate: { q: townHallTile.q, r: townHallTile.r },
+        buildingId: building.id,
+        targetCoordinate: { q: buildingTile.q, r: buildingTile.r },
         actionPointUnits: settings.costs.towerRepairUnits,
         goldCost: settings.repairKit.goldPrice,
-        label: 'Use Repair Kit on Town Hall',
+        label: `Use Repair Kit on ${building.buildingType === CivilizationBuildingType.TOWN_HALL ? 'Town Hall' : 'building'}`,
         requiresConfirmation: true,
         disabledReason: !settings.repairKit.enabled
           ? 'REPAIR_KIT_DISABLED'
@@ -810,23 +807,19 @@ export class CivilizationQueryService {
         disabledReason: catapultResourceDisabledReason,
       });
     }
-    const catapultTownHallTargets = state.buildings.filter((building) => {
-      if (
-        building.buildingType !== CivilizationBuildingType.TOWN_HALL ||
-        !building.ownerTeamId ||
-        building.ownerTeamId === player.teamId
-      ) {
+    const catapultBuildingTargets = state.buildings.filter((building) => {
+      if (!building.ownerTeamId || building.ownerTeamId === player.teamId) {
         return false;
       }
-      const townHallTile = state.tiles.find((tile) => tile.id === building.tileId);
-      return Boolean(townHallTile && areHexesAdjacent(currentTile, townHallTile));
+      const buildingTile = state.tiles.find((tile) => tile.id === building.tileId);
+      return Boolean(buildingTile && areHexesAdjacent(currentTile, buildingTile));
     });
-    for (const townHall of catapultTownHallTargets) {
-      const townHallTile = state.tiles.find((tile) => tile.id === townHall.tileId)!;
+    for (const building of catapultBuildingTargets) {
+      const buildingTile = state.tiles.find((tile) => tile.id === building.tileId)!;
       const occupiedByEnemy = state.players.some(
         (candidate) =>
           candidate.isActive &&
-          candidate.currentTileId === townHall.tileId &&
+          candidate.currentTileId === building.tileId &&
           candidate.teamId !== player.teamId,
       );
       const protectedByTower = state.towers.some((tower) => {
@@ -835,25 +828,27 @@ export class CivilizationQueryService {
           tower.teamId !== player.teamId &&
           tower.status === CivilizationTowerStatus.ACTIVE &&
           towerTile?.isConnected &&
-          hexDistance(townHallTile, towerTile) <= tower.protectionRadius
+          hexDistance(buildingTile, towerTile) <= tower.protectionRadius
         );
       });
       actions.push({
         type: 'CATAPULT_ATTACK',
-        buildingId: townHall.id,
-        targetCoordinate: { q: townHallTile.q, r: townHallTile.r },
+        buildingId: building.id,
+        targetCoordinate: { q: buildingTile.q, r: buildingTile.r },
         actionPointUnits: settings.catapult.actionPointUnits,
         goldCost: settings.catapult.goldPrice,
-        label: 'Fire Catapult at Town Hall',
+        label: `Fire Catapult at ${building.buildingType === CivilizationBuildingType.TOWN_HALL ? 'Town Hall' : 'building'}`,
         requiresConfirmation: true,
         disabledReason: occupiedByEnemy
           ? CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY
           : protectedByTower
-            ? CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED
+            ? building.buildingType === CivilizationBuildingType.TOWN_HALL
+              ? CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED
+              : CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER
             : catapultResourceDisabledReason,
       });
     }
-    if (catapultTowerTargets.length === 0 && catapultTownHallTargets.length === 0) {
+    if (catapultTowerTargets.length === 0 && catapultBuildingTargets.length === 0) {
       actions.push({
         type: 'CATAPULT_ATTACK',
         actionPointUnits: settings.catapult.actionPointUnits,

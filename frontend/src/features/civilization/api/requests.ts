@@ -22,12 +22,14 @@ export type CivilizationActionPayload =
       actionId: string;
       towerId?: string;
       townHallBuildingId?: string;
+      buildingId?: string;
     }
   | {
       type: "REPAIR_TOWER";
       actionId: string;
       towerId?: string;
       townHallBuildingId?: string;
+      buildingId?: string;
     }
   | { type: "CAPTURE_TOWN_HALL"; actionId: string; townHallBuildingId: string }
   | { type: "DEFEND_TOWN_HALL"; actionId: string; townHallBuildingId: string };

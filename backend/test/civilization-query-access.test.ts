@@ -611,6 +611,63 @@ describe('Civilization query access', () => {
     );
   });
 
+  test('offers Repair Kit for an adjacent allied resource building under attack', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.tiles.push({
+      id: 'damaged-resource-building-tile',
+      gameId: GAME_ID,
+      q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_A_ID,
+      isConnected: true,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.buildings = [
+      {
+        id: 'damaged-resource-building-a',
+        gameId: GAME_ID,
+        tileId: 'damaged-resource-building-tile',
+        buildingType: CivilizationBuildingType.GOLD_BUILDING,
+        attributeKey: null,
+        ownerTeamId: TEAM_A_ID,
+        captureTeamId: TEAM_B_ID,
+        captureProgressUnits: 3,
+        captureRequiredUnits: 6,
+        incomePerHour: new Prisma.Decimal(25),
+        status: CivilizationBuildingStatus.ACTIVE,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    state.teamResources = [
+      {
+        id: 'repair-resource-building-gold-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        goldAmount: new Prisma.Decimal(500),
+        goldIncomePerHour: new Prisma.Decimal(0),
+        lastSettledAt: FIXED_NOW,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'REPAIR_TOWER',
+          buildingId: 'damaged-resource-building-a',
+          targetCoordinate: { q: 1, r: 0 },
+          disabledReason: null,
+        }),
+      ]),
+    );
+  });
+
   test("marks movement onto another team's spawn as unavailable", () => {
     const state = createQueryState(CivilizationGameStatus.ACTIVE);
     state.tiles.push({
@@ -744,12 +801,30 @@ describe('Civilization query access', () => {
         updatedAt: FIXED_NOW,
       },
     ];
+    state.teamResources = [
+      {
+        id: 'resource-building-catapult-gold-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        goldAmount: new Prisma.Decimal(500),
+        goldIncomePerHour: new Prisma.Decimal(0),
+        lastSettledAt: FIXED_NOW,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
     const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
 
     expect(response.availableActions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           type: 'CAPTURE_BUILDING',
+          buildingId: 'resource-building-b',
+          targetCoordinate: { q: 1, r: 0 },
+          disabledReason: null,
+        }),
+        expect.objectContaining({
+          type: 'CATAPULT_ATTACK',
           buildingId: 'resource-building-b',
           targetCoordinate: { q: 1, r: 0 },
           disabledReason: null,

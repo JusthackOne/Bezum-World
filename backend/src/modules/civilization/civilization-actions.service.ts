@@ -876,14 +876,17 @@ export class CivilizationActionsService {
         'Catapults are disabled for this game',
       );
     }
-    if (Boolean(input.towerId) === Boolean(input.townHallBuildingId)) {
+    const buildingTargetIds = [input.buildingId, input.townHallBuildingId].filter(
+      (value): value is string => Boolean(value),
+    );
+    if (Number(Boolean(input.towerId)) + buildingTargetIds.length !== 1) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.CATAPULT_TARGET_INVALID,
-        'Choose exactly one enemy tower or town hall target',
+        'Choose exactly one enemy structure target',
       );
     }
-    if (input.townHallBuildingId) {
-      return this.catapultAttackTownHallInTransaction(context, input.townHallBuildingId);
+    if (buildingTargetIds[0]) {
+      return this.catapultAttackBuildingInTransaction(context, buildingTargetIds[0]);
     }
     const tower = context.state.towers.find((candidate) => candidate.id === input.towerId);
     if (
@@ -959,39 +962,38 @@ export class CivilizationActionsService {
     return { event };
   }
 
-  private async catapultAttackTownHallInTransaction(
+  private async catapultAttackBuildingInTransaction(
     context: ActionExecutionContext,
-    townHallBuildingId: string,
+    buildingId: string,
   ): Promise<ActionMutationResult> {
-    const townHall = context.state.buildings.find(
-      (building) =>
-        building.id === townHallBuildingId &&
-        building.buildingType === CivilizationBuildingType.TOWN_HALL,
-    );
-    if (!townHall?.ownerTeamId || townHall.ownerTeamId === context.player.teamId) {
+    const building = context.state.buildings.find((candidate) => candidate.id === buildingId);
+    if (!building?.ownerTeamId || building.ownerTeamId === context.player.teamId) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.CATAPULT_TARGET_INVALID,
-        'Target must be an enemy town hall',
+        'Target must be an enemy building',
       );
     }
+    const isTownHall = building.buildingType === CivilizationBuildingType.TOWN_HALL;
     const playerTile = this.tile(context.state, context.player.currentTileId);
-    const townHallTile = this.tile(context.state, townHall.tileId);
-    if (!areHexesAdjacent(playerTile, townHallTile)) {
+    const buildingTile = this.tile(context.state, building.tileId);
+    if (!areHexesAdjacent(playerTile, buildingTile)) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.CATAPULT_TARGET_INVALID,
-        'The player must stand next to the enemy town hall',
+        'The player must stand next to the enemy building',
       );
     }
-    if (this.hasEnemyOnTile(context.state, townHall.tileId, context.player.teamId)) {
+    if (this.hasEnemyOnTile(context.state, building.tileId, context.player.teamId)) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY,
-        'Defending players on the town hall must be defeated first',
+        'Defending players on the building must be defeated first',
       );
     }
-    if (this.isProtectedByEnemyTower(context.state, townHallTile, context.player.teamId)) {
+    if (this.isProtectedByEnemyTower(context.state, buildingTile, context.player.teamId)) {
       throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED,
-        'The town hall is protected by an active connected tower',
+        isTownHall
+          ? CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED
+          : CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER,
+        'The building is protected by an active connected tower',
       );
     }
     await this.spendActionPoints(
@@ -1003,24 +1005,24 @@ export class CivilizationActionsService {
       context,
       context.settings.catapult.goldPrice,
       'CATAPULT_ATTACK',
-      townHall.tileId,
+      building.tileId,
     );
 
     const previousProgress =
-      townHall.captureTeamId && townHall.captureTeamId !== context.player.teamId
+      building.captureTeamId && building.captureTeamId !== context.player.teamId
         ? 0
-        : townHall.captureProgressUnits;
+        : building.captureProgressUnits;
     const damageCaptureProgressUnits = context.settings.catapult.damage * 2;
     const progress = Math.min(
-      townHall.captureRequiredUnits,
+      building.captureRequiredUnits,
       previousProgress + damageCaptureProgressUnits,
     );
-    const captured = progress >= townHall.captureRequiredUnits;
+    const captured = progress >= building.captureRequiredUnits;
     await this.repository.updateBuilding(
-      townHall.id,
+      building.id,
       {
-        ownerTeamId: townHall.ownerTeamId,
-        status: captured ? CivilizationBuildingStatus.CAPTURED : townHall.status,
+        ownerTeamId: captured && !isTownHall ? context.player.teamId : building.ownerTeamId,
+        status: captured && isTownHall ? CivilizationBuildingStatus.CAPTURED : building.status,
         captureTeamId: captured ? null : context.player.teamId,
         captureProgressUnits: captured ? 0 : progress,
       },
@@ -1028,7 +1030,7 @@ export class CivilizationActionsService {
     );
     if (captured) {
       await this.repository.updateTile(
-        townHall.tileId,
+        building.tileId,
         { ownerTeamId: context.player.teamId, isConnected: false },
         context.tx,
       );
@@ -1037,36 +1039,47 @@ export class CivilizationActionsService {
           gameId: context.gameId,
           teamId: context.player.teamId,
           actorPlayerId: context.player.id,
-          tileId: townHall.tileId,
+          tileId: building.tileId,
           eventType: CivilizationEventType.TILE_CAPTURED,
           payload: {
-            previousOwnerTeamId: townHall.ownerTeamId,
+            previousOwnerTeamId: building.ownerTeamId,
             ownerTeamId: context.player.teamId,
             source: 'CATAPULT_ATTACK',
           },
         },
         context.tx,
       );
+      if (!isTownHall) {
+        await this.removeCapturedTileTowers(context, building.tileId);
+        await this.connectivityService.recalculate(context.gameId, context.now, context.tx);
+      }
     }
     await this.repository.createEvent(
       {
         gameId: context.gameId,
         teamId: context.player.teamId,
         actorPlayerId: context.player.id,
-        tileId: townHall.tileId,
-        eventType: captured
-          ? CivilizationEventType.TOWN_HALL_CAPTURED
-          : CivilizationEventType.TOWN_HALL_CAPTURE_PROGRESS,
+        tileId: building.tileId,
+        eventType: isTownHall
+          ? captured
+            ? CivilizationEventType.TOWN_HALL_CAPTURED
+            : CivilizationEventType.TOWN_HALL_CAPTURE_PROGRESS
+          : captured
+            ? CivilizationEventType.BUILDING_CAPTURED
+            : previousProgress === 0
+              ? CivilizationEventType.BUILDING_CAPTURE_STARTED
+              : CivilizationEventType.BUILDING_CAPTURE_PROGRESS,
         payload: {
-          townHallBuildingId: townHall.id,
-          previousOwnerTeamId: townHall.ownerTeamId,
-          ownerTeamId: townHall.ownerTeamId,
+          buildingId: building.id,
+          ...(isTownHall ? { townHallBuildingId: building.id } : {}),
+          previousOwnerTeamId: building.ownerTeamId,
+          ownerTeamId: captured && !isTownHall ? context.player.teamId : building.ownerTeamId,
           capturedByTeamId: captured ? context.player.teamId : null,
-          captureProgressUnits: captured ? townHall.captureRequiredUnits : progress,
-          captureRequiredUnits: townHall.captureRequiredUnits,
+          captureProgressUnits: captured ? building.captureRequiredUnits : progress,
+          captureRequiredUnits: building.captureRequiredUnits,
           contributionUnits: Math.min(
             damageCaptureProgressUnits,
-            townHall.captureRequiredUnits - previousProgress,
+            building.captureRequiredUnits - previousProgress,
           ),
           actionPointUnitsSpent: context.settings.catapult.actionPointUnits,
           source: 'CATAPULT_ATTACK',
@@ -1074,7 +1087,7 @@ export class CivilizationActionsService {
       },
       context.tx,
     );
-    if (captured) {
+    if (captured && isTownHall) {
       await this.completionService.completeInTransaction(
         context.gameId,
         CivilizationCompletionReason.TOWN_HALL_CAPTURED,
@@ -1088,16 +1101,17 @@ export class CivilizationActionsService {
         gameId: context.gameId,
         teamId: context.player.teamId,
         actorPlayerId: context.player.id,
-        tileId: townHall.tileId,
+        tileId: building.tileId,
         eventType: CivilizationEventType.CATAPULT_ATTACKED,
         payload: {
-          townHallBuildingId: townHall.id,
+          buildingId: building.id,
+          ...(isTownHall ? { townHallBuildingId: building.id } : {}),
           sourceTileId: playerTile.id,
-          targetTileId: townHall.tileId,
+          targetTileId: building.tileId,
           damageActions: context.settings.catapult.damage,
           damageCaptureProgressUnits,
-          captureProgressUnits: captured ? townHall.captureRequiredUnits : progress,
-          captureRequiredUnits: townHall.captureRequiredUnits,
+          captureProgressUnits: captured ? building.captureRequiredUnits : progress,
+          captureRequiredUnits: building.captureRequiredUnits,
           captured,
           goldSpent: context.settings.catapult.goldPrice,
           actionPointUnitsSpent: context.settings.catapult.actionPointUnits,
@@ -1118,14 +1132,17 @@ export class CivilizationActionsService {
         'Repair kits are disabled for this game',
       );
     }
-    if (Boolean(input.towerId) === Boolean(input.townHallBuildingId)) {
+    const buildingTargetIds = [input.buildingId, input.townHallBuildingId].filter(
+      (value): value is string => Boolean(value),
+    );
+    if (Number(Boolean(input.towerId)) + buildingTargetIds.length !== 1) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.TOWER_NOT_REPAIRABLE,
-        'Choose exactly one allied tower or town hall target',
+        'Choose exactly one allied structure target',
       );
     }
-    if (input.townHallBuildingId) {
-      return this.repairTownHallWithKitInTransaction(context, input.townHallBuildingId);
+    if (buildingTargetIds[0]) {
+      return this.repairBuildingWithKitInTransaction(context, buildingTargetIds[0]);
     }
     const tower = context.state.towers.find((candidate) => candidate.id === input.towerId);
     if (
@@ -1195,9 +1212,9 @@ export class CivilizationActionsService {
     return { event };
   }
 
-  private async repairTownHallWithKitInTransaction(
+  private async repairBuildingWithKitInTransaction(
     context: ActionExecutionContext,
-    townHallBuildingId: string,
+    buildingId: string,
   ): Promise<ActionMutationResult> {
     if (!context.settings.repairKit.enabled) {
       throw new CivilizationException(
@@ -1205,31 +1222,28 @@ export class CivilizationActionsService {
         'Repair kits are disabled for this game',
       );
     }
-    const townHall = context.state.buildings.find(
-      (building) =>
-        building.id === townHallBuildingId &&
-        building.buildingType === CivilizationBuildingType.TOWN_HALL,
-    );
+    const building = context.state.buildings.find((candidate) => candidate.id === buildingId);
     if (
-      !townHall ||
-      townHall.ownerTeamId !== context.player.teamId ||
-      townHall.captureProgressUnits <= 0
+      !building ||
+      building.ownerTeamId !== context.player.teamId ||
+      building.captureProgressUnits <= 0
     ) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
-        'Target must be a damaged allied town hall',
+        'Target must be a damaged allied building',
       );
     }
+    const isTownHall = building.buildingType === CivilizationBuildingType.TOWN_HALL;
     const playerTile = this.tile(context.state, context.player.currentTileId);
-    const townHallTile = this.tile(context.state, townHall.tileId);
+    const buildingTile = this.tile(context.state, building.tileId);
     if (
-      !areHexesAdjacent(playerTile, townHallTile) ||
-      !townHallTile.isConnected ||
-      this.hasEnemyOnTile(context.state, townHallTile.id, context.player.teamId)
+      !areHexesAdjacent(playerTile, buildingTile) ||
+      !buildingTile.isConnected ||
+      this.hasEnemyOnTile(context.state, buildingTile.id, context.player.teamId)
     ) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.BUILDING_NOT_CAPTURABLE,
-        'The player must stand next to their connected undefended town hall',
+        'The player must stand next to their connected undefended building',
       );
     }
     await this.spendActionPoints(
@@ -1241,18 +1255,18 @@ export class CivilizationActionsService {
       context,
       context.settings.repairKit.goldPrice,
       'REPAIR_KIT',
-      townHall.tileId,
+      building.tileId,
     );
     const repairedCaptureProgressUnits = Math.min(
       context.settings.repairKit.repairActions * 2,
-      townHall.captureProgressUnits,
+      building.captureProgressUnits,
     );
-    const captureProgressUnits = townHall.captureProgressUnits - repairedCaptureProgressUnits;
+    const captureProgressUnits = building.captureProgressUnits - repairedCaptureProgressUnits;
     await this.repository.updateBuilding(
-      townHall.id,
+      building.id,
       {
         captureProgressUnits,
-        captureTeamId: captureProgressUnits === 0 ? null : townHall.captureTeamId,
+        captureTeamId: captureProgressUnits === 0 ? null : building.captureTeamId,
       },
       context.tx,
     );
@@ -1261,14 +1275,17 @@ export class CivilizationActionsService {
         gameId: context.gameId,
         teamId: context.player.teamId,
         actorPlayerId: context.player.id,
-        tileId: townHall.tileId,
-        eventType: CivilizationEventType.TOWN_HALL_DEFENDED,
+        tileId: building.tileId,
+        eventType: isTownHall
+          ? CivilizationEventType.TOWN_HALL_DEFENDED
+          : CivilizationEventType.BUILDING_CAPTURE_PROGRESS,
         payload: {
-          townHallBuildingId: townHall.id,
+          buildingId: building.id,
+          ...(isTownHall ? { townHallBuildingId: building.id } : {}),
           repairActions: context.settings.repairKit.repairActions,
           repairedCaptureProgressUnits,
           captureProgressUnits,
-          captureRequiredUnits: townHall.captureRequiredUnits,
+          captureRequiredUnits: building.captureRequiredUnits,
           actionPointUnitsSpent: context.settings.costs.towerRepairUnits,
           goldSpent: context.settings.repairKit.goldPrice,
           source: 'REPAIR_KIT',
@@ -1402,7 +1419,7 @@ export class CivilizationActionsService {
     context: ActionExecutionContext,
     input: CivilizationTownHallActionDto,
   ): Promise<ActionMutationResult> {
-    return this.repairTownHallWithKitInTransaction(context, input.townHallBuildingId);
+    return this.repairBuildingWithKitInTransaction(context, input.townHallBuildingId);
   }
 
   private async spendActionPoints(

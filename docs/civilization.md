@@ -199,28 +199,31 @@ used on an active damaged or destroyed allied tower only while the player is on 
 tower tile remains owned and connected, no enemy occupies it, and the team can pay the configured AP
 and gold. The item immediately removes its administrator-configured number of destruction actions.
 
-The Catapult is an atomic purchase-and-use action against either an active enemy defensive tower or an
-adjacent enemy Town Hall. The server recomputes axial distance and accepts a tower only when the
-player is exactly on its configured protection-radius boundary. A Town Hall requires an adjacent
-player position, no defender on the building, and no active connected tower protection. In one
+The Catapult is an atomic purchase-and-use action against either an active enemy defensive tower or
+any adjacent enemy building. The server recomputes axial distance and accepts a tower only when the
+player is exactly on its configured protection-radius boundary. A building requires an adjacent
+player position, no defender on its tile, and no active connected tower protection. In one
 serializable transaction the action validates game state, ownership, target type, feature enablement,
 team gold, AP, and the idempotency key; then it deducts the configured costs and applies configured
-damage. Against a Town Hall, each configured `catapult.damage` point adds two stored half-units, so
-the applied damage matches the progress displayed to players, and completes the game when the
-building's configured requirement is reached. The action row prevents the same Catapult request from
-being consumed twice. A successful event carries source/target tiles and damage so every polling
-client can play the short cannonball/impact animation; reduced-motion clients use an impact flash.
-The Repair Kit uses the same target-selection pattern for adjacent allied damaged towers and Town
-Halls. For a Town Hall it removes `repairKit.repairActions` player-visible hostile capture-progress
-points. No direct Town Hall defense action is exposed; compatible calls to the legacy defense
-endpoint consume the same Repair Kit AP, gold, and repair amount.
+damage. Against any non-tower building, each configured `catapult.damage` point adds two stored
+half-units, so the applied damage matches the progress displayed to players. Completing a resource
+building's progress captures it normally; completing Town Hall progress ends the game. Gold and
+attribute buildings remain capturable through the normal item-free `CAPTURE_BUILDING` action; the
+Catapult is an additional option, not a requirement. The action row prevents the same Catapult
+request from being consumed twice. A successful event carries source/target tiles and damage so every
+polling client can play the short cannonball/impact animation; reduced-motion clients use an impact
+flash. The Repair Kit uses the same target-selection pattern for adjacent allied damaged towers and
+buildings. For any building it removes `repairKit.repairActions` player-visible hostile
+capture-progress points. No direct Town Hall defense action is exposed; compatible calls to the
+legacy defense endpoint consume the same Repair Kit AP, gold, and repair amount.
 
 Town-hall progress is stored in half units. An attacker may contribute from the Town Hall hex or an
 adjacent hex; an adjacent enemy Town Hall is therefore exposed as `CAPTURE_TOWN_HALL`, not `MOVE`.
 Capture completes the game immediately; deadline completion uses weighted remaining resources and
-permits a draw. Each configured Repair Kit repair point removes two stored Town Hall half-units, so
-the configured amount matches the progress displayed to players. Repair Kit defense spends locked
-team gold and AP before removing progress, never below zero.
+permits a draw. Each configured Repair Kit repair point removes two stored building half-units, so the
+configured amount matches the progress displayed to players for Town Halls, gold buildings, and
+attribute buildings. Repair Kit defense spends locked team gold and AP before removing progress,
+never below zero.
 
 ## Completion and rewards
 

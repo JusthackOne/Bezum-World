@@ -92,7 +92,7 @@ function buildActionPayload(action: CivilizationLegalAction): CivilizationAction
           ? {
               type: "CATAPULT_ATTACK",
               actionId,
-              townHallBuildingId: action.buildingId,
+              buildingId: action.buildingId,
             }
           : null,
     REPAIR_TOWER: () =>
@@ -102,7 +102,7 @@ function buildActionPayload(action: CivilizationLegalAction): CivilizationAction
           ? {
               type: "REPAIR_TOWER",
               actionId,
-              townHallBuildingId: action.buildingId,
+              buildingId: action.buildingId,
             }
           : null,
     CAPTURE_TOWN_HALL: () =>
@@ -590,8 +590,8 @@ export function CivilizationGameView({
                 {selectedItem === "BUILD_TOWER"
                   ? `Build on an adjacent allied hex. Protects territory within ${state.game.settings.tower.protectionRadius} hexes and takes ${state.game.settings.tower.destructionRequiredActions} successful attacks to destroy.`
                   : selectedItem === "CATAPULT_ATTACK"
-                    ? `Strike an enemy tower or an adjacent enemy Town Hall for ${state.game.settings.catapult.damage} tower damage actions or Town Hall capture-progress points.`
-                    : `Repair an adjacent allied damaged tower or Town Hall. Restores ${state.game.settings.repairKit.repairActions} tower damage actions or Town Hall capture-progress points.`}
+                    ? `Strike an enemy structure for ${state.game.settings.catapult.damage} damage ${state.game.settings.catapult.damage === 1 ? "point" : "points"}. Resource buildings remain capturable normally without a Catapult.`
+                    : `Repair any adjacent allied damaged structure for ${state.game.settings.repairKit.repairActions} repair ${state.game.settings.repairKit.repairActions === 1 ? "point" : "points"}.`}
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-px border bg-border text-[10px]">

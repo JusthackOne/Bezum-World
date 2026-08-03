@@ -537,7 +537,7 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 register={form.register}
               />
               <NumberField
-                label="Tower actions / Town Hall damage points"
+                label="Damage points per use"
                 name="settings.catapult.damage"
                 register={form.register}
               />
@@ -559,7 +559,7 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 register={form.register}
               />
               <NumberField
-                label="Tower actions / Town Hall points repaired"
+                label="Repair points per use"
                 name="settings.repairKit.repairActions"
                 register={form.register}
               />
