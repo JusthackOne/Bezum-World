@@ -26,7 +26,7 @@ export default function RootLayout({
       className={`${pressStart2P.variable} dark h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full bg-background text-foreground font-sans">
+      <body className="min-h-full bg-background font-sans text-foreground">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

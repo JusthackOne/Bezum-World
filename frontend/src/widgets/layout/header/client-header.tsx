@@ -15,7 +15,7 @@ export function ClientHeader() {
   const username = user?.username ?? "Current user";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b bg-card/95 px-4 backdrop-blur-sm supports-[backdrop-filter]:bg-card/80 md:px-8">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b bg-card/95 px-4 backdrop-blur-sm supports-backdrop-filter:bg-card/80 md:px-8">
       <SidebarTrigger className="size-9 rounded-full border bg-background shadow-sm md:hidden" />
       {state === "collapsed" ? (
         <SidebarTrigger className="hidden size-9 rounded-full border bg-background shadow-sm md:inline-flex" />
@@ -37,7 +37,7 @@ export function ClientHeader() {
         <Link
           href={profileHref}
           aria-label={`Open ${username}'s profile`}
-          className="shrink-0 rounded-full outline-none ring-offset-background transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="shrink-0 rounded-full ring-offset-background transition-transform outline-none hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <AvatarImage
             avatarUrl={user?.avatarUrl ?? null}

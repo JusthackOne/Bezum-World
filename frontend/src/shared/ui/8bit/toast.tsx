@@ -25,7 +25,7 @@ export function toast(toast: string) {
       )}
     >
       <div
-        className="absolute inset-0 -mx-1.5 border-x-6 border-inherit pointer-events-none"
+        className="pointer-events-none absolute inset-0 -mx-1.5 border-x-6 border-inherit"
         aria-hidden="true"
       />
       <p className="text-sm font-medium">{toast}</p>
@@ -59,7 +59,7 @@ function Toast({ className, font, ...props }: BitToastProps) {
   return (
     <ShadcnToast
       className={cn(
-        "relative rounded-none border-y-6 border-foreground bg-card text-card-foreground p-4 dark:border-ring",
+        "relative rounded-none border-y-6 border-foreground bg-card p-4 text-card-foreground dark:border-ring",
         toastVariants({ font }),
         className,
       )}

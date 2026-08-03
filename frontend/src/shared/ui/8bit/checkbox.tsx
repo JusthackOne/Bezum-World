@@ -38,7 +38,7 @@ function Checkbox({ className, font, ...props }: BitCheckboxProps) {
     >
       <ShadcnCheckbox
         className={cn(
-          "rounded-none size-5 ring-0 border-none",
+          "size-5 rounded-none border-none ring-0",
           font !== "normal" && "retro",
           className,
         )}
@@ -46,7 +46,7 @@ function Checkbox({ className, font, ...props }: BitCheckboxProps) {
       />
 
       <div
-        className="absolute inset-0 border-x-6 -mx-1.5 border-foreground dark:border-ring pointer-events-none"
+        className="pointer-events-none absolute inset-0 -mx-1.5 border-x-6 border-foreground dark:border-ring"
         aria-hidden="true"
       />
     </div>

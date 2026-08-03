@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ActivityIcon,
+  CastleIcon,
   CircleDollarSignIcon,
   SkullIcon,
   ListTodoIcon,
@@ -67,6 +68,7 @@ export function ClientSidebar() {
   const isTasksActive = pathname.startsWith("/tasks");
   const isLeaderboardActive = pathname.startsWith("/leaderboard");
   const isEventsActive = pathname.startsWith("/events");
+  const isCivilizationActive = pathname.startsWith("/civilization");
 
   const username = session?.user.username ?? "Unknown user";
   const profileHref = session?.user.username
@@ -101,6 +103,12 @@ export function ClientSidebar() {
         label: "Slots",
         Icon: CircleDollarSignIcon,
         isActive: isSlotsActive,
+      },
+      {
+        href: "/civilization",
+        label: "Civa",
+        Icon: CastleIcon,
+        isActive: isCivilizationActive,
       },
     ],
     [
@@ -152,7 +160,7 @@ export function ClientSidebar() {
               />
 
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold leading-none tracking-wide">
+                <p className="truncate text-sm leading-none font-semibold tracking-wide">
                   Bezzumia
                 </p>
                 <p className="mt-1 text-xs text-sidebar-foreground/65">Social RPG</p>
@@ -173,7 +181,7 @@ export function ClientSidebar() {
         </SidebarHeader>
         <SidebarContent className="justify-center">
           <SidebarGroup className="px-3 py-2">
-            <nav aria-label="Client navigation" className="mx-auto w-full max-w-[220px]">
+            <nav aria-label="Client navigation" className="mx-auto w-full max-w-55">
               <div className="flex flex-col gap-3 min-[800px]:gap-4">
                 {navRows.map((row) => (
                   <div key={row.map((item) => item.href).join(":")} className="flex w-full">
@@ -185,11 +193,17 @@ export function ClientSidebar() {
                             "group flex h-20 w-20 flex-col items-center justify-center rounded-full border transition-all duration-150 min-[380px]:h-[5.5rem] min-[380px]:w-[5.5rem] min-[800px]:h-24 min-[800px]:w-24",
                             item.isActive
                               ? "border-sidebar-primary bg-sidebar-primary text-white shadow-[0_0_0_3px_color-mix(in_oklch,var(--sidebar-primary)_25%,transparent)]"
-                              : "border-sidebar-border border-2 bg-sidebar-accent/80 text-sidebar-foreground hover:border-sidebar-primary/70 hover:bg-sidebar-accent/60 hover:shadow-[0_0_22px_color-mix(in_oklch,var(--sidebar-primary)_28%,transparent)]",
+                              : "border-2 border-sidebar-border bg-sidebar-accent/80 text-sidebar-foreground hover:border-sidebar-primary/70 hover:bg-sidebar-accent/60 hover:shadow-[0_0_22px_color-mix(in_oklch,var(--sidebar-primary)_28%,transparent)]",
                           ].join(" ")}
                         >
                           <item.Icon className="size-8 min-[800px]:size-9" />
-                          <span className="mt-1 text-[13px] font-semibold leading-none tracking-wide min-[800px]:text-sm">
+                          <span
+                            className={
+                              item.href === "/civilization"
+                                ? "mt-1 max-w-20 text-center text-[11px] leading-none font-semibold tracking-wide"
+                                : "mt-1 text-[13px] leading-none font-semibold tracking-wide min-[800px]:text-sm"
+                            }
+                          >
                             {item.label}
                           </span>
                         </Link>

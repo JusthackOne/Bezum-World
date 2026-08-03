@@ -47,7 +47,7 @@ function SlotPaytable({ symbols, className }: SlotPaytableProps) {
         {[...symbols].reverse().map((symbol, index) => (
           <div
             key={symbol.id}
-            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-2 transition hover:border-violet-400/35 hover:bg-violet-400/5"
+            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-white/10 bg-white/2.5 p-2 transition hover:border-violet-400/35 hover:bg-violet-400/5"
           >
             <SlotSymbolThumbnail symbolId={symbol.id} />
             <div className="min-w-0">
@@ -73,7 +73,7 @@ function SlotPaytable({ symbols, className }: SlotPaytableProps) {
 
 function RecentSpins({ history }: { history: SlotSpinAnimation[] }) {
   return (
-    <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+    <section className="mt-4 rounded-2xl border border-white/10 bg-white/2.5 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-[10px] tracking-[0.22em] text-slate-300">RECENT SPINS</h2>
         <span className="text-[9px] text-slate-500">THIS PAGE ONLY</span>
@@ -195,7 +195,7 @@ export function SlotsPage() {
   return (
     <div className="relative min-w-0 overflow-hidden rounded-3xl bg-[#040511] p-0 text-white shadow-2xl sm:p-5 lg:p-7">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(34,211,238,.13),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,.18),transparent_34%),radial-gradient(circle_at_50%_90%,rgba(245,158,11,.10),transparent_36%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)] [background-size:32px_32px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)] bg-size-[32px_32px] opacity-20" />
 
       <div className="relative min-w-0">
         <header className="mb-5 flex flex-col gap-3 border-b border-white/10 px-3 pt-3 pb-5 sm:flex-row sm:items-end sm:justify-between sm:px-0 sm:pt-0">

@@ -84,7 +84,7 @@ export function BossBattlesTable() {
       </div>
       <div className="flex flex-col gap-3 md:flex-row">
         <div className="relative flex-1">
-          <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-9"
             placeholder="Search by boss name"

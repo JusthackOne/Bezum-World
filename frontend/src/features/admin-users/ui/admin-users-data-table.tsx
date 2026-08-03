@@ -209,7 +209,7 @@ export function AdminUsersDataTable() {
         <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="text-2xl font-semibold">Users</h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               Manage player accounts and base attributes.
             </p>
           </div>
@@ -273,13 +273,13 @@ export function AdminUsersDataTable() {
               <TableBody>
                 {usersQuery.isPending ? (
                   <TableRow>
-                    <TableCell className="text-muted-foreground text-center" colSpan={13}>
+                    <TableCell className="text-center text-muted-foreground" colSpan={13}>
                       Loading users...
                     </TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell className="text-muted-foreground text-center" colSpan={13}>
+                    <TableCell className="text-center text-muted-foreground" colSpan={13}>
                       No users found.
                     </TableCell>
                   </TableRow>
@@ -303,12 +303,12 @@ export function AdminUsersDataTable() {
                             }
                           />
                         </TableCell>
-                        <TableCell className="max-w-[160px] truncate font-mono text-xs">
+                        <TableCell className="max-w-40 truncate font-mono text-xs">
                           {user.id}
                         </TableCell>
                         <TableCell>{user.username}</TableCell>
                         <TableCell className="font-mono text-xs">{user.code ?? "N/A"}</TableCell>
-                        <TableCell className="max-w-[220px] truncate">
+                        <TableCell className="max-w-55 truncate">
                           {user.avatarUrl ?? "N/A"}
                         </TableCell>
                         <TableCell>{user.balance}</TableCell>

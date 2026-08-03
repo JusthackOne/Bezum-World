@@ -31,7 +31,7 @@ export function AdminImageUpload({ label, value, file, onFileChange }: Props) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={preview} alt={`${label} preview`} className="h-full w-full object-cover" />
         ) : (
-          <CameraIcon className="absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
+          <CameraIcon className="absolute top-1/2 left-1/2 size-8 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
         )}
         <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
           {preview ? "Change image" : "Select image"}

@@ -86,11 +86,11 @@ export function SlotLeaderboard() {
   const valueLabel = type === "winnings" ? "WON" : "LOST";
 
   return (
-    <aside className="order-2 min-w-0 rounded-2xl border border-violet-400/20 bg-[#090b20]/95 p-3 shadow-[0_0_50px_rgba(15,23,42,.55)] sm:p-4 xl:order-none">
+    <aside className="order-2 min-w-0 rounded-2xl border border-violet-400/20 bg-[#090b20]/95 p-3 shadow-[0_0_50px_rgba(15,23,42,.55)] sm:p-4 xl:order-0">
       <div className="mb-3">
         <div className="min-w-0">
           <p className="text-[9px] tracking-[0.22em] text-violet-300">SLOTS RANKING</p>
-          <h2 className="mt-1.5 truncate text-sm font-black tracking-[0.1em] text-white">
+          <h2 className="mt-1.5 truncate text-sm font-black tracking-widest text-white">
             LEADERBOARD
           </h2>
         </div>

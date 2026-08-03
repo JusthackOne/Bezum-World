@@ -117,32 +117,32 @@ export function ItemDetailsModal({ item, open, onOpenChange }: ItemDetailsModalP
           rarityStyle.glowClassName,
         )}
       >
-        <div className="aspect-[4/3] w-full overflow-hidden border-b bg-muted/35">
+        <div className="aspect-4/3 w-full overflow-hidden border-b bg-muted/35">
           {imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={imageUrl} alt={item.name} className="h-full w-full object-cover" />
           ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               No image
             </div>
           )}
         </div>
 
-        <div className="space-y-4 break-words px-4 pb-4 sm:px-6 sm:pb-6">
+        <div className="space-y-4 px-4 pb-4 wrap-break-word sm:px-6 sm:pb-6">
           <DialogHeader className="pt-4 sm:pt-6">
             <DialogTitle>{item.name}</DialogTitle>
             <DialogDescription>{item.description ?? "No description available."}</DialogDescription>
           </DialogHeader>
 
           <div className="flex items-center justify-between rounded-md border bg-muted/10 px-3 py-2">
-            <span className="text-muted-foreground text-xs">Rarity</span>
+            <span className="text-xs text-muted-foreground">Rarity</span>
             <span className={cn("text-xs font-semibold capitalize", rarityStyle.textClassName)}>
               {item.rarity.replaceAll("_", " ")}
             </span>
           </div>
 
           <div className="flex items-center justify-between rounded-md border bg-muted/10 px-3 py-2">
-            <span className="text-muted-foreground text-xs">Body part</span>
+            <span className="text-xs text-muted-foreground">Body part</span>
             <span className="text-xs font-semibold">{bodyPartLabel}</span>
           </div>
 
@@ -171,7 +171,7 @@ export function ItemDetailsModal({ item, open, onOpenChange }: ItemDetailsModalP
               })}
             </div>
           ) : (
-            <p className="text-muted-foreground text-xs">No attributes</p>
+            <p className="text-xs text-muted-foreground">No attributes</p>
           )}
 
           <div className="space-y-2 rounded-md border bg-muted/10 p-3">
@@ -180,7 +180,7 @@ export function ItemDetailsModal({ item, open, onOpenChange }: ItemDetailsModalP
                 <ShieldIcon className="size-4 text-slate-500 dark:text-slate-300" />
                 Durability
               </span>
-              <span className="font-semibold tabular-nums text-slate-600 drop-shadow-[0_0_8px_rgba(148,163,184,0.35)] dark:text-slate-200">
+              <span className="font-semibold text-slate-600 tabular-nums drop-shadow-[0_0_8px_rgba(148,163,184,0.35)] dark:text-slate-200">
                 {item.durability ?? "N/A"}
               </span>
             </div>
@@ -190,7 +190,7 @@ export function ItemDetailsModal({ item, open, onOpenChange }: ItemDetailsModalP
                 <CoinsIcon className="size-4 text-amber-300" />
                 Price
               </span>
-              <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-base font-semibold tabular-nums text-transparent drop-shadow-[0_0_10px_rgba(245,158,11,0.24)]">
+              <span className="bg-linear-to-r from-amber-200 to-yellow-400 bg-clip-text text-base font-semibold text-transparent tabular-nums drop-shadow-[0_0_10px_rgba(245,158,11,0.24)]">
                 {formatBalance(item.price)}
               </span>
             </div>

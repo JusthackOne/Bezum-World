@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CastleIcon } from "lucide-react";
 
 import {
   Sidebar,
@@ -21,6 +22,7 @@ export function AdminSidebar() {
   const isItemsActive = pathname.startsWith("/admin/items");
   const isTasksActive = pathname.startsWith("/admin/tasks");
   const isBossBattlesActive = pathname.startsWith("/admin/boss-battles");
+  const isCivilizationActive = pathname.startsWith("/admin/civilization");
 
   return (
     <Sidebar>
@@ -42,6 +44,14 @@ export function AdminSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isTasksActive}>
                 <Link href="/admin/tasks">Tasks</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isCivilizationActive}>
+                <Link href="/admin/civilization">
+                  <CastleIcon className="size-4" /> Civilization
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
 

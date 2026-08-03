@@ -72,13 +72,13 @@ function UserEquipmentSection({
   isRetrying: boolean;
 }) {
   if (isPending) {
-    return <p className="text-muted-foreground text-sm">Loading equipment...</p>;
+    return <p className="text-sm text-muted-foreground">Loading equipment...</p>;
   }
 
   if (isError) {
     return (
       <div className="space-y-2">
-        <p className="text-destructive text-sm">Failed to load equipment.</p>
+        <p className="text-sm text-destructive">Failed to load equipment.</p>
         <Button type="button" size="sm" variant="outline" onClick={onRetry} disabled={isRetrying}>
           Retry equipment
         </Button>
@@ -156,7 +156,7 @@ function TappableProfileMetric({
         <button
           type="button"
           className={cn(
-            "w-full touch-manipulation text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "w-full touch-manipulation text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
             className,
           )}
           aria-label={label}
@@ -240,7 +240,7 @@ function UserInfoCard({
         </div>
         <div className="flex flex-col">
           <TooltipProvider>
-            <div className="flex gap-1 flex-col">
+            <div className="flex flex-col gap-1">
               {userAttributeRows.map((attribute) => {
                 return (
                   <AttributeBadge
@@ -257,14 +257,14 @@ function UserInfoCard({
               label="GameScore"
               value={profile.gameScore}
               icon={<GameScoreIcon className="size-4 text-fuchsia-300" />}
-              className="rounded-lg border mt-4 border-fuchsia-400/60 bg-[linear-gradient(120deg,rgba(244,114,182,0.12),rgba(96,165,250,0.12),rgba(52,211,153,0.12),rgba(250,204,21,0.12))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(217,70,239,0.25),0_0_20px_rgba(59,130,246,0.18)]"
+              className="mt-4 rounded-lg border border-fuchsia-400/60 bg-[linear-gradient(120deg,rgba(244,114,182,0.12),rgba(96,165,250,0.12),rgba(52,211,153,0.12),rgba(250,204,21,0.12))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(217,70,239,0.25),0_0_20px_rgba(59,130,246,0.18)]"
               valueClassName="bg-gradient-to-r from-fuchsia-300 via-sky-300 to-emerald-300 bg-clip-text text-base font-semibold tabular-nums text-transparent"
             />
             <TappableProfileMetric
               label="Balance"
               value={profile.balance}
               icon={<CoinsIcon className="size-4 text-amber-300" />}
-              className="rounded-lg border mt-2.5 border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.13),rgba(251,191,36,0.08))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(245,158,11,0.26),0_0_18px_rgba(245,158,11,0.18)]"
+              className="mt-2.5 rounded-lg border border-amber-400/70 bg-[linear-gradient(120deg,rgba(250,204,21,0.13),rgba(251,191,36,0.08))] px-3 py-2.5 shadow-[0_0_0_1px_rgba(245,158,11,0.26),0_0_18px_rgba(245,158,11,0.18)]"
               valueClassName="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-base font-semibold tabular-nums text-transparent"
             />
           </TooltipProvider>
@@ -331,14 +331,14 @@ function UserItemsCard({
           className={cn("min-h-0 flex-1 space-y-4 overflow-x-hidden pr-4", hiddenScrollbarClass)}
         >
           {equipmentActionError ? (
-            <p role="alert" className="text-destructive text-sm">
+            <p role="alert" className="text-sm text-destructive">
               {equipmentActionError}
             </p>
           ) : null}
           {isPending ? (
-            <p className="text-muted-foreground text-sm">Loading items...</p>
+            <p className="text-sm text-muted-foreground">Loading items...</p>
           ) : items.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No items found for this user.</p>
+            <p className="text-sm text-muted-foreground">No items found for this user.</p>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2">
               {items.map((item) => {
@@ -367,7 +367,7 @@ function UserItemsCard({
                             <span aria-hidden="true">(</span>
                             <span className="inline-flex items-center gap-1">
                               <CoinsIcon className="size-3 text-amber-300" />
-                              <span className="bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text font-semibold tabular-nums text-transparent">
+                              <span className="bg-linear-to-r from-amber-200 to-yellow-400 bg-clip-text font-semibold text-transparent tabular-nums">
                                 {formatBalance(item.listingPrice ?? 0)}
                               </span>
                             </span>
@@ -505,7 +505,7 @@ export function PublicUserPage({ username }: PublicUserPageProps) {
   }
 
   return (
-    <section className="min-h-screen overflow-x-hidden p-4 sm:p-6 lg:h-[100dvh] lg:overflow-hidden lg:p-8">
+    <section className="min-h-screen overflow-x-hidden p-4 sm:p-6 lg:h-dvh lg:overflow-hidden lg:p-8">
       <div className="mx-auto grid w-full max-w-[110rem] gap-6 lg:h-full lg:grid-cols-[26rem_minmax(0,1fr)]">
         <div className="lg:hidden">
           <div className="grid grid-cols-2 gap-2">

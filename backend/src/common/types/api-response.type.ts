@@ -9,7 +9,8 @@ export interface ApiSuccessResponse<TData> {
 export interface ApiErrorResponse {
   success: false;
   error: {
-    code: number;
+    code: number | string;
+    statusCode?: number;
     message: string;
     details?: unknown;
   };
