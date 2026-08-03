@@ -104,7 +104,7 @@ Core mechanics:
 - use shadcn/ui as base
 - use Tailwind for layout
 - use canonical Tailwind CSS v4 utility classes whenever an equivalent utility exists
-- treat `tailwindcss(suggestCanonicalClasses)` diagnostics in changed code as errors and resolve them before finishing
+- do not automatically run or fix lint, Tailwind CSS diagnostics (including `tailwindcss(suggestCanonicalClasses)`), type-check, or build errors after changes; do so only when the user explicitly requests the corresponding check or fix
 - prefer theme utilities and spacing-scale utilities over arbitrary values; use arbitrary values only when no exact canonical utility exists
 - after every UI feature or UI bug fix, use Playwright MCP to verify the affected user flow in a running application before finishing
 - during Playwright MCP verification, inspect the rendered UI at relevant desktop and mobile viewport sizes, exercise the changed interactions, and check the browser console and failed network requests
@@ -115,6 +115,15 @@ Core mechanics:
   - items
   - effects
   - battle UI
+
+---
+
+## Verification Rules
+
+- after changing code, run the smallest relevant test set that covers the changed files and affected behavior
+- prefer targeted test files, test-name filters, or package-scoped tests over the full test suite
+- do not automatically run or fix lint, Tailwind CSS diagnostics, type-check, or production build checks after each change
+- run or fix lint, Tailwind CSS diagnostics, type-check, and production build checks only when the user explicitly requests them
 
 ---
 
