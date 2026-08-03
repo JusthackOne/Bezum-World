@@ -1,12 +1,10 @@
 import { CoinsIcon, MapIcon, ShieldIcon, SparklesIcon, TrophyIcon } from "lucide-react";
 
 import { CIVILIZATION_ATTRIBUTE_KEYS, type CivilizationTeamState } from "@/entities/civilization";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/8bit";
 import { formatNumber } from "@/shared/lib/number-format";
-
-function attributeLabel(key: string): string {
-  return key.slice(0, 1).toUpperCase() + key.slice(1);
-}
+import { cn } from "@/shared/lib/utils";
+import { attributeVisuals } from "@/shared/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/8bit";
 
 export function CivilizationTeamStatistics({ team }: { team: CivilizationTeamState }) {
   return (
@@ -44,20 +42,32 @@ export function CivilizationTeamStatistics({ team }: { team: CivilizationTeamSta
           <p className="mb-2 flex items-center gap-1 text-muted-foreground">
             <SparklesIcon className="size-3" /> Attribute pools
           </p>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-            {CIVILIZATION_ATTRIBUTE_KEYS.map((key) => (
-              <div key={key} className="flex items-center justify-between gap-2">
-                <span className="truncate text-[9px] text-muted-foreground">
-                  {attributeLabel(key)}
-                </span>
-                <span className="text-[9px]">
-                  {formatNumber(team.attributeAmounts[key])}
-                  <span className="text-muted-foreground">
-                    {` (+${formatNumber(team.attributeIncomePerHour[key])}/h)`}
+          <div className="grid grid-cols-2 gap-2">
+            {CIVILIZATION_ATTRIBUTE_KEYS.map((key) => {
+              const visual = attributeVisuals[key];
+              const Icon = visual.icon;
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    "flex items-center gap-2 border px-2 py-1.5",
+                    visual.accentClassName,
+                  )}
+                  aria-label={`${visual.label}: ${formatNumber(
+                    team.attributeAmounts[key],
+                  )}, +${formatNumber(team.attributeIncomePerHour[key])} per hour`}
+                  title={visual.label}
+                >
+                  <Icon className={cn("size-4 shrink-0", visual.iconClassName)} />
+                  <span className="min-w-0 text-xs font-semibold tabular-nums">
+                    {formatNumber(team.attributeAmounts[key])}
                   </span>
-                </span>
-              </div>
-            ))}
+                  <span className="ml-auto text-[9px] text-muted-foreground tabular-nums">
+                    +{formatNumber(team.attributeIncomePerHour[key])}/h
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 

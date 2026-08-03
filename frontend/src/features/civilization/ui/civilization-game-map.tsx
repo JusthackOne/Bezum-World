@@ -14,9 +14,12 @@ import {
 import { Viewport } from "pixi-viewport";
 import {
   CheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   CoinsIcon,
   LocateFixedIcon,
   MinusIcon,
+  PackageIcon,
   PlusIcon,
   TrophyIcon,
   ZapIcon,
@@ -117,14 +120,6 @@ const MAXIMUM_MAP_ZOOM = 2.4;
 const MAP_ZOOM_STEP = 0.18;
 const STRUCTURE_TOOLTIP_WIDTH = 256;
 const MAP_STRUCTURE_SPRITE_SIZE = CIVILIZATION_HEX_RADIUS * 2;
-
-const BUILDING_PLACEMENT_CONTROLS = [
-  {
-    actionType: "BUILD_TOWER" as const,
-    label: "Place defensive tower",
-    asset: CIVILIZATION_ASSETS["tower.active"],
-  },
-];
 
 function parseColor(color: string | undefined, fallback: string): string {
   return color && /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
@@ -1007,6 +1002,7 @@ export function CivilizationGameMap({
   const activeAttackAnimationCleanupsRef = useRef(new Set<() => void>());
   const [structureTooltip, setStructureTooltip] = useState<StructureTooltipState | null>(null);
   const [playerStackTileId, setPlayerStackTileId] = useState<string | null>(null);
+  const [itemPaletteOpen, setItemPaletteOpen] = useState(false);
   const [mapSize, setMapSize] = useState({ width: 320, height: 420 });
   const showStructureTooltipRef = useRef<ShowStructureTooltip>((target, event, isPinned) => {
     setStructureTooltip({
@@ -1440,6 +1436,44 @@ export function CivilizationGameMap({
     state.availableActions.find(
       (action) => action.type === "REPAIR_TOWER" && action.disabledReason !== null,
     )?.disabledReason ?? "No damaged adjacent allied structures are available.";
+  const itemControls = [
+    {
+      actionType: "BUILD_TOWER" as const,
+      name: "Tower",
+      label: "Place defensive tower",
+      asset: CIVILIZATION_ASSETS["tower.active"],
+      goldCost: state.game.settings.tower.buildGoldCost,
+      actionPointCost: state.game.settings.costs.towerBuildUnits / 2,
+      active: placementMode === "BUILD_TOWER",
+      disabled: isInteractionDisabled || enabledTowerPlacements.length === 0,
+      unavailableReason: towerPlacementUnavailableReason,
+      onClick: onToggleTowerPlacement,
+    },
+    {
+      actionType: "CATAPULT_ATTACK" as const,
+      name: "Catapult",
+      label: "Target an enemy structure with a Catapult",
+      asset: CIVILIZATION_ASSETS["item.catapult"],
+      goldCost: state.game.settings.catapult.goldPrice,
+      actionPointCost: state.game.settings.catapult.actionPointUnits / 2,
+      active: placementMode === "CATAPULT_ATTACK",
+      disabled: isInteractionDisabled || enabledCatapultTargets.length === 0,
+      unavailableReason: catapultUnavailableReason,
+      onClick: onToggleCatapult,
+    },
+    {
+      actionType: "REPAIR_TOWER" as const,
+      name: "Repair",
+      label: "Repair an adjacent allied structure with a Repair Kit",
+      asset: CIVILIZATION_ASSETS["item.repairKit"],
+      goldCost: state.game.settings.repairKit.goldPrice,
+      actionPointCost: state.game.settings.costs.towerRepairUnits / 2,
+      active: placementMode === "REPAIR_TOWER",
+      disabled: isInteractionDisabled || enabledRepairTargets.length === 0,
+      unavailableReason: repairUnavailableReason,
+      onClick: onToggleRepairKit,
+    },
+  ];
 
   return (
     <div
@@ -1464,110 +1498,88 @@ export function CivilizationGameMap({
       />
       {currentPlayer && !state.access.isReadOnly ? (
         <div
-          className="absolute top-3 left-3 flex flex-col gap-2 sm:flex-row"
+          className="absolute top-3 left-3 z-20 flex flex-col items-start gap-2"
           data-map-overlay-control
         >
-          {BUILDING_PLACEMENT_CONTROLS.map((control) => {
-            const disabled = isInteractionDisabled || enabledTowerPlacements.length === 0;
-            return (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="min-w-28 justify-between bg-slate-900/95 text-slate-100 shadow-lg backdrop-blur-sm lg:hidden"
+            aria-expanded={itemPaletteOpen}
+            aria-controls="civilization-item-palette"
+            onClick={() => setItemPaletteOpen((current) => !current)}
+          >
+            <span className="flex items-center gap-2">
+              <PackageIcon className="size-4" /> Items
+            </span>
+            {itemPaletteOpen ? (
+              <ChevronUpIcon className="size-4" />
+            ) : (
+              <ChevronDownIcon className="size-4" />
+            )}
+          </Button>
+
+          <div
+            id="civilization-item-palette"
+            className={cn(
+              "max-h-96 flex-col gap-2 overflow-y-auto overscroll-y-contain pb-2",
+              itemPaletteOpen ? "flex" : "hidden",
+              "lg:flex lg:max-h-none lg:flex-row lg:overflow-visible lg:pb-0",
+            )}
+          >
+            {itemControls.map((control) => (
               <Button
                 key={control.actionType}
                 type="button"
                 size="sm"
-                className="h-auto min-w-18 flex-col gap-1 p-2"
-                variant={placementMode === control.actionType ? "default" : "secondary"}
+                className={cn(
+                  "h-auto min-w-28 shrink-0 flex-col gap-1.5 bg-slate-900/95 p-2 text-slate-100 shadow-lg backdrop-blur-sm hover:bg-slate-800 disabled:opacity-75 lg:min-w-18 lg:gap-0.5 lg:p-1",
+                  control.active && "ring-2 ring-cyan-300 ring-offset-2 ring-offset-slate-950",
+                )}
+                variant={control.active ? "default" : "secondary"}
                 aria-label={control.label}
-                aria-pressed={placementMode === control.actionType}
-                disabled={disabled}
-                title={disabled ? towerPlacementUnavailableReason : control.label}
-                onClick={onToggleTowerPlacement}
+                aria-pressed={control.active}
+                disabled={control.disabled}
+                title={
+                  control.disabled
+                    ? control.unavailableReason.replaceAll("_", " ").toLowerCase()
+                    : control.label
+                }
+                onClick={() => {
+                  control.onClick();
+                  setItemPaletteOpen(false);
+                }}
               >
                 <Image
                   src={control.asset.path}
                   alt=""
-                  width={32}
-                  height={32}
-                  className="h-8 w-auto object-contain"
+                  width={40}
+                  height={40}
+                  className="size-10 object-contain drop-shadow-md lg:size-7"
                 />
-                <span className="flex gap-2 text-[9px]">
-                  <span className="flex items-center gap-0.5">
-                    <CoinsIcon className="size-3 text-amber-300" />
-                    {state.game.settings.tower.buildGoldCost}
+                <span className="text-xs leading-none font-semibold tracking-wide uppercase lg:text-[8px]">
+                  {control.name}
+                </span>
+                <span className="grid w-full grid-cols-2 gap-1" aria-label="Item cost">
+                  <span className="flex items-center justify-center gap-1 bg-amber-950/80 px-1 py-1 text-xs font-semibold text-amber-200 lg:gap-0.5 lg:text-[8px]">
+                    <CoinsIcon className="size-3.5 lg:size-2.5" />
+                    {control.goldCost}
+                    <span className="text-[9px] font-normal text-amber-300/80 lg:text-[7px]">
+                      G
+                    </span>
                   </span>
-                  <span className="flex items-center gap-0.5">
-                    <ZapIcon className="size-3 text-cyan-300" />
-                    {state.game.settings.costs.towerBuildUnits / 2}
+                  <span className="flex items-center justify-center gap-1 bg-cyan-950/80 px-1 py-1 text-xs font-semibold text-cyan-200 lg:gap-0.5 lg:text-[8px]">
+                    <ZapIcon className="size-3.5 lg:size-2.5" />
+                    {control.actionPointCost}
+                    <span className="text-[9px] font-normal text-cyan-300/80 lg:text-[7px]">
+                      AP
+                    </span>
                   </span>
                 </span>
               </Button>
-            );
-          })}
-          <Button
-            type="button"
-            size="sm"
-            variant={placementMode === "CATAPULT_ATTACK" ? "default" : "secondary"}
-            className="h-auto min-w-18 flex-col gap-1 p-2"
-            aria-label="Target an enemy structure with a Catapult"
-            aria-pressed={placementMode === "CATAPULT_ATTACK"}
-            disabled={isInteractionDisabled || enabledCatapultTargets.length === 0}
-            title={
-              enabledCatapultTargets.length === 0
-                ? catapultUnavailableReason.replaceAll("_", " ").toLowerCase()
-                : "Use Catapult"
-            }
-            onClick={onToggleCatapult}
-          >
-            <Image
-              src={CIVILIZATION_ASSETS["item.catapult"].path}
-              alt=""
-              width={32}
-              height={32}
-              className="size-8 object-contain"
-            />
-            <span className="flex gap-2 text-[9px]">
-              <span className="flex items-center gap-0.5">
-                <CoinsIcon className="size-3 text-amber-300" />
-                {state.game.settings.catapult.goldPrice}
-              </span>
-              <span className="flex items-center gap-0.5">
-                <ZapIcon className="size-3 text-cyan-300" />
-                {state.game.settings.catapult.actionPointUnits / 2}
-              </span>
-            </span>
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={placementMode === "REPAIR_TOWER" ? "default" : "secondary"}
-            className="h-auto min-w-18 flex-col gap-1 p-2"
-            aria-label="Repair an adjacent allied structure with a Repair Kit"
-            aria-pressed={placementMode === "REPAIR_TOWER"}
-            disabled={isInteractionDisabled || enabledRepairTargets.length === 0}
-            title={
-              enabledRepairTargets.length === 0
-                ? repairUnavailableReason.replaceAll("_", " ").toLowerCase()
-                : "Use Repair Kit"
-            }
-            onClick={onToggleRepairKit}
-          >
-            <Image
-              src={CIVILIZATION_ASSETS["item.repairKit"].path}
-              alt=""
-              width={32}
-              height={32}
-              className="size-8 object-contain"
-            />
-            <span className="flex gap-2 text-[9px]">
-              <span className="flex items-center gap-0.5">
-                <CoinsIcon className="size-3 text-amber-300" />
-                {state.game.settings.repairKit.goldPrice}
-              </span>
-              <span className="flex items-center gap-0.5">
-                <ZapIcon className="size-3 text-cyan-300" />
-                {state.game.settings.costs.towerRepairUnits / 2}
-              </span>
-            </span>
-          </Button>
+            ))}
+          </div>
         </div>
       ) : null}
       {structureTooltip ? (

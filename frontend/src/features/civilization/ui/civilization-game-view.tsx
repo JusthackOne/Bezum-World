@@ -8,7 +8,6 @@ import {
   CoinsIcon,
   EyeIcon,
   GiftIcon,
-  HistoryIcon,
   RefreshCwIcon,
   ShieldIcon,
   ZapIcon,
@@ -55,6 +54,7 @@ import { coordinateKey, useCivilizationUiStore } from "../model";
 import { civilizationRoutes } from "../routes";
 import type { CivilizationActionPayload } from "../api/requests";
 import { CivilizationPlayerPanel } from "./civilization-player-panel";
+import { CivilizationInstructionsDialog } from "./civilization-instructions-dialog";
 import { CivilizationStatusBadge } from "./civilization-status-badge";
 import { CivilizationTeamStatistics } from "./civilization-team-statistics";
 
@@ -469,11 +469,7 @@ export function CivilizationGameView({
               <EyeIcon className="size-4" /> Spectator mode
             </span>
           ) : null}
-          {readOnly ? (
-            <span className="inline-flex items-center gap-2 border border-slate-400/40 bg-slate-500/10 px-3 py-2 text-[10px] text-slate-200">
-              <HistoryIcon className="size-4" /> Read-only snapshot
-            </span>
-          ) : null}
+          <CivilizationInstructionsDialog />
           <Button
             type="button"
             variant="outline"

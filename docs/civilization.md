@@ -2,6 +2,15 @@
 
 ## Client map interaction
 
+Opening the current Civilization page displays a Russian onboarding dialog. It starts with the
+`instruction.mp4` walkthrough and follows with concise controls, objectives, resource and
+connectivity rules, Catapult-only Town Hall capture, item guidance, and an illustrated description
+of every building type. Players can close the dialog to start and reopen it with the `Как играть`
+question-mark button in the game header. The button replaces the former `Read-only snapshot` badge;
+read-only behavior still follows the game status and access state without a separate badge. Closing the first view stores the versioned
+`civilization-instructions-viewed-v1` flag in browser local storage, so later visits do not open the
+dialog automatically; the question-mark button remains available.
+
 Players inspect the game board by clicking or tapping hexes and character tokens directly. Legal
 actions remain hidden until the current user's character is selected. The map then uses separate
 movement, attack, capture, and contribution colors for every enabled server-provided action target.
@@ -17,7 +26,10 @@ keeps the original server state after failure. Dragging pans the map, while the 
 gesture changes its zoom level.
 
 The upper-left item palette exposes defensive-tower placement, the single-use Catapult, and the
-single-use Repair Kit. Placement
+single-use Repair Kit. Each control keeps a short English name below the artwork and shows gold (`G`)
+and action-point (`AP`) prices in separate high-contrast cells. On mobile, an `Items` button opens and
+collapses the controls as a height-limited vertical list. From the `lg` desktop breakpoint, the
+toggle is hidden and a smaller horizontal row with reduced artwork, spacing, and type stays visible. Placement
 buttons first open an item dialog with its purpose, cost, and relevant combat values. `Use` enters
 the corresponding placement or targeting mode, while `Back` returns to the map. There is no second
 team-resource confirmation dialog after a target is chosen. Tower placement mode highlights every enabled `BUILD_TOWER` coordinate returned by the
@@ -28,6 +40,8 @@ player occupies the first hex immediately outside the protected area, plus an ad
 Hall when it has no defending player and is not protected by an active tower. The displayed gold and AP prices, disabled state,
 and disabled reason all come from the latest server read model. The overlay resource block beside the zoom controls shows the
 current participant team's projected gold and estimated score directly from the latest game state.
+Team attribute pools use the application's standard strength, charisma, endurance, and intelligence
+icons instead of visible attribute names; accessible labels and hover titles retain the full names.
 Neutral ground uses a gray base so team territory and action overlays remain distinct.
 
 Defensive towers use destruction actions instead of hit points. A regular tower attack adds one
@@ -208,8 +222,9 @@ team gold, AP, and the idempotency key; then it deducts the configured costs and
 damage. Against any non-tower building, each configured `catapult.damage` point adds two stored
 half-units, so the applied damage matches the progress displayed to players. Completing a resource
 building's progress captures it normally; completing Town Hall progress ends the game. Gold and
-attribute buildings remain capturable through the normal item-free `CAPTURE_BUILDING` action; the
-Catapult is an additional option, not a requirement. The action row prevents the same Catapult
+attribute buildings remain capturable through the normal item-free `CAPTURE_BUILDING` action. A
+Town Hall can only be damaged and captured with a Catapult; the legacy `CAPTURE_TOWN_HALL` endpoint
+rejects direct calls and the action is never exposed to clients. The action row prevents the same Catapult
 request from being consumed twice. A successful event carries source/target tiles and damage so every
 polling client can play the short cannonball/impact animation; reduced-motion clients use an impact
 flash. The Repair Kit uses the same target-selection pattern for adjacent allied damaged towers and
@@ -222,9 +237,9 @@ normal attack boundary. One Catapult use always destroys that unfinished tower r
 configured Catapult damage, clears its pending construction state, and spends the normal Catapult AP
 and gold cost.
 
-Town-hall progress is stored in half units. An attacker may contribute from the Town Hall hex or an
-adjacent hex; an adjacent enemy Town Hall is therefore exposed as `CAPTURE_TOWN_HALL`, not `MOVE`.
-Capture completes the game immediately; deadline completion uses weighted remaining resources and
+Town-hall progress is stored in half units. A Catapult attack requires the attacker to stand on an
+adjacent hex; ordinary capture interaction is unavailable even if the attacker reaches the Town Hall.
+Catapult capture completes the game immediately; deadline completion uses weighted remaining resources and
 permits a draw. Each configured Repair Kit repair point removes two stored building half-units, so the
 configured amount matches the progress displayed to players for Town Halls, gold buildings, and
 attribute buildings. Repair Kit defense spends locked team gold and AP before removing progress,
