@@ -106,7 +106,7 @@ export function ClientSidebar() {
       },
       {
         href: "/civilization",
-        label: "Civ",
+        label: "Civa",
         Icon: CastleIcon,
         isActive: isCivilizationActive,
       },
