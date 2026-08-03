@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { ValidationPipe } from '@nestjs/common';
 import {
   CivilizationBuildingStatus,
   CivilizationBuildingType,
@@ -8,6 +9,7 @@ import {
   CivilizationTeamSide,
   CivilizationTerrainType,
   CivilizationTowerStatus,
+  CivilizationTowerWorkKind,
   Prisma,
 } from '@prisma/client';
 
@@ -24,6 +26,10 @@ import { CivilizationRuntimeService } from '../src/modules/civilization/civiliza
 import { CivilizationScheduleService } from '../src/modules/civilization/civilization-schedule.service';
 import { CivilizationSettlementService } from '../src/modules/civilization/civilization-settlement.service';
 import { defaultCivilizationSettings } from '../src/modules/civilization/domain';
+import {
+  CivilizationCatapultActionDto,
+  CivilizationRepairActionDto,
+} from '../src/modules/civilization/dto';
 import {
   CivilizationRepository,
   type CivilizationEventInput,
@@ -1142,6 +1148,45 @@ describe('Civilization tower actions', () => {
     ).toHaveLength(1);
   });
 
+  test('destroys an enemy tower under construction with one Catapult charge', async () => {
+    const state = createState();
+    const settings = structuredClone(defaultCivilizationSettings);
+    settings.catapult.damage = 1;
+    state.settingsJson = settings;
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    const tower = createTower(
+      'catapult-construction-target',
+      TEAM_B_ID,
+      TARGET_TILE_ID,
+      CivilizationTowerStatus.UNDER_CONSTRUCTION,
+    );
+    tower.protectionRadius = 0;
+    tower.workKind = CivilizationTowerWorkKind.BUILD;
+    tower.constructionCompletesAt = new Date('2026-08-01T13:00:00.000Z');
+    state.towers.push(tower);
+    const harness = createActionHarness(state);
+
+    await harness.service.catapultAttack(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000040023',
+      towerId: tower.id,
+    });
+
+    expect(findTower(state, tower.id)).toMatchObject({
+      status: CivilizationTowerStatus.DESTROYED,
+      destructionProgressActions: 3,
+      destructionRequiredActions: 3,
+      workKind: null,
+      constructionCompletesAt: null,
+      destroyedAt: FIXED_NOW,
+    });
+    expect(harness.repository.events.at(-1)?.payloadJson).toMatchObject({
+      towerId: tower.id,
+      damageActions: 1,
+      destroyed: true,
+      wasUnderConstruction: true,
+    });
+  });
+
   test('applies full displayed Catapult damage against an adjacent enemy town hall', async () => {
     const state = createState();
     const settings = structuredClone(defaultCivilizationSettings);
@@ -1534,7 +1579,7 @@ describe('Civilization town-hall actions', () => {
 
     await harness.service.repairTower(GAME_ID, USER_A_ID, {
       actionId: '00000000-0000-4000-8000-000000050005',
-      townHallBuildingId: townHall.id,
+      buildingId: townHall.id,
     });
 
     expect(findBuilding(state, townHall.id).captureProgressUnits).toBe(1);
@@ -1599,6 +1644,33 @@ describe('Civilization town-hall actions', () => {
         source: 'REPAIR_KIT',
       }),
     });
+  });
+});
+
+describe('Civilization item action validation', () => {
+  test('accepts buildingId for Catapult and Repair Kit requests', async () => {
+    const validationPipe = new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    const input = {
+      actionId: '00000000-0000-4000-8000-000000070001',
+      buildingId: '00000000-0000-4000-8000-000000070002',
+    };
+
+    await expect(
+      validationPipe.transform(input, {
+        type: 'body',
+        metatype: CivilizationCatapultActionDto,
+      }),
+    ).resolves.toMatchObject(input);
+    await expect(
+      validationPipe.transform(input, {
+        type: 'body',
+        metatype: CivilizationRepairActionDto,
+      }),
+    ).resolves.toMatchObject(input);
   });
 });
 

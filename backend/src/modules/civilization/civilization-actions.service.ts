@@ -889,15 +889,16 @@ export class CivilizationActionsService {
       return this.catapultAttackBuildingInTransaction(context, buildingTargetIds[0]);
     }
     const tower = context.state.towers.find((candidate) => candidate.id === input.towerId);
+    const towerIsUnderConstruction = tower?.status === CivilizationTowerStatus.UNDER_CONSTRUCTION;
     if (
       !tower ||
       tower.teamId === context.player.teamId ||
-      tower.status !== CivilizationTowerStatus.ACTIVE ||
+      (tower.status !== CivilizationTowerStatus.ACTIVE && !towerIsUnderConstruction) ||
       tower.destructionProgressActions >= tower.destructionRequiredActions
     ) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.TOWER_NOT_ATTACKABLE,
-        'Target must be an active enemy defensive tower',
+        'Target must be an active or under-construction enemy defensive tower',
       );
     }
     const playerTile = this.tile(context.state, context.player.currentTileId);
@@ -924,16 +925,20 @@ export class CivilizationActionsService {
       'CATAPULT_ATTACK',
       tower.tileId,
     );
-    const destructionProgressActions = Math.min(
-      tower.destructionRequiredActions,
-      tower.destructionProgressActions + context.settings.catapult.damage,
-    );
+    const destructionProgressActions = towerIsUnderConstruction
+      ? tower.destructionRequiredActions
+      : Math.min(
+          tower.destructionRequiredActions,
+          tower.destructionProgressActions + context.settings.catapult.damage,
+        );
     const destroyed = destructionProgressActions >= tower.destructionRequiredActions;
     await this.repository.updateTower(
       tower.id,
       {
         destructionProgressActions,
         status: destroyed ? CivilizationTowerStatus.DESTROYED : CivilizationTowerStatus.ACTIVE,
+        workKind: destroyed ? null : tower.workKind,
+        constructionCompletesAt: destroyed ? null : tower.constructionCompletesAt,
         destroyedAt: destroyed ? context.now : null,
       },
       context.tx,
@@ -953,6 +958,7 @@ export class CivilizationActionsService {
           destructionProgressActions,
           destructionRequiredActions: tower.destructionRequiredActions,
           destroyed,
+          wasUnderConstruction: towerIsUnderConstruction,
           goldSpent: context.settings.catapult.goldPrice,
           actionPointUnitsSpent: context.settings.catapult.actionPointUnits,
         },

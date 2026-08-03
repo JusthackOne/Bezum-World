@@ -7,6 +7,7 @@ import {
   CivilizationTeamSide,
   CivilizationTerrainType,
   CivilizationTowerStatus,
+  CivilizationTowerWorkKind,
   Prisma,
 } from '@prisma/client';
 
@@ -431,6 +432,65 @@ describe('Civilization query access', () => {
         expect.objectContaining({
           type: 'CATAPULT_ATTACK',
           towerId: 'tower-b-radius-two',
+          targetCoordinate: { q: 2, r: -1 },
+          disabledReason: null,
+        }),
+      ]),
+    );
+  });
+
+  test('offers Catapult against an enemy tower under construction', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.tiles.push({
+      id: 'construction-tower-tile-b',
+      gameId: GAME_ID,
+      q: 2,
+      r: -1,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_B_ID,
+      isConnected: true,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.towers = [
+      {
+        id: 'construction-tower-b',
+        gameId: GAME_ID,
+        teamId: TEAM_B_ID,
+        tileId: 'construction-tower-tile-b',
+        status: CivilizationTowerStatus.UNDER_CONSTRUCTION,
+        workKind: CivilizationTowerWorkKind.BUILD,
+        protectionRadius: 1,
+        destructionProgressActions: 0,
+        destructionRequiredActions: 3,
+        constructionStartedAt: FIXED_NOW,
+        constructionCompletesAt: new Date('2026-08-09T13:00:00.000Z'),
+        destroyedAt: null,
+        createdByPlayerId: null,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    state.teamResources = [
+      {
+        id: 'construction-catapult-resource-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        goldAmount: new Prisma.Decimal(500),
+        goldIncomePerHour: new Prisma.Decimal(0),
+        lastSettledAt: FIXED_NOW,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'CATAPULT_ATTACK',
+          towerId: 'construction-tower-b',
           targetCoordinate: { q: 2, r: -1 },
           disabledReason: null,
         }),

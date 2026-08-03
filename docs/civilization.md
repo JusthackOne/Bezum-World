@@ -217,6 +217,11 @@ buildings. For any building it removes `repairKit.repairActions` player-visible 
 capture-progress points. No direct Town Hall defense action is exposed; compatible calls to the
 legacy defense endpoint consume the same Repair Kit AP, gold, and repair amount.
 
+An enemy defensive tower that is still under construction is also a valid Catapult target at its
+normal attack boundary. One Catapult use always destroys that unfinished tower regardless of the
+configured Catapult damage, clears its pending construction state, and spends the normal Catapult AP
+and gold cost.
+
 Town-hall progress is stored in half units. An attacker may contribute from the Town Hall hex or an
 adjacent hex; an adjacent enemy Town Hall is therefore exposed as `CAPTURE_TOWN_HALL`, not `MOVE`.
 Capture completes the game immediately; deadline completion uses weighted remaining resources and

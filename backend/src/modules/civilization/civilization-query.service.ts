@@ -775,7 +775,8 @@ export class CivilizationQueryService {
     const catapultTowerTargets = state.towers.filter((tower) => {
       if (
         tower.teamId === player.teamId ||
-        tower.status !== CivilizationTowerStatus.ACTIVE ||
+        (tower.status !== CivilizationTowerStatus.ACTIVE &&
+          tower.status !== CivilizationTowerStatus.UNDER_CONSTRUCTION) ||
         tower.destructionProgressActions >= tower.destructionRequiredActions
       ) {
         return false;
