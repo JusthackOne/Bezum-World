@@ -22,6 +22,7 @@ import type {
 import { CIVILIZATION_ASSETS } from "@/entities/civilization";
 import { getApiRequestErrorMessage } from "@/shared/lib/api-request";
 import { formatDateTime } from "@/shared/lib/date-time";
+import { createRandomUuid } from "@/shared/lib/random-uuid";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,7 +68,7 @@ const CivilizationGameMap = dynamic(
 );
 
 function buildActionPayload(action: CivilizationLegalAction): CivilizationActionPayload | null {
-  const actionId = crypto.randomUUID();
+  const actionId = createRandomUuid();
   const builders: Record<CivilizationActionType, () => CivilizationActionPayload | null> = {
     MOVE: () =>
       action.targetCoordinate ? { type: "MOVE", actionId, target: action.targetCoordinate } : null,

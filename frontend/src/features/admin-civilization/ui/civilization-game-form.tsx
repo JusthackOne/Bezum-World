@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch, type FieldPath, type UseFormRegister } from "react-hook-form";
+import {
+  Controller,
+  useForm,
+  useWatch,
+  type Control,
+  type FieldPath,
+  type UseFormRegister,
+} from "react-hook-form";
 import { z } from "zod";
 import {
   CheckCircle2Icon,
@@ -40,7 +47,9 @@ import {
 
 import { useSaveAdminCivilizationGameMutation } from "../api";
 import {
+  civilizationHalfUnitsToPoints,
   civilizationGameFormSchema,
+  civilizationPointsToHalfUnits,
   createDefaultCivilizationGameInput,
   validateCivilizationMap,
 } from "../model";
@@ -132,6 +141,66 @@ function NumberField({
   return (
     <Field label={label}>
       <Input type="number" min={min} step={step} {...register(name, { valueAsNumber: true })} />
+    </Field>
+  );
+}
+
+type PointFieldName =
+  | "settings.actionPoints.maximumUnits"
+  | "settings.actionPoints.initialUnits"
+  | "settings.actionPoints.regenerationUnits"
+  | "settings.costs.ownedMoveUnits"
+  | "settings.costs.otherMoveUnits"
+  | "settings.costs.attackPlayerUnits"
+  | "settings.costs.buildingCaptureUnits"
+  | "settings.costs.towerBuildUnits"
+  | "settings.costs.towerAttackUnits"
+  | "settings.costs.townHallCaptureUnits"
+  | "settings.costs.towerRepairUnits"
+  | "settings.catapult.actionPointUnits"
+  | "settings.buildingCapture.requiredUnits"
+  | "settings.buildingCapture.contributionUnits"
+  | "settings.townHall.captureRequiredUnits"
+  | "settings.townHall.contributionUnits";
+
+function PointField({
+  label,
+  name,
+  control,
+}: {
+  label: string;
+  name: PointFieldName;
+  control: Control<FormValues>;
+}) {
+  return (
+    <Field label={label}>
+      <Controller
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <Input
+            ref={field.ref}
+            name={field.name}
+            type="number"
+            min={0.5}
+            step={0.5}
+            value={
+              Number.isFinite(field.value)
+                ? civilizationHalfUnitsToPoints(field.value)
+                : ""
+            }
+            onBlur={field.onBlur}
+            onChange={(event) => {
+              const value = event.target.value;
+              field.onChange(
+                value === ""
+                  ? Number.NaN
+                  : civilizationPointsToHalfUnits(Number.parseFloat(value)),
+              );
+            }}
+          />
+        )}
+      />
     </Field>
   );
 }
@@ -454,65 +523,65 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
               <CardTitle>Action points and movement</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <NumberField
-                label="Maximum AP units (2 = 1 AP)"
+              <PointField
+                label="Maximum AP"
                 name="settings.actionPoints.maximumUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Initial AP units"
+              <PointField
+                label="Initial AP"
                 name="settings.actionPoints.initialUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Regenerated units"
+              <PointField
+                label="Regenerated AP"
                 name="settings.actionPoints.regenerationUnits"
-                register={form.register}
+                control={form.control}
               />
               <NumberField
                 label="Regeneration interval (minutes)"
                 name="settings.actionPoints.regenerationIntervalMinutes"
                 register={form.register}
               />
-              <NumberField
-                label="Move owned cost (units)"
+              <PointField
+                label="Move on owned tile (AP)"
                 name="settings.costs.ownedMoveUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Move other cost (units)"
+              <PointField
+                label="Move on other tile (AP)"
                 name="settings.costs.otherMoveUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Attack player cost (units)"
+              <PointField
+                label="Attack player (AP)"
                 name="settings.costs.attackPlayerUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Building contribution cost (units)"
+              <PointField
+                label="Capture building (AP)"
                 name="settings.costs.buildingCaptureUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Tower build cost (units)"
+              <PointField
+                label="Build tower (AP)"
                 name="settings.costs.towerBuildUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Tower attack cost (units)"
+              <PointField
+                label="Attack tower (AP)"
                 name="settings.costs.towerAttackUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Town hall capture cost (units)"
+              <PointField
+                label="Town Hall capture (AP)"
                 name="settings.costs.townHallCaptureUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Repair Kit cost (units)"
+              <PointField
+                label="Repair Kit (AP)"
                 name="settings.costs.towerRepairUnits"
-                register={form.register}
+                control={form.control}
               />
             </CardContent>
           </Card>
@@ -531,10 +600,10 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 name="settings.catapult.goldPrice"
                 register={form.register}
               />
-              <NumberField
-                label="Action cost (units)"
+              <PointField
+                label="Action cost (AP)"
                 name="settings.catapult.actionPointUnits"
-                register={form.register}
+                control={form.control}
               />
               <NumberField
                 label="Damage points per use"
@@ -589,15 +658,15 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                   register={form.register}
                 />
               ))}
-              <NumberField
-                label="Building capture required (half-units)"
+              <PointField
+                label="Building capture required (points)"
                 name="settings.buildingCapture.requiredUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Units per contribution"
+              <PointField
+                label="Progress per contribution (points)"
                 name="settings.buildingCapture.contributionUnits"
-                register={form.register}
+                control={form.control}
               />
             </CardContent>
           </Card>
@@ -645,15 +714,15 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
               <CardTitle>Town hall and score</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <NumberField
-                label="Town hall capture required (half-units)"
+              <PointField
+                label="Town Hall capture required (points)"
                 name="settings.townHall.captureRequiredUnits"
-                register={form.register}
+                control={form.control}
               />
-              <NumberField
-                label="Capture units / action"
+              <PointField
+                label="Progress per action (points)"
                 name="settings.townHall.contributionUnits"
-                register={form.register}
+                control={form.control}
               />
               <DecimalField
                 label="Gold score weight"

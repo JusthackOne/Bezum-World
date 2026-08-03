@@ -114,11 +114,15 @@ export function CivilizationInstructionsDialog() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    let shouldOpen = true;
     try {
-      setOpen(localStorage.getItem(CIVILIZATION_INSTRUCTIONS_VIEWED_KEY) !== "true");
+      shouldOpen = localStorage.getItem(CIVILIZATION_INSTRUCTIONS_VIEWED_KEY) !== "true";
     } catch {
-      setOpen(true);
+      // The instruction opens by default when browser storage is unavailable.
     }
+
+    const timer = window.setTimeout(() => setOpen(shouldOpen), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const handleOpenChange = (nextOpen: boolean): void => {

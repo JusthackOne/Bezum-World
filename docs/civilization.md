@@ -198,6 +198,9 @@ There are no hourly income jobs.
 Gameplay mutations run in serializable PostgreSQL transactions. A game-scoped advisory lock serializes multi-record state transitions; mutable rows are additionally selected `FOR UPDATE` in a stable order. The standard order is game, players, tiles, buildings/towers, then team-resource rows. A serialization failure is returned to the caller without committing a partial action, and the action idempotency key makes an explicit retry safe.
 
 Every mutation accepts an idempotency key. The action row is unique for the game, player, and key, records a request hash, and stores the original result. A retry with the same key and payload returns the stored result without spending AP or gold twice; reusing a key with a different payload is rejected.
+Client-generated idempotency and action identifiers use native `crypto.randomUUID()` when available
+and a UUID v4-compatible fallback for production browsers that only expose `getRandomValues` or do
+not expose Web Crypto.
 
 Combat uses a cryptographically secure server roll. The integer roll, configured threshold, selected target, and result are appended to the event log. A clock and random source are injectable for deterministic tests.
 
@@ -234,6 +237,12 @@ flash. The Repair Kit uses the same target-selection pattern for adjacent allied
 buildings. For any building it removes `repairKit.repairActions` player-visible hostile
 capture-progress points. No direct Town Hall defense action is exposed; compatible calls to the
 legacy defense endpoint consume the same Repair Kit AP, gold, and repair amount.
+
+The administration form displays AP costs, AP limits, regeneration values, and building capture
+progress in player-visible points: a configured value of `1` means exactly `1 AP` or `1 capture
+point`. Half-point increments remain available where the game supports them. The API continues to
+persist these values as integer half-units for backward compatibility, and the form performs the
+conversion at its input boundary.
 
 An enemy defensive tower that is still under construction is also a valid Catapult target at its
 normal attack boundary. One Catapult use always destroys that unfinished tower regardless of the
@@ -308,7 +317,7 @@ Action responses update the authoritative React Query state immediately. Current
 1. Open **Admin → Civilization** and create a draft.
 2. Configure name, half-open schedule, two teams, colors/identifiers, and all balance settings.
 3. Assign players to exactly one team.
-4. Use the visual map editor to create playable axial cells within axial radius 25, paint ground/mountains/ownership, place one town hall and one distinct spawn per team, and configure resource-building ownership and income. Initial player placement is automatic.
+4. Use the visual map editor to create playable axial cells within axial radius 25. The `Add / remove hex` tool selects `Neutral`, `Team A`, or `Team B` as the owner of every newly added cell, including cells added during one drag stroke. Dedicated Team A/B ownership tools are not shown; `Ownership: neutral` remains available to clear an existing cell. Paint ground/mountains, place one town hall and one distinct spawn per team, and configure resource-building ownership and income. Initial player placement is automatic.
 5. Use undo/redo and preview, then run server validation.
 6. Resolve every reported map/settings error and schedule the game. Database overlap protection is rechecked transactionally.
 7. To add a player after activation, open the active game, choose a team, and submit the audited add-player operation. The player receives configured initial AP on that team's spawn.

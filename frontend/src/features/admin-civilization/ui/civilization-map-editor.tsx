@@ -32,6 +32,10 @@ import {
   type HexCoordinate,
 } from "@/entities/civilization";
 import {
+  civilizationHalfUnitsToPoints,
+  civilizationPointsToHalfUnits,
+} from "@/features/admin-civilization/model";
+import {
   coordinateKey,
   createHexagonalMap,
   createHexLayout,
@@ -55,8 +59,6 @@ type EditorTool =
   | "TOGGLE_HEX"
   | "GROUND"
   | "MOUNTAIN"
-  | "OWNER_TEAM_A"
-  | "OWNER_TEAM_B"
   | "OWNER_NEUTRAL"
   | "TOWN_HALL_TEAM_A"
   | "TOWN_HALL_TEAM_B"
@@ -81,6 +83,7 @@ interface EditorScene {
 interface HexBrushStroke {
   pointerId: number;
   mode: "ADD" | "REMOVE";
+  ownerTeamSide: CivilizationTeamSide | null;
   visitedCoordinates: Set<string>;
   map: CivilizationAdminMapInput;
   hasChanges: boolean;
@@ -99,8 +102,6 @@ const toolOptions: Array<{ value: EditorTool; label: string }> = [
   { value: "TOGGLE_HEX", label: "Add / remove hex" },
   { value: "GROUND", label: "Paint ground" },
   { value: "MOUNTAIN", label: "Paint mountain" },
-  { value: "OWNER_TEAM_A", label: "Ownership: team A" },
-  { value: "OWNER_TEAM_B", label: "Ownership: team B" },
   { value: "OWNER_NEUTRAL", label: "Ownership: neutral" },
   { value: "TOWN_HALL_TEAM_A", label: "Town hall: team A" },
   { value: "TOWN_HALL_TEAM_B", label: "Town hall: team B" },
@@ -202,6 +203,7 @@ function applyPaintingTool(
   coordinate: HexCoordinate,
   tool: EditorTool,
   settings: CivilizationSettings,
+  addedHexOwnerTeamSide: CivilizationTeamSide | null,
 ): CivilizationAdminMapInput {
   const map = cloneMap(current);
   const key = coordinateKey(coordinate);
@@ -213,6 +215,8 @@ function applyPaintingTool(
       removeObjectsAt(map, coordinate);
     } else {
       ensureGround(map, coordinate);
+      const addedTile = map.tiles.find((item) => coordinateKey(item) === key)!;
+      addedTile.ownerTeamSide = addedHexOwnerTeamSide;
     }
     return map;
   }
@@ -226,8 +230,6 @@ function applyPaintingTool(
     ensuredTile.terrainType = "MOUNTAIN";
     ensuredTile.ownerTeamSide = null;
     removeObjectsAt(map, coordinate);
-  } else if (tool === "OWNER_TEAM_A" || tool === "OWNER_TEAM_B") {
-    ensuredTile.ownerTeamSide = sideFromTool(tool);
   } else if (tool === "OWNER_NEUTRAL") {
     ensuredTile.ownerTeamSide = null;
   } else if (tool.startsWith("TOWN_HALL_")) {
@@ -294,6 +296,7 @@ function applyHexBrush(
   current: CivilizationAdminMapInput,
   coordinate: HexCoordinate,
   mode: HexBrushStroke["mode"],
+  ownerTeamSide: CivilizationTeamSide | null,
 ): CivilizationAdminMapInput {
   const key = coordinateKey(coordinate);
   const hasTile = current.tiles.some((tile) => coordinateKey(tile) === key);
@@ -304,6 +307,8 @@ function applyHexBrush(
   const map = cloneMap(current);
   if (mode === "ADD") {
     ensureGround(map, coordinate);
+    const addedTile = map.tiles.find((tile) => coordinateKey(tile) === key)!;
+    addedTile.ownerTeamSide = ownerTeamSide;
   } else {
     map.tiles = map.tiles.filter((tile) => coordinateKey(tile) !== key);
     removeObjectsAt(map, coordinate);
@@ -573,6 +578,8 @@ export function CivilizationMapEditor({
   const [historyIndex, setHistoryIndex] = useState(0);
   const [historyLength, setHistoryLength] = useState(1);
   const [tool, setTool] = useState<EditorTool>("TOGGLE_HEX");
+  const [addedHexOwnerTeamSide, setAddedHexOwnerTeamSide] =
+    useState<CivilizationTeamSide | null>(null);
   const [preview, setPreview] = useState(false);
   const [showValidation, setShowValidation] = useState(true);
   const [moveSource, setMoveSource] = useState<HexCoordinate | null>(null);
@@ -621,12 +628,18 @@ export function CivilizationMapEditor({
         setMovePreviewCoordinate(null);
         return;
       }
-      const next = applyPaintingTool(value, coordinate, tool, settings);
+      const next = applyPaintingTool(
+        value,
+        coordinate,
+        tool,
+        settings,
+        addedHexOwnerTeamSide,
+      );
       if (next !== value) {
         commit(next);
       }
     },
-    [commit, disabled, moveSource, preview, settings, tool, value],
+    [addedHexOwnerTeamSide, commit, disabled, moveSource, preview, settings, tool, value],
   );
 
   const renderPropsRef = useRef({
@@ -884,7 +897,12 @@ export function CivilizationMapEditor({
     const key = coordinateKey(coordinate);
     if (stroke.visitedCoordinates.has(key)) return;
     stroke.visitedCoordinates.add(key);
-    const next = applyHexBrush(stroke.map, coordinate, stroke.mode);
+    const next = applyHexBrush(
+      stroke.map,
+      coordinate,
+      stroke.mode,
+      stroke.ownerTeamSide,
+    );
     if (next === stroke.map) return;
     stroke.map = next;
     stroke.hasChanges = true;
@@ -915,6 +933,7 @@ export function CivilizationMapEditor({
       hexBrushStrokeRef.current = {
         pointerId: event.pointerId,
         mode: value.tiles.some((tile) => coordinateKey(tile) === key) ? "REMOVE" : "ADD",
+        ownerTeamSide: addedHexOwnerTeamSide,
         visitedCoordinates: new Set(),
         map: value,
         hasChanges: false,
@@ -1055,6 +1074,26 @@ export function CivilizationMapEditor({
             ))}
           </select>
         </label>
+        {tool === "TOGGLE_HEX" ? (
+          <label className="flex min-w-48 flex-col gap-1 text-[10px]">
+            New hex owner
+            <select
+              className="h-9 border bg-background px-3 text-xs"
+              value={addedHexOwnerTeamSide ?? "NEUTRAL"}
+              disabled={disabled || preview}
+              onChange={(event) => {
+                const value = event.target.value;
+                setAddedHexOwnerTeamSide(
+                  value === "TEAM_A" || value === "TEAM_B" ? value : null,
+                );
+              }}
+            >
+              <option value="NEUTRAL">Neutral</option>
+              <option value="TEAM_A">Team A — {teams[0].name}</option>
+              <option value="TEAM_B">Team B — {teams[1].name}</option>
+            </select>
+          </label>
+        ) : null}
         <div className="flex flex-wrap items-end gap-2 self-end">
           <Button
             type="button"
@@ -1283,17 +1322,19 @@ export function CivilizationMapEditor({
                     />
                   </label>
                   <label className="flex flex-col gap-1">
-                    Capture units
+                    Capture points
                     <input
                       type="number"
-                      min={1}
-                      step={1}
+                      min={0.5}
+                      step={0.5}
                       className="h-8 border bg-background px-2"
-                      value={building.captureRequiredUnits}
+                      value={civilizationHalfUnitsToPoints(building.captureRequiredUnits)}
                       disabled={disabled}
                       onChange={(event) =>
                         updateBuilding(index, {
-                          captureRequiredUnits: Number.parseInt(event.target.value, 10) || 0,
+                          captureRequiredUnits: civilizationPointsToHalfUnits(
+                            Number.parseFloat(event.target.value) || 0,
+                          ),
                         })
                       }
                     />

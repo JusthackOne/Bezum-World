@@ -1,3 +1,5 @@
+import { createRandomUuid } from "./random-uuid";
+
 export interface IdempotencyAttempt {
   fingerprint: string;
   key: string;
@@ -33,7 +35,7 @@ export function stableRequestFingerprint(value: unknown): string {
 export function getOrCreateIdempotencyKey(
   attemptRef: MutableValueRef<IdempotencyAttempt | null>,
   fingerprint: string,
-  createKey: () => string = () => crypto.randomUUID(),
+  createKey: () => string = createRandomUuid,
 ): string {
   if (attemptRef.current?.fingerprint === fingerprint) {
     return attemptRef.current.key;

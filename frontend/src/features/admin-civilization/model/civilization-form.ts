@@ -13,6 +13,16 @@ import { coordinateKey, createHexagonalMap, hexDistance } from "@/features/civil
 import { toLocalDateTimeInput } from "@/shared/lib/date-time";
 
 const canonicalDecimalPattern = /^(?:0|[1-9]\d{0,17})(?:\.\d{0,11}[1-9])?$/;
+const HALF_UNITS_PER_POINT = 2;
+
+export function civilizationHalfUnitsToPoints(halfUnits: number): number {
+  return halfUnits / HALF_UNITS_PER_POINT;
+}
+
+export function civilizationPointsToHalfUnits(points: number): number {
+  return points * HALF_UNITS_PER_POINT;
+}
+
 const attributeAmountsSchema = z.object({
   strength: z.string().regex(canonicalDecimalPattern, "Enter a canonical non-negative amount"),
   charisma: z.string().regex(canonicalDecimalPattern, "Enter a canonical non-negative amount"),
