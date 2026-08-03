@@ -154,4 +154,20 @@ Keep production secrets outside version control in real deployments.
 
 ## 📸 Screenshots
 
-Add screenshots here.
+A tour of the authenticated player experience.
+
+| Player profile | Events |
+| --- | --- |
+| ![Player profile and inventory](docs/screenshots/profile.png) | ![Player activity feed](docs/screenshots/events.png) |
+
+| Tasks | Shop |
+| --- | --- |
+| ![Available tasks](docs/screenshots/tasks.png) | ![In-game item shop](docs/screenshots/shop.png) |
+
+| Slots | Player battles |
+| --- | --- |
+| ![Arcane Reliquary slots](docs/screenshots/slots.png) | ![Daily player battles](docs/screenshots/battles.png) |
+
+| Previous boss: Job Application | Leaderboard |
+| --- | --- |
+| ![Previous boss battle against the Job Application](docs/screenshots/boss-battle.png) | ![Global player leaderboard](docs/screenshots/leaderboard.png) |
