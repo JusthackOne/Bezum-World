@@ -12,6 +12,7 @@ import { PrismaService } from '../src/database/prisma/prisma.service';
 import { CivilizationAdminService } from '../src/modules/civilization/civilization-admin.service';
 import { CivilizationCompletionService } from '../src/modules/civilization/civilization-completion.service';
 import { CivilizationConfigurationService } from '../src/modules/civilization/civilization-configuration.service';
+import { CivilizationConnectivityService } from '../src/modules/civilization/civilization-connectivity.service';
 import {
   CIVILIZATION_ERROR_CODES,
   CivilizationException,
@@ -124,6 +125,27 @@ class InMemoryAdminRepository {
     return this.dateOverlap;
   }
 
+  async findExistingAccountIds(userIds: string[]): Promise<Set<string>> {
+    return new Set(userIds);
+  }
+
+  async replaceActiveConfiguration(
+    _gameId: string,
+    input: {
+      name: string;
+      startAt: Date;
+      endAt: Date;
+      settings: unknown;
+    },
+  ): Promise<CivilizationStateRecord> {
+    this.state.name = input.name;
+    this.state.startAt = input.startAt;
+    this.state.endAt = input.endAt;
+    this.state.settingsJson = input.settings as CivilizationStateRecord['settingsJson'];
+    this.state.stateVersion += 1;
+    return this.state;
+  }
+
   async updateGame(_gameId: string, data: Record<string, unknown>): Promise<void> {
     this.gameUpdates.push(data);
     if (typeof data.status === 'string') {
@@ -216,6 +238,12 @@ function createAdminHarness(
     configurationService as unknown as CivilizationConfigurationService,
     { settleAllResources: async (): Promise<void> => {} } as CivilizationSettlementService,
     completionService as unknown as CivilizationCompletionService,
+    {
+      async recalculate(): Promise<CivilizationStateRecord> {
+        state.stateVersion += 1;
+        return state;
+      },
+    } as CivilizationConnectivityService,
     queryService as unknown as CivilizationQueryService,
     scheduleService as unknown as CivilizationScheduleService,
     runtime as unknown as CivilizationRuntimeService,
@@ -338,6 +366,24 @@ async function expectCivilizationError(
 }
 
 describe('Civilization admin idempotency', () => {
+  test('updates and reschedules an active game configuration', async () => {
+    const harness = createAdminHarness(CivilizationGameStatus.ACTIVE);
+
+    const result = await harness.service.updateGame(GAME_ID, ADMIN_ID, IDEMPOTENCY_KEY, {
+      name: 'Updated active game',
+    });
+
+    expect(result).toMatchObject({
+      id: GAME_ID,
+      name: 'Updated active game',
+      status: CivilizationGameStatus.ACTIVE,
+    });
+    expect(harness.state.stateVersion).toBe(2);
+    expect(harness.repository.operationOrder).toContain('overlap-check');
+    expect(harness.successfulGameSchedules).toHaveLength(1);
+    expect(harness.repository.audits).toHaveLength(1);
+  });
+
   test('serializes concurrent same-key force completion and rejects key reuse with another winner', async () => {
     const harness = createAdminHarness(CivilizationGameStatus.ACTIVE);
 

@@ -17,7 +17,12 @@ export type CivilizationActionPayload =
   | { type: "CAPTURE_BUILDING"; actionId: string; buildingId: string }
   | { type: "BUILD_TOWER"; actionId: string; tile: HexCoordinate }
   | { type: "ATTACK_TOWER"; actionId: string; towerId: string }
-  | { type: "CATAPULT_ATTACK"; actionId: string; towerId: string }
+  | {
+      type: "CATAPULT_ATTACK";
+      actionId: string;
+      towerId?: string;
+      townHallBuildingId?: string;
+    }
   | { type: "REPAIR_TOWER"; actionId: string; towerId: string }
   | { type: "CAPTURE_TOWN_HALL"; actionId: string; townHallBuildingId: string }
   | { type: "DEFEND_TOWN_HALL"; actionId: string; townHallBuildingId: string };

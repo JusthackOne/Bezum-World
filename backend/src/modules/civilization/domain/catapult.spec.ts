@@ -1,15 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 
-import { hexDistance } from './hex-grid';
-import { towerProtectionAreasOverlap } from './towers';
+import { isOnTowerAttackBoundary, towerProtectionAreasOverlap } from './towers';
 
 describe('Catapult tower-boundary geometry', () => {
-  test('accepts only coordinates exactly on the configured boundary', () => {
+  test('accepts only the first coordinate outside the protected area', () => {
     const tower = { q: 0, r: 0 };
 
-    expect(hexDistance({ q: 2, r: -1 }, tower)).toBe(2);
-    expect(hexDistance({ q: 1, r: 0 }, tower)).toBe(1);
-    expect(hexDistance({ q: 3, r: -1 }, tower)).toBe(3);
+    expect(isOnTowerAttackBoundary({ q: 2, r: -1 }, { center: tower, radius: 1 })).toBe(true);
+    expect(isOnTowerAttackBoundary({ q: 1, r: 0 }, { center: tower, radius: 1 })).toBe(false);
+    expect(isOnTowerAttackBoundary({ q: 3, r: -1 }, { center: tower, radius: 1 })).toBe(false);
   });
 
   test('keeps relocated tower protection areas separated', () => {

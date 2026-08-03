@@ -77,14 +77,6 @@ export function ClientSidebar() {
   const navRows: ClientNavItem[][] = [
     [
       {
-        href: "/civilization",
-        label: "Цивилизация",
-        Icon: CastleIcon,
-        isActive: isCivilizationActive,
-      },
-    ],
-    [
-      {
         href: "/leaderboard",
         label: "Leaderboard",
         Icon: TrophyIcon,
@@ -111,6 +103,12 @@ export function ClientSidebar() {
         label: "Slots",
         Icon: CircleDollarSignIcon,
         isActive: isSlotsActive,
+      },
+      {
+        href: "/civilization",
+        label: "Civ",
+        Icon: CastleIcon,
+        isActive: isCivilizationActive,
       },
     ],
     [
@@ -202,7 +200,7 @@ export function ClientSidebar() {
                           <span
                             className={
                               item.href === "/civilization"
-                                ? "mt-1 max-w-20 text-center text-[9px] leading-none font-semibold tracking-wide"
+                                ? "mt-1 max-w-20 text-center text-[11px] leading-none font-semibold tracking-wide"
                                 : "mt-1 text-[13px] leading-none font-semibold tracking-wide min-[800px]:text-sm"
                             }
                           >

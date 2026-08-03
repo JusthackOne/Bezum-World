@@ -14,6 +14,8 @@ export type CivilizationAssetKey =
   | "tower.active"
   | "tower.underConstruction"
   | "tower.destroyed"
+  | "item.catapult"
+  | "item.repairKit"
   | "spawnPoint"
   | "mountain"
   | "resource.neutral";
@@ -69,6 +71,16 @@ export const CIVILIZATION_ASSETS = {
     path: "/assets/civilization/tower-destroyed.webp",
     alt: "Destroyed repairable tower",
     tintable: true,
+  },
+  "item.catapult": {
+    path: "/assets/civilization/catapult.webp",
+    alt: "Catapult",
+    tintable: false,
+  },
+  "item.repairKit": {
+    path: "/assets/civilization/repair-kit.webp",
+    alt: "Tower repair kit",
+    tintable: false,
   },
   spawnPoint: {
     path: "/assets/civilization/spawn-point.webp",

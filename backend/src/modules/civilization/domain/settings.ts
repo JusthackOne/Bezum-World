@@ -66,6 +66,7 @@ export const civilizationSettingsSchema = z
         repairMinutes: nonNegativeIntegerSchema,
         protectionRadius: nonNegativeIntegerSchema,
         repairGoldCost: civilizationDecimalStringSchema,
+        destructionRequiredActions: positiveIntegerSchema.default(3),
       })
       .strict(),
     catapult: z
@@ -76,6 +77,14 @@ export const civilizationSettingsSchema = z
         damage: positiveIntegerSchema,
       })
       .strict(),
+    repairKit: z
+      .object({
+        enabled: z.boolean(),
+        goldPrice: civilizationDecimalStringSchema,
+        repairActions: positiveIntegerSchema,
+      })
+      .strict()
+      .default({ enabled: true, goldPrice: '75', repairActions: 1 }),
     townHall: z
       .object({
         captureRequiredUnits: positiveIntegerSchema,
@@ -180,12 +189,18 @@ export const defaultCivilizationSettings = {
     repairMinutes: 0,
     protectionRadius: 1,
     repairGoldCost: '75',
+    destructionRequiredActions: 3,
   },
   catapult: {
     enabled: true,
     goldPrice: '150',
     actionPointUnits: 4,
-    damage: 50,
+    damage: 2,
+  },
+  repairKit: {
+    enabled: true,
+    goldPrice: '75',
+    repairActions: 1,
   },
   townHall: {
     captureRequiredUnits: 16,

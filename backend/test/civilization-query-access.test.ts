@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 
 import { CivilizationQueryService } from '../src/modules/civilization/civilization-query.service';
+import { CIVILIZATION_ERROR_CODES } from '../src/modules/civilization/civilization.errors';
 import { CivilizationRuntimeService } from '../src/modules/civilization/civilization-runtime.service';
 import { CivilizationSettlementService } from '../src/modules/civilization/civilization-settlement.service';
 import { defaultCivilizationSettings } from '../src/modules/civilization/domain';
@@ -284,13 +285,25 @@ describe('Civilization query access', () => {
         tileId: 'tile-b',
         status: CivilizationTowerStatus.DESTROYED,
         workKind: null,
-        protectionRadius: 1,
-        hitPoints: 0,
-        maximumHitPoints: 100,
+        protectionRadius: 0,
+        destructionProgressActions: 3,
+        destructionRequiredActions: 3,
         constructionStartedAt: FIXED_NOW,
         constructionCompletesAt: null,
         destroyedAt: FIXED_NOW,
         createdByPlayerId: null,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    state.teamResources = [
+      {
+        id: 'resource-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        goldAmount: new Prisma.Decimal(500),
+        goldIncomePerHour: new Prisma.Decimal(0),
+        lastSettledAt: FIXED_NOW,
         createdAt: FIXED_NOW,
         updatedAt: FIXED_NOW,
       },
@@ -315,12 +328,23 @@ describe('Civilization query access', () => {
     );
   });
 
-  test('returns every enabled tower placement coordinate for owned connected empty ground', () => {
+  test('returns tower placement only for adjacent owned connected empty ground', () => {
     const state = createQueryState(CivilizationGameStatus.ACTIVE);
     state.tiles.push({
       id: 'tile-a-adjacent',
       gameId: GAME_ID,
       q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_A_ID,
+      isConnected: true,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.tiles.push({
+      id: 'tile-a-remote',
+      gameId: GAME_ID,
+      q: 2,
       r: 0,
       terrainType: CivilizationTerrainType.GROUND,
       ownerTeamId: TEAM_A_ID,
@@ -347,6 +371,217 @@ describe('Civilization query access', () => {
         .filter((action) => action.type === 'BUILD_TOWER' && action.disabledReason === null)
         .map((action) => action.targetCoordinate),
     ).toEqual([{ q: 1, r: 0 }]);
+  });
+
+  test('offers a tower attack from the configured protection boundary', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.tiles.push({
+      id: 'tile-b-radius-two',
+      gameId: GAME_ID,
+      q: 2,
+      r: -1,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_B_ID,
+      isConnected: true,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.towers = [
+      {
+        id: 'tower-b-radius-two',
+        gameId: GAME_ID,
+        teamId: TEAM_B_ID,
+        tileId: 'tile-b-radius-two',
+        status: CivilizationTowerStatus.ACTIVE,
+        workKind: null,
+        protectionRadius: 1,
+        destructionProgressActions: 0,
+        destructionRequiredActions: 3,
+        constructionStartedAt: FIXED_NOW,
+        constructionCompletesAt: null,
+        destroyedAt: null,
+        createdByPlayerId: null,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    state.teamResources = [
+      {
+        id: 'resource-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        goldAmount: new Prisma.Decimal(500),
+        goldIncomePerHour: new Prisma.Decimal(0),
+        lastSettledAt: FIXED_NOW,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'ATTACK_TOWER',
+          towerId: 'tower-b-radius-two',
+          targetCoordinate: { q: 2, r: -1 },
+          disabledReason: null,
+        }),
+        expect.objectContaining({
+          type: 'CATAPULT_ATTACK',
+          towerId: 'tower-b-radius-two',
+          targetCoordinate: { q: 2, r: -1 },
+          disabledReason: null,
+        }),
+      ]),
+    );
+  });
+
+  test('offers normal movement onto an adjacent enemy tile with a destroyed tower', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.tiles.push({
+      id: 'destroyed-tower-tile',
+      gameId: GAME_ID,
+      q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_B_ID,
+      isConnected: false,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.towers = [
+      {
+        id: 'destroyed-tower-b',
+        gameId: GAME_ID,
+        teamId: TEAM_B_ID,
+        tileId: 'destroyed-tower-tile',
+        status: CivilizationTowerStatus.DESTROYED,
+        workKind: null,
+        protectionRadius: 1,
+        destructionProgressActions: 3,
+        destructionRequiredActions: 3,
+        constructionStartedAt: FIXED_NOW,
+        constructionCompletesAt: null,
+        destroyedAt: FIXED_NOW,
+        createdByPlayerId: null,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'MOVE',
+          targetCoordinate: { q: 1, r: 0 },
+          actionPointUnits: defaultCivilizationSettings.costs.otherMoveUnits,
+          disabledReason: null,
+        }),
+      ]),
+    );
+  });
+
+  test('offers a configured Repair Kit only for an adjacent allied damaged tower', () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    const settings = structuredClone(defaultCivilizationSettings);
+    settings.repairKit.goldPrice = '95';
+    settings.repairKit.repairActions = 2;
+    state.settingsJson = settings;
+    state.tiles.push({
+      id: 'damaged-tower-tile',
+      gameId: GAME_ID,
+      q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_A_ID,
+      isConnected: true,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.towers = [
+      {
+        id: 'damaged-tower-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        tileId: 'damaged-tower-tile',
+        status: CivilizationTowerStatus.ACTIVE,
+        workKind: null,
+        protectionRadius: 1,
+        destructionProgressActions: 2,
+        destructionRequiredActions: 3,
+        constructionStartedAt: FIXED_NOW,
+        constructionCompletesAt: null,
+        destroyedAt: null,
+        createdByPlayerId: null,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+    state.teamResources = [
+      {
+        id: 'resource-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        goldAmount: new Prisma.Decimal(500),
+        goldIncomePerHour: new Prisma.Decimal(0),
+        lastSettledAt: FIXED_NOW,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
+
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'REPAIR_TOWER',
+          towerId: 'damaged-tower-a',
+          targetCoordinate: { q: 1, r: 0 },
+          goldCost: '95',
+          disabledReason: null,
+        }),
+      ]),
+    );
+    expect(response.game.settings.repairKit.repairActions).toBe(2);
+  });
+
+  test("marks movement onto another team's spawn as unavailable", () => {
+    const state = createQueryState(CivilizationGameStatus.ACTIVE);
+    state.tiles.push({
+      id: 'team-b-spawn',
+      gameId: GAME_ID,
+      q: 1,
+      r: 0,
+      terrainType: CivilizationTerrainType.GROUND,
+      ownerTeamId: TEAM_B_ID,
+      isConnected: true,
+      createdAt: FIXED_NOW,
+      updatedAt: FIXED_NOW,
+    });
+    state.spawnPoints.push({
+      id: 'spawn-team-b',
+      gameId: GAME_ID,
+      teamId: TEAM_B_ID,
+      tileId: 'team-b-spawn',
+      createdAt: FIXED_NOW,
+    });
+
+    const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
+
+    expect(response.availableActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'MOVE',
+          targetCoordinate: { q: 1, r: 0 },
+          disabledReason: CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY,
+        }),
+      ]),
+    );
   });
 
   test('offers adjacent enemy town-hall capture instead of movement', () => {
@@ -379,6 +614,18 @@ describe('Civilization query access', () => {
         updatedAt: FIXED_NOW,
       },
     ];
+    state.teamResources = [
+      {
+        id: 'town-hall-catapult-resource-a',
+        gameId: GAME_ID,
+        teamId: TEAM_A_ID,
+        goldAmount: new Prisma.Decimal(500),
+        goldIncomePerHour: new Prisma.Decimal(0),
+        lastSettledAt: FIXED_NOW,
+        createdAt: FIXED_NOW,
+        updatedAt: FIXED_NOW,
+      },
+    ];
     const response = createQueryHarness(state).service.toState(state, USER_A_ID, FIXED_NOW);
 
     expect(response.availableActions).toEqual(
@@ -387,6 +634,14 @@ describe('Civilization query access', () => {
           type: 'CAPTURE_TOWN_HALL',
           buildingId: 'town-hall-b',
           targetCoordinate: { q: 1, r: 0 },
+          disabledReason: null,
+        }),
+        expect.objectContaining({
+          type: 'CATAPULT_ATTACK',
+          buildingId: 'town-hall-b',
+          targetCoordinate: { q: 1, r: 0 },
+          actionPointUnits: defaultCivilizationSettings.catapult.actionPointUnits,
+          goldCost: defaultCivilizationSettings.catapult.goldPrice,
           disabledReason: null,
         }),
       ]),

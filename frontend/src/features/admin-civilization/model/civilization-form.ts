@@ -72,6 +72,7 @@ export const civilizationGameFormSchema = z
           teamSide: z.enum(["TEAM_A", "TEAM_B"]),
           status: z.enum(["UNDER_CONSTRUCTION", "ACTIVE", "DESTROYED"]),
           protectionRadius: z.number().int().nonnegative().optional(),
+          destructionRequiredActions: z.number().int().positive().optional(),
         }),
       ),
     }),
@@ -110,12 +111,18 @@ export const civilizationGameFormSchema = z
         repairMinutes: z.number().int().nonnegative(),
         protectionRadius: z.number().int().nonnegative(),
         repairGoldCost: nonNegativeDecimal,
+        destructionRequiredActions: z.number().int().positive(),
       }),
       catapult: z.object({
         enabled: z.boolean(),
         goldPrice: nonNegativeDecimal,
         actionPointUnits: z.number().int().nonnegative(),
         damage: z.number().int().positive(),
+      }),
+      repairKit: z.object({
+        enabled: z.boolean(),
+        goldPrice: nonNegativeDecimal,
+        repairActions: z.number().int().positive(),
       }),
       townHall: z.object({
         captureRequiredUnits: z.number().int().positive(),
@@ -228,12 +235,18 @@ export const DEFAULT_CIVILIZATION_SETTINGS: CivilizationSettings = {
     repairMinutes: 0,
     protectionRadius: 1,
     repairGoldCost: "75",
+    destructionRequiredActions: 3,
   },
   catapult: {
     enabled: true,
     goldPrice: "150",
     actionPointUnits: 4,
-    damage: 50,
+    damage: 2,
+  },
+  repairKit: {
+    enabled: true,
+    goldPrice: "75",
+    repairActions: 1,
   },
   townHall: {
     captureRequiredUnits: 16,
@@ -430,7 +443,9 @@ export function validateCivilizationMap(
   }
   map.spawns.forEach((spawn) => {
     if (!validGround(spawn)) {
-      issues.push(issue("INVALID_SPAWN_TILE", `${spawn.teamSide} spawn must be on playable ground.`, spawn));
+      issues.push(
+        issue("INVALID_SPAWN_TILE", `${spawn.teamSide} spawn must be on playable ground.`, spawn),
+      );
     }
     const tile = tiles.get(coordinateKey(spawn));
     if (tile?.ownerTeamSide && tile.ownerTeamSide !== spawn.teamSide) {

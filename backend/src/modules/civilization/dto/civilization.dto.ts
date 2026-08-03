@@ -153,6 +153,12 @@ export class CivilizationTowerInputDto extends HexCoordinateDto {
   @IsInt()
   @Min(0)
   protectionRadius?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  destructionRequiredActions?: number;
 }
 
 export class CivilizationMapInputDto {
@@ -272,6 +278,16 @@ export class BuildCivilizationTowerDto extends CivilizationActionDto {
 export class CivilizationTowerActionDto extends CivilizationActionDto {
   @IsUUID()
   towerId!: string;
+}
+
+export class CivilizationCatapultActionDto extends CivilizationActionDto {
+  @IsOptional()
+  @IsUUID()
+  towerId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  townHallBuildingId?: string;
 }
 
 export class CivilizationTownHallActionDto extends CivilizationActionDto {

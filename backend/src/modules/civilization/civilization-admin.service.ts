@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 
 import { CivilizationCompletionService } from './civilization-completion.service';
+import { CivilizationConnectivityService } from './civilization-connectivity.service';
 import {
   type CivilizationConfigurationValidation,
   CivilizationConfigurationService,
@@ -41,6 +42,7 @@ export class CivilizationAdminService {
     private readonly configurationService: CivilizationConfigurationService,
     private readonly settlementService: CivilizationSettlementService,
     private readonly completionService: CivilizationCompletionService,
+    private readonly connectivityService: CivilizationConnectivityService,
     private readonly queryService: CivilizationQueryService,
     private readonly scheduleService: CivilizationScheduleService,
     private readonly runtime: CivilizationRuntimeService,
@@ -168,15 +170,6 @@ export class CivilizationAdminService {
         }
         const before = await this.repository.findStateById(gameId, tx);
         this.assertEditable(before);
-        if (
-          before.status === CivilizationGameStatus.SCHEDULED &&
-          before.startAt.getTime() <= this.runtime.now().getTime()
-        ) {
-          throw new CivilizationException(
-            CIVILIZATION_ERROR_CODES.GAME_IMMUTABLE,
-            'A scheduled game cannot be edited after its configured start time',
-          );
-        }
         const current = this.toConfiguration(before);
         const merged: CreateCivilizationGameDto = {
           name: patch.name ?? current.name,
@@ -188,7 +181,10 @@ export class CivilizationAdminService {
         };
         this.assertValid(this.configurationService.validate(merged));
         const settings = parseCivilizationSettings(merged.settings);
-        if (before.status === CivilizationGameStatus.SCHEDULED) {
+        if (
+          before.status === CivilizationGameStatus.SCHEDULED ||
+          before.status === CivilizationGameStatus.ACTIVE
+        ) {
           await this.repository.acquireScheduleLock(tx);
           if (
             await this.repository.hasDateOverlap(
@@ -208,19 +204,28 @@ export class CivilizationAdminService {
           merged.teams.flatMap((team) => team.playerIds),
           tx,
         );
-        const next = await this.repository.replaceConfiguration(
-          gameId,
-          {
-            name: merged.name.trim(),
-            startAt: new Date(merged.startAt),
-            endAt: new Date(merged.endAt),
-            teams: merged.teams,
-            map: merged.map,
-            settings,
-          },
-          tx,
-        );
-        for (const player of next.players) {
+        const replacement = {
+          name: merged.name.trim(),
+          startAt: new Date(merged.startAt),
+          endAt: new Date(merged.endAt),
+          teams: merged.teams,
+          map: merged.map,
+          settings,
+        };
+        const now = this.runtime.now();
+        let next: CivilizationStateRecord;
+        if (before.status === CivilizationGameStatus.ACTIVE) {
+          await this.settlementService.settleAllResources(before, now, tx);
+          const previousSettings = parseCivilizationSettings(before.settingsJson);
+          for (const player of before.players.filter((candidate) => candidate.isActive)) {
+            await this.settlementService.settlePlayer(player, previousSettings, now, tx);
+          }
+          await this.repository.replaceActiveConfiguration(gameId, replacement, now, tx);
+          next = await this.connectivityService.recalculate(gameId, now, tx);
+        } else {
+          next = await this.repository.replaceConfiguration(gameId, replacement, tx);
+        }
+        for (const player of next.players.filter((candidate) => candidate.isActive)) {
           await this.repository.createEvent(
             {
               gameId,
@@ -252,7 +257,8 @@ export class CivilizationAdminService {
         return {
           response,
           reschedule:
-            before.status === CivilizationGameStatus.SCHEDULED
+            before.status === CivilizationGameStatus.SCHEDULED ||
+            before.status === CivilizationGameStatus.ACTIVE
               ? {
                   startAt: next.startAt,
                   endAt: next.endAt,
@@ -744,11 +750,12 @@ export class CivilizationAdminService {
     if (!state) this.notFound();
     if (
       state.status !== CivilizationGameStatus.DRAFT &&
-      state.status !== CivilizationGameStatus.SCHEDULED
+      state.status !== CivilizationGameStatus.SCHEDULED &&
+      state.status !== CivilizationGameStatus.ACTIVE
     ) {
       throw new CivilizationException(
         CIVILIZATION_ERROR_CODES.GAME_IMMUTABLE,
-        'Civilization configuration is immutable after the game starts',
+        'Completed or cancelled Civilization configuration is immutable',
       );
     }
   }
@@ -794,7 +801,7 @@ export class CivilizationAdminService {
       teams: configuration.teams,
       map: configuration.map,
       settings: configuration.settings,
-      playerCount: state.players.length,
+      playerCount: state.players.filter((player) => player.isActive).length,
       createdAt: state.createdAt.toISOString(),
       updatedAt: state.updatedAt.toISOString(),
       gameState: this.queryService.toState(state, '', this.runtime.now()),
@@ -848,7 +855,7 @@ export class CivilizationAdminService {
         color: team.color,
         visualKey: team.visualIdentifier ?? team.side.toLowerCase(),
         playerIds: state.players
-          .filter((player) => player.teamId === team.id)
+          .filter((player) => player.teamId === team.id && player.isActive)
           .map((player) => player.userId),
       })),
       map: {
@@ -877,16 +884,19 @@ export class CivilizationAdminService {
             incomePerHour: building.incomePerHour.toString(),
           };
         }),
-        towers: state.towers.map((tower) => {
-          const tile = tileById.get(tower.tileId)!;
-          return {
-            q: tile.q,
-            r: tile.r,
-            teamSide: teamById.get(tower.teamId)!.side,
-            status: tower.status,
-            protectionRadius: tower.protectionRadius,
-          };
-        }),
+        towers: state.towers
+          .filter((tower) => tower.status !== CivilizationTowerStatus.CANCELLED)
+          .map((tower) => {
+            const tile = tileById.get(tower.tileId)!;
+            return {
+              q: tile.q,
+              r: tile.r,
+              teamSide: teamById.get(tower.teamId)!.side,
+              status: tower.status,
+              protectionRadius: tower.protectionRadius,
+              destructionRequiredActions: tower.destructionRequiredActions,
+            };
+          }),
       },
     };
   }
@@ -898,7 +908,7 @@ export class CivilizationAdminService {
       status: state.status,
       startAt: state.startAt.toISOString(),
       endAt: state.endAt.toISOString(),
-      playerCount: state.players.length,
+      playerCount: state.players.filter((player) => player.isActive).length,
       tileCount: state.tiles.length,
       buildingCount: state.buildings.length,
       settings: parseCivilizationSettings(state.settingsJson),

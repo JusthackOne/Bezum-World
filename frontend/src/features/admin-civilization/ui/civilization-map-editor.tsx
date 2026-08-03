@@ -78,6 +78,14 @@ interface EditorScene {
   initializedView: boolean;
 }
 
+interface HexBrushStroke {
+  pointerId: number;
+  mode: "ADD" | "REMOVE";
+  visitedCoordinates: Set<string>;
+  map: CivilizationAdminMapInput;
+  hasChanges: boolean;
+}
+
 interface CivilizationMapEditorProps {
   value: CivilizationAdminMapInput;
   teams: CivilizationAdminGameInput["teams"];
@@ -274,10 +282,32 @@ function applyPaintingTool(
       teamSide: side,
       status: "ACTIVE",
       protectionRadius: settings.tower.protectionRadius,
+      destructionRequiredActions: settings.tower.destructionRequiredActions,
     });
     ensuredTile.ownerTeamSide = side;
   }
 
+  return map;
+}
+
+function applyHexBrush(
+  current: CivilizationAdminMapInput,
+  coordinate: HexCoordinate,
+  mode: HexBrushStroke["mode"],
+): CivilizationAdminMapInput {
+  const key = coordinateKey(coordinate);
+  const hasTile = current.tiles.some((tile) => coordinateKey(tile) === key);
+  if ((mode === "ADD" && hasTile) || (mode === "REMOVE" && !hasTile)) {
+    return current;
+  }
+
+  const map = cloneMap(current);
+  if (mode === "ADD") {
+    ensureGround(map, coordinate);
+  } else {
+    map.tiles = map.tiles.filter((tile) => coordinateKey(tile) !== key);
+    removeObjectsAt(map, coordinate);
+  }
   return map;
 }
 
@@ -402,12 +432,7 @@ async function renderEditor(
       );
     } else if (
       moveSource &&
-      isValidMoveDestination(
-        map,
-        moveSource,
-        coordinate,
-        settings.tower.protectionRadius,
-      )
+      isValidMoveDestination(map, moveSource, coordinate, settings.tower.protectionRadius)
     ) {
       scene.validationLayer.addChild(
         new Graphics()
@@ -470,9 +495,7 @@ async function renderEditor(
   );
   if (moveSource && movePreviewCoordinate) {
     const sourceKey = coordinateKey(moveSource);
-    const sourceEntry = assetEntries.find(
-      (entry) => coordinateKey(entry.coordinate) === sourceKey,
-    );
+    const sourceEntry = assetEntries.find((entry) => coordinateKey(entry.coordinate) === sourceKey);
     if (sourceEntry) {
       assetEntries.push({ ...sourceEntry, coordinate: movePreviewCoordinate, isMovePreview: true });
     }
@@ -544,6 +567,7 @@ export function CivilizationMapEditor({
   const editorRootRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<EditorScene | null>(null);
   const pointerDownRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const hexBrushStrokeRef = useRef<HexBrushStroke | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const historyRef = useRef<CivilizationAdminMapInput[]>([cloneMap(value)]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -560,6 +584,7 @@ export function CivilizationMapEditor({
     y: number;
   } | null>(null);
   const [deleteBuildingIndex, setDeleteBuildingIndex] = useState<number | null>(null);
+  const toolRef = useRef(tool);
   const hasMapContent =
     value.tiles.length > 0 || value.buildings.length > 0 || value.towers.length > 0;
   const commit = useCallback(
@@ -681,6 +706,9 @@ export function CivilizationMapEditor({
         .decelerate()
         .clamp({ direction: "all" })
         .clampZoom({ minScale: 0.25, maxScale: 2.5 });
+      if (toolRef.current === "TOGGLE_HEX") {
+        viewport.plugins.pause("drag");
+      }
       app.stage.addChild(viewport);
       const scene: EditorScene = {
         app,
@@ -733,6 +761,17 @@ export function CivilizationMapEditor({
       host.replaceChildren();
     };
   }, []);
+
+  useEffect(() => {
+    toolRef.current = tool;
+    const viewport = sceneRef.current?.viewport;
+    if (!viewport) return;
+    if (tool === "TOGGLE_HEX") {
+      viewport.plugins.pause("drag");
+    } else {
+      viewport.plugins.resume("drag");
+    }
+  }, [tool]);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -829,13 +868,36 @@ export function CivilizationMapEditor({
     );
   };
   const startBuildingRelocation = (coordinate: HexCoordinate): void => {
-    if (!value.buildings.some((building) => coordinateKey(building) === coordinateKey(coordinate))) {
+    if (
+      !value.buildings.some((building) => coordinateKey(building) === coordinateKey(coordinate))
+    ) {
       return;
     }
     setTool("MOVE");
     setMoveSource(coordinate);
     setMovePreviewCoordinate(null);
     setBuildingMenu(null);
+  };
+  const paintHexBrushCoordinate = (coordinate: HexCoordinate): void => {
+    const stroke = hexBrushStrokeRef.current;
+    if (!stroke) return;
+    const key = coordinateKey(coordinate);
+    if (stroke.visitedCoordinates.has(key)) return;
+    stroke.visitedCoordinates.add(key);
+    const next = applyHexBrush(stroke.map, coordinate, stroke.mode);
+    if (next === stroke.map) return;
+    stroke.map = next;
+    stroke.hasChanges = true;
+    onChange(next);
+  };
+  const finishHexBrush = (pointerId: number): boolean => {
+    const stroke = hexBrushStrokeRef.current;
+    if (!stroke || stroke.pointerId !== pointerId) return false;
+    hexBrushStrokeRef.current = null;
+    if (stroke.hasChanges) {
+      commit(stroke.map);
+    }
+    return true;
   };
   const handleMapPointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     if (event.button === 2) {
@@ -844,6 +906,21 @@ export function CivilizationMapEditor({
       return;
     }
     if (event.button !== 0 || !event.isPrimary) {
+      return;
+    }
+    if (event.pointerType === "mouse" && tool === "TOGGLE_HEX" && !disabled && !preview) {
+      const coordinate = coordinateAtClientPoint(event.clientX, event.clientY);
+      if (!coordinate) return;
+      const key = coordinateKey(coordinate);
+      hexBrushStrokeRef.current = {
+        pointerId: event.pointerId,
+        mode: value.tiles.some((tile) => coordinateKey(tile) === key) ? "REMOVE" : "ADD",
+        visitedCoordinates: new Set(),
+        map: value,
+        hasChanges: false,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      paintHexBrushCoordinate(coordinate);
       return;
     }
     pointerDownRef.current = {
@@ -865,21 +942,32 @@ export function CivilizationMapEditor({
     }, 550);
   };
   const handleMapPointerMove = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const brushStroke = hexBrushStrokeRef.current;
+    if (brushStroke?.pointerId === event.pointerId) {
+      if ((event.buttons & 1) === 0) {
+        finishHexBrush(event.pointerId);
+        return;
+      }
+      const coordinate = coordinateAtClientPoint(event.clientX, event.clientY);
+      if (coordinate) paintHexBrushCoordinate(coordinate);
+      return;
+    }
     if (!moveSource) return;
     const coordinate = coordinateAtClientPoint(event.clientX, event.clientY);
     setMovePreviewCoordinate(
       coordinate &&
-        isValidMoveDestination(
-          value,
-          moveSource,
-          coordinate,
-          settings.tower.protectionRadius,
-        )
+        isValidMoveDestination(value, moveSource, coordinate, settings.tower.protectionRadius)
         ? coordinate
         : null,
     );
   };
   const handleMapPointerUp = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (finishHexBrush(event.pointerId)) {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      return;
+    }
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -898,6 +986,14 @@ export function CivilizationMapEditor({
     if (coordinate) {
       handleHexClickRef.current(coordinate);
     }
+  };
+  const handleMapPointerCancel = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    finishHexBrush(event.pointerId);
+    pointerDownRef.current = null;
   };
   const handleBuildingContextMenu = (event: ReactMouseEvent<HTMLDivElement>): void => {
     event.preventDefault();
@@ -1039,21 +1135,9 @@ export function CivilizationMapEditor({
           onPointerDown={handleMapPointerDown}
           onPointerMove={handleMapPointerMove}
           onPointerUp={handleMapPointerUp}
-          onPointerCancel={() => {
-            if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-            pointerDownRef.current = null;
-          }}
+          onPointerCancel={handleMapPointerCancel}
           onContextMenu={handleBuildingContextMenu}
         />
-        <div className="pointer-events-none absolute bottom-3 left-3 border border-white/20 bg-slate-950/85 px-3 py-2 text-[9px] text-slate-200">
-          {preview
-            ? "Preview mode: map editing is locked"
-            : tool === "MOVE"
-              ? moveSource
-                ? "Choose the destination hex"
-                : "Click an object to move it"
-              : "Click to paint · left-drag to pan · wheel to zoom"}
-        </div>
       </div>
       <AlertDialog open={clearConfirmationOpen} onOpenChange={setClearConfirmationOpen}>
         <AlertDialogContent>
@@ -1221,27 +1305,49 @@ export function CivilizationMapEditor({
           {value.towers.length > 0 ? (
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {value.towers.map((tower, index) => (
-                <label
+                <fieldset
                   key={`${tower.teamSide}:${tower.q}:${tower.r}:${index}`}
-                  className="flex items-center justify-between gap-3 border p-2 text-[9px]"
+                  className="grid grid-cols-2 gap-2 border p-2 text-[9px]"
                 >
-                  <span>
-                    {tower.teamSide} tower ({tower.q}, {tower.r}) radius
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    className="h-8 w-20 border bg-background px-2"
-                    value={tower.protectionRadius ?? settings.tower.protectionRadius}
-                    disabled={disabled}
-                    onChange={(event) =>
-                      updateTower(index, {
-                        protectionRadius: Number.parseInt(event.target.value, 10) || 0,
-                      })
-                    }
-                  />
-                </label>
+                  <legend className="px-1">
+                    {tower.teamSide} tower ({tower.q}, {tower.r})
+                  </legend>
+                  <label className="flex items-center justify-between gap-2">
+                    Radius
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      className="h-8 w-20 border bg-background px-2"
+                      value={tower.protectionRadius ?? settings.tower.protectionRadius}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        updateTower(index, {
+                          protectionRadius: Number.parseInt(event.target.value, 10) || 0,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-2">
+                    Actions
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      className="h-8 w-20 border bg-background px-2"
+                      value={
+                        tower.destructionRequiredActions ??
+                        settings.tower.destructionRequiredActions
+                      }
+                      disabled={disabled}
+                      onChange={(event) =>
+                        updateTower(index, {
+                          destructionRequiredActions: Number.parseInt(event.target.value, 10) || 1,
+                        })
+                      }
+                    />
+                  </label>
+                </fieldset>
               ))}
             </div>
           ) : null}
@@ -1249,7 +1355,8 @@ export function CivilizationMapEditor({
       ) : null}
       <div className="flex flex-wrap justify-between gap-2 text-[9px] text-muted-foreground">
         <span>
-          {value.tiles.length} playable hexes · {value.buildings.length} buildings · {value.spawns.length} team spawns
+          {value.tiles.length} playable hexes · {value.buildings.length} buildings ·{" "}
+          {value.spawns.length} team spawns
         </span>
         <span className={issues.length > 0 ? "text-destructive" : "text-emerald-400"}>
           {issues.length > 0 ? `${issues.length} validation issues` : "Local map checks passed"}

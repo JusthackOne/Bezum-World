@@ -8,7 +8,6 @@ import {
   CivilizationTeamSide,
   CivilizationTerrainType,
   CivilizationTowerStatus,
-  CivilizationTowerWorkKind,
   Prisma,
 } from '@prisma/client';
 
@@ -166,8 +165,8 @@ class InMemoryCivilizationRepository {
       createdAt: FIXED_NOW,
       updatedAt: FIXED_NOW,
       destroyedAt: null,
-      hitPoints: 100,
-      maximumHitPoints: 100,
+      destructionProgressActions: 0,
+      destructionRequiredActions: 3,
       ...data,
     } as unknown as StateTower;
     this.state.towers.push(tower);
@@ -499,8 +498,8 @@ function createTower(
     status,
     workKind: null,
     protectionRadius: 1,
-    hitPoints: status === CivilizationTowerStatus.DESTROYED ? 0 : 100,
-    maximumHitPoints: 100,
+    destructionProgressActions: status === CivilizationTowerStatus.DESTROYED ? 3 : 0,
+    destructionRequiredActions: 3,
     constructionStartedAt: new Date('2026-08-01T09:00:00.000Z'),
     constructionCompletesAt:
       status === CivilizationTowerStatus.UNDER_CONSTRUCTION ? FIXED_NOW : null,
@@ -659,6 +658,24 @@ describe('Civilization movement actions', () => {
     );
   });
 
+  test("rejects movement onto another team's spawn even when it is empty", async () => {
+    const state = createState();
+    state.spawnPoints.find((spawn) => spawn.teamId === TEAM_B_ID)!.tileId = TARGET_TILE_ID;
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    const harness = createActionHarness(state);
+
+    await expectCivilizationError(
+      harness.service.move(GAME_ID, USER_A_ID, {
+        actionId: '00000000-0000-4000-8000-000000010010',
+        target: { q: 1, r: 0 },
+      }),
+      CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY,
+    );
+
+    expect(player(state, PLAYER_A_ID).currentTileId).toBe(ORIGIN_TILE_ID);
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(16);
+  });
+
   test('never captures a tower tile by moving onto a tower under construction', async () => {
     const state = createState();
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
@@ -684,6 +701,31 @@ describe('Civilization movement actions', () => {
     expect(findTower(state, tower.id).status).toBe(CivilizationTowerStatus.UNDER_CONSTRUCTION);
     expect(state.teamResources[1]!.goldAmount.toString()).toBe(previousGold);
     expect(harness.repository.events).toHaveLength(0);
+  });
+
+  test('captures an enemy tile with a destroyed tower for the normal enemy-tile cost', async () => {
+    const state = createState();
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_B_ID;
+    const tower = createTower(
+      'destroyed-enemy-tower',
+      TEAM_B_ID,
+      TARGET_TILE_ID,
+      CivilizationTowerStatus.DESTROYED,
+    );
+    state.towers.push(tower);
+    const harness = createActionHarness(state);
+
+    await harness.service.move(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000010010',
+      target: { q: 1, r: 0 },
+    });
+
+    expect(player(state, PLAYER_A_ID).currentTileId).toBe(TARGET_TILE_ID);
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(14);
+    expect(tile(state, TARGET_TILE_ID).ownerTeamId).toBe(TEAM_A_ID);
+    expect(state.towers.some((candidate) => candidate.id === tower.id)).toBe(false);
+    expect(harness.repository.deleteTowerCalls).toContain(tower.id);
   });
 
   test('serializes simultaneous attempts to capture the same neutral tile', async () => {
@@ -947,6 +989,23 @@ describe('Civilization tower actions', () => {
     ]);
   });
 
+  test('rejects construction on an owned connected tile beyond one hex', async () => {
+    const state = createState();
+    state.tiles.push(createTile(TEAM_A_REMOTE_TILE_ID, 2, 0, TEAM_A_ID, true));
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    const harness = createActionHarness(state);
+
+    await expectCivilizationError(
+      harness.service.buildTower(GAME_ID, USER_A_ID, {
+        actionId: '00000000-0000-4000-8000-000000040012',
+        tile: { q: 2, r: 0 },
+      }),
+      CIVILIZATION_ERROR_CODES.TOWER_PLACEMENT_INVALID,
+    );
+    expect(state.towers).toHaveLength(0);
+    expect(state.teamResources[0]!.goldAmount.toString()).toBe('500');
+  });
+
   test('rejects overlapping protection radii before spending gold', async () => {
     const state = createState();
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
@@ -965,7 +1024,7 @@ describe('Civilization tower actions', () => {
     expect(state.teamResources[0]!.goldAmount.toString()).toBe('500');
   });
 
-  test('destroys an active enemy tower instantly for three AP', async () => {
+  test('tracks attacks and destroys an enemy tower at its configured action limit', async () => {
     const state = createState();
     const tower = createTower(
       'enemy-tower',
@@ -973,6 +1032,8 @@ describe('Civilization tower actions', () => {
       TARGET_TILE_ID,
       CivilizationTowerStatus.ACTIVE,
     );
+    tower.protectionRadius = 0;
+    tower.destructionRequiredActions = 2;
     state.towers.push(tower);
     const harness = createActionHarness(state);
 
@@ -982,15 +1043,73 @@ describe('Civilization tower actions', () => {
     });
 
     expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(10);
+    expect(findTower(state, tower.id)).toMatchObject({
+      status: CivilizationTowerStatus.ACTIVE,
+      destructionProgressActions: 1,
+    });
+
+    await harness.service.attackTower(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000040015',
+      towerId: tower.id,
+    });
+
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(4);
     expect(findTower(state, tower.id).status).toBe(CivilizationTowerStatus.DESTROYED);
+    expect(findTower(state, tower.id).destructionProgressActions).toBe(2);
     expect(findTower(state, tower.id).destroyedAt).toEqual(FIXED_NOW);
+  });
+
+  test('attacks an enemy tower from its configured protection boundary', async () => {
+    const state = createState();
+    player(state, PLAYER_B_ID).currentTileId = TARGET_TILE_ID;
+    const tower = createTower(
+      'radius-two-enemy-tower',
+      TEAM_B_ID,
+      TEAM_B_SPAWN_TILE_ID,
+      CivilizationTowerStatus.ACTIVE,
+    );
+    tower.protectionRadius = 1;
+    state.towers.push(tower);
+    const harness = createActionHarness(state);
+
+    await harness.service.attackTower(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000040013',
+      towerId: tower.id,
+    });
+
+    expect(findTower(state, tower.id)).toMatchObject({
+      status: CivilizationTowerStatus.ACTIVE,
+      destructionProgressActions: 1,
+    });
+  });
+
+  test('rejects a tower attack from inside its protection boundary', async () => {
+    const state = createState();
+    const tower = createTower(
+      'radius-two-adjacent-tower',
+      TEAM_B_ID,
+      TARGET_TILE_ID,
+      CivilizationTowerStatus.ACTIVE,
+    );
+    tower.protectionRadius = 2;
+    state.towers.push(tower);
+    const harness = createActionHarness(state);
+
+    await expectCivilizationError(
+      harness.service.attackTower(GAME_ID, USER_A_ID, {
+        actionId: '00000000-0000-4000-8000-000000040014',
+        towerId: tower.id,
+      }),
+      CIVILIZATION_ERROR_CODES.TOWER_NOT_ATTACKABLE,
+    );
+    expect(findTower(state, tower.id).status).toBe(CivilizationTowerStatus.ACTIVE);
   });
 
   test('applies configured Catapult damage and charges one idempotent purchase', async () => {
     const state = createState();
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
     const settings = structuredClone(defaultCivilizationSettings);
-    settings.catapult.damage = 35;
+    settings.catapult.damage = 1;
     state.settingsJson = settings;
     const tower = createTower(
       'catapult-target',
@@ -998,6 +1117,7 @@ describe('Civilization tower actions', () => {
       TARGET_TILE_ID,
       CivilizationTowerStatus.ACTIVE,
     );
+    tower.protectionRadius = 0;
     state.towers.push(tower);
     const harness = createActionHarness(state);
     const request = {
@@ -1012,7 +1132,8 @@ describe('Civilization tower actions', () => {
     expect(state.teamResources[0]!.goldAmount.toString()).toBe('350');
     expect(findTower(state, tower.id)).toMatchObject({
       status: CivilizationTowerStatus.ACTIVE,
-      hitPoints: 65,
+      destructionProgressActions: 1,
+      destructionRequiredActions: 3,
     });
     expect(
       harness.repository.events.filter(
@@ -1021,12 +1142,94 @@ describe('Civilization tower actions', () => {
     ).toHaveLength(1);
   });
 
+  test('uses Catapult damage as capture progress against an adjacent enemy town hall', async () => {
+    const state = createState();
+    const settings = structuredClone(defaultCivilizationSettings);
+    settings.catapult.damage = 4;
+    state.settingsJson = settings;
+    player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
+    tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_B_ID;
+    const townHall = createBuilding(
+      'catapult-town-hall-target',
+      CivilizationBuildingType.TOWN_HALL,
+      TEAM_B_ID,
+      0,
+      null,
+      6,
+    );
+    state.buildings.push(townHall);
+    const harness = createActionHarness(state);
+
+    await harness.service.catapultAttack(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000040018',
+      townHallBuildingId: townHall.id,
+    });
+
+    expect(findBuilding(state, townHall.id)).toMatchObject({
+      status: CivilizationBuildingStatus.ACTIVE,
+      captureTeamId: TEAM_A_ID,
+      captureProgressUnits: 4,
+    });
+
+    await harness.service.catapultAttack(GAME_ID, USER_A_ID, {
+      actionId: '00000000-0000-4000-8000-000000040019',
+      townHallBuildingId: townHall.id,
+    });
+
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(8);
+    expect(state.teamResources[0]!.goldAmount.toString()).toBe('200');
+    expect(findBuilding(state, townHall.id)).toMatchObject({
+      status: CivilizationBuildingStatus.CAPTURED,
+      captureTeamId: null,
+      captureProgressUnits: 0,
+    });
+    expect(tile(state, TARGET_TILE_ID).ownerTeamId).toBe(TEAM_A_ID);
+    expect(harness.completionCalls).toEqual([
+      {
+        gameId: GAME_ID,
+        reason: CivilizationCompletionReason.TOWN_HALL_CAPTURED,
+        winnerTeamId: TEAM_A_ID,
+      },
+    ]);
+    expect(
+      harness.repository.events.filter(
+        (event) => event.eventType === CivilizationEventType.CATAPULT_ATTACKED,
+      ),
+    ).toHaveLength(2);
+    expect(harness.repository.events.at(-1)?.payloadJson).toMatchObject({
+      townHallBuildingId: townHall.id,
+      damageActions: 4,
+      captureProgressUnits: 6,
+      captureRequiredUnits: 6,
+      captured: true,
+    });
+  });
+
+  test('rejects a Catapult request with more than one target before charging resources', async () => {
+    const state = createState();
+    const harness = createActionHarness(state);
+
+    await expectCivilizationError(
+      harness.service.catapultAttack(GAME_ID, USER_A_ID, {
+        actionId: '00000000-0000-4000-8000-000000040020',
+        towerId: 'tower-target',
+        townHallBuildingId: 'town-hall-target',
+      }),
+      CIVILIZATION_ERROR_CODES.CATAPULT_TARGET_INVALID,
+    );
+
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(16);
+    expect(state.teamResources[0]!.goldAmount.toString()).toBe('500');
+  });
+
   test('repairs an owned connected tower immediately for AP and gold', async () => {
     const state = createState();
+    tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_A_ID;
+    tile(state, TARGET_TILE_ID).isConnected = true;
     const tower = createTower(
       'repairable-tower',
       TEAM_A_ID,
-      ORIGIN_TILE_ID,
+      TARGET_TILE_ID,
       CivilizationTowerStatus.DESTROYED,
     );
     state.towers.push(tower);
@@ -1041,46 +1244,70 @@ describe('Civilization tower actions', () => {
     expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(14);
     expect(state.teamResources[0]!.goldAmount.toString()).toBe('425');
     expect(findTower(state, tower.id).status).toBe(CivilizationTowerStatus.ACTIVE);
+    expect(findTower(state, tower.id).destructionProgressActions).toBe(2);
     expect(findTower(state, tower.id).destroyedAt).toBeNull();
   });
 
-  test('starts a configurable delayed repair and schedules its completion', async () => {
+  test('uses the configured Repair Kit amount and gold price on a damaged active tower', async () => {
     const state = createState();
     const settings = structuredClone(defaultCivilizationSettings);
-    settings.tower.repairMinutes = 45;
+    settings.repairKit.repairActions = 2;
+    settings.repairKit.goldPrice = '110';
     state.settingsJson = settings;
+    tile(state, TARGET_TILE_ID).ownerTeamId = TEAM_A_ID;
+    tile(state, TARGET_TILE_ID).isConnected = true;
     const tower = createTower(
-      'delayed-repair-tower',
+      'damaged-active-tower',
       TEAM_A_ID,
-      ORIGIN_TILE_ID,
-      CivilizationTowerStatus.DESTROYED,
+      TARGET_TILE_ID,
+      CivilizationTowerStatus.ACTIVE,
     );
+    tower.destructionProgressActions = 2;
     state.towers.push(tower);
     player(state, PLAYER_B_ID).currentTileId = TEAM_B_SPAWN_TILE_ID;
     const harness = createActionHarness(state);
 
     await harness.service.repairTower(GAME_ID, USER_A_ID, {
-      actionId: '00000000-0000-4000-8000-000000040007',
+      actionId: '00000000-0000-4000-8000-000000040016',
       towerId: tower.id,
     });
 
     expect(findTower(state, tower.id)).toMatchObject({
-      status: CivilizationTowerStatus.UNDER_CONSTRUCTION,
-      workKind: CivilizationTowerWorkKind.REPAIR,
-      constructionStartedAt: FIXED_NOW,
-      constructionCompletesAt: new Date('2026-08-01T12:45:00.000Z'),
+      status: CivilizationTowerStatus.ACTIVE,
+      destructionProgressActions: 0,
+      workKind: null,
       destroyedAt: null,
     });
-    expect(harness.repository.events.at(-1)?.eventType).toBe(
-      CivilizationEventType.TOWER_REPAIR_STARTED,
+    expect(state.teamResources[0]!.goldAmount.toString()).toBe('390');
+    expect(harness.repository.events.at(-1)?.payloadJson).toMatchObject({
+      repairActions: 2,
+      destructionProgressActions: 0,
+      goldSpent: '110',
+    });
+  });
+
+  test('rejects a Repair Kit when the player is not next to the allied tower', async () => {
+    const state = createState();
+    state.tiles.push(createTile(TEAM_A_REMOTE_TILE_ID, 4, 0, TEAM_A_ID, true));
+    const tower = createTower(
+      'remote-damaged-tower',
+      TEAM_A_ID,
+      TEAM_A_REMOTE_TILE_ID,
+      CivilizationTowerStatus.ACTIVE,
     );
-    expect(harness.scheduledTowers).toEqual([
-      {
+    tower.destructionProgressActions = 1;
+    state.towers.push(tower);
+    const harness = createActionHarness(state);
+
+    await expectCivilizationError(
+      harness.service.repairTower(GAME_ID, USER_A_ID, {
+        actionId: '00000000-0000-4000-8000-000000040017',
         towerId: tower.id,
-        gameId: GAME_ID,
-        completesAt: new Date('2026-08-01T12:45:00.000Z'),
-      },
-    ]);
+      }),
+      CIVILIZATION_ERROR_CODES.TOWER_NOT_REPAIRABLE,
+    );
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(16);
+    expect(state.teamResources[0]!.goldAmount.toString()).toBe('500');
   });
 
   test('serializes simultaneous team-gold spending and prevents an overdraft', async () => {

@@ -140,6 +140,7 @@ enum CivilizationEventType {
   TOWER_CONSTRUCTION_STARTED
   TOWER_CONSTRUCTION_CANCELLED
   TOWER_COMPLETED
+  TOWER_ATTACKED
   TOWER_DESTROYED
   TOWER_REPAIR_STARTED
   TOWER_REPAIRED
@@ -828,25 +829,25 @@ model CivilizationBuilding {
 }
 
 model CivilizationTower {
-  id                      String                     @id @default(uuid())
-  gameId                  String                     @map("game_id")
-  teamId                  String                     @map("team_id")
-  tileId                  String                     @map("tile_id")
-  status                  CivilizationTowerStatus    @default(UNDER_CONSTRUCTION)
-  workKind                CivilizationTowerWorkKind? @map("work_kind")
-  protectionRadius        Int                        @map("protection_radius")
-  hitPoints               Int                        @default(100) @map("hit_points")
-  maximumHitPoints        Int                        @default(100) @map("maximum_hit_points")
-  constructionStartedAt   DateTime                   @map("construction_started_at") @db.Timestamptz(3)
-  constructionCompletesAt DateTime?                  @map("construction_completes_at") @db.Timestamptz(3)
-  destroyedAt             DateTime?                  @map("destroyed_at") @db.Timestamptz(3)
-  createdByPlayerId       String?                    @map("created_by_player_id")
-  createdAt               DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt               DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
-  game                    CivilizationGame           @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  team                    CivilizationTeam           @relation(fields: [teamId], references: [id], onDelete: Restrict)
-  tile                    CivilizationTile           @relation(fields: [tileId], references: [id], onDelete: Restrict)
-  createdByPlayer         CivilizationGamePlayer?    @relation(fields: [createdByPlayerId], references: [id], onDelete: SetNull)
+  id                         String                     @id @default(uuid())
+  gameId                     String                     @map("game_id")
+  teamId                     String                     @map("team_id")
+  tileId                     String                     @map("tile_id")
+  status                     CivilizationTowerStatus    @default(UNDER_CONSTRUCTION)
+  workKind                   CivilizationTowerWorkKind? @map("work_kind")
+  protectionRadius           Int                        @map("protection_radius")
+  destructionProgressActions Int                        @default(0) @map("destruction_progress_actions")
+  destructionRequiredActions Int                        @map("destruction_required_actions")
+  constructionStartedAt      DateTime                   @map("construction_started_at") @db.Timestamptz(3)
+  constructionCompletesAt    DateTime?                  @map("construction_completes_at") @db.Timestamptz(3)
+  destroyedAt                DateTime?                  @map("destroyed_at") @db.Timestamptz(3)
+  createdByPlayerId          String?                    @map("created_by_player_id")
+  createdAt                  DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                  DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  game                       CivilizationGame           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team                       CivilizationTeam           @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  tile                       CivilizationTile           @relation(fields: [tileId], references: [id], onDelete: Restrict)
+  createdByPlayer            CivilizationGamePlayer?    @relation(fields: [createdByPlayerId], references: [id], onDelete: SetNull)
 
   @@index([gameId, teamId, status])
   @@index([gameId, tileId, status])
@@ -950,20 +951,20 @@ model CivilizationRewardDistribution {
 }
 
 model CivilizationRewardClaim {
-  id               String                   @id @default(uuid())
-  gameId           String                   @map("game_id")
-  teamId           String                   @map("team_id")
-  playerId         String                   @map("player_id")
-  eligible         Boolean
-  unavailableReason String?                 @map("unavailable_reason")
-  rewardJson       Json                     @map("reward_json")
-  expiresAt        DateTime?                @map("expires_at") @db.Timestamptz(3)
-  claimedAt        DateTime?                @map("claimed_at") @db.Timestamptz(3)
-  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
-  game             CivilizationGame         @relation(fields: [gameId], references: [id], onDelete: Restrict)
-  team             CivilizationTeam         @relation(fields: [teamId], references: [id], onDelete: Restrict)
-  player           CivilizationGamePlayer   @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  id                String                 @id @default(uuid())
+  gameId            String                 @map("game_id")
+  teamId            String                 @map("team_id")
+  playerId          String                 @map("player_id")
+  eligible          Boolean
+  unavailableReason String?                @map("unavailable_reason")
+  rewardJson        Json                   @map("reward_json")
+  expiresAt         DateTime?              @map("expires_at") @db.Timestamptz(3)
+  claimedAt         DateTime?              @map("claimed_at") @db.Timestamptz(3)
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  game              CivilizationGame       @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  team              CivilizationTeam       @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  player            CivilizationGamePlayer @relation(fields: [playerId], references: [id], onDelete: Restrict)
 
   @@unique([gameId, playerId])
   @@index([playerId, claimedAt])

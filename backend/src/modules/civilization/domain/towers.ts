@@ -28,6 +28,14 @@ export function towerProtectionAreasOverlap(
   return hexDistance(first.center, second.center) <= first.radius + second.radius;
 }
 
+export function isOnTowerAttackBoundary(
+  player: HexCoordinate,
+  tower: TowerProtectionArea,
+): boolean {
+  assertRadius(tower.radius);
+  return hexDistance(player, tower.center) === tower.radius + 1;
+}
+
 export function findTowerOverlap(
   candidate: TowerProtectionArea,
   existingAreas: readonly TowerProtectionArea[],

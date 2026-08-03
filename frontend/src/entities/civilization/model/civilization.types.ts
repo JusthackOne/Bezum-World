@@ -67,12 +67,18 @@ export interface CivilizationSettings {
     repairMinutes: number;
     protectionRadius: number;
     repairGoldCost: string;
+    destructionRequiredActions: number;
   };
   catapult: {
     enabled: boolean;
     goldPrice: string;
     actionPointUnits: number;
     damage: number;
+  };
+  repairKit: {
+    enabled: boolean;
+    goldPrice: string;
+    repairActions: number;
   };
   townHall: {
     captureRequiredUnits: number;
@@ -152,8 +158,8 @@ export interface CivilizationTower {
   status: CivilizationTowerStatus;
   workKind: CivilizationTowerWorkKind | null;
   protectionRadius: number;
-  hitPoints: number;
-  maximumHitPoints: number;
+  destructionProgressActions: number;
+  destructionRequiredActions: number;
   isConnected: boolean;
   constructionStartedAt: string;
   constructionCompletesAt: string | null;
@@ -336,6 +342,7 @@ export interface CivilizationAdminTowerInput extends HexCoordinate {
   teamSide: CivilizationTeamSide;
   status: Exclude<CivilizationTowerStatus, "CANCELLED">;
   protectionRadius?: number;
+  destructionRequiredActions?: number;
 }
 
 export interface CivilizationAdminMapInput {

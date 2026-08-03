@@ -9,21 +9,34 @@ Clicking a target executes its sole interaction immediately; a structure interac
 over movement when both refer to the same hex. Clicking a specifically targeted enemy character
 executes that character's attack action. Selecting the current character again cancels action mode.
 Clicking any non-action hex or empty map space also clears the player selection and every legal-action
-highlight. Clicking a tower always clears player movement mode first and immediately highlights the
-tower's active protection area; selecting another object or the map background removes that area.
+highlight. Clicking an intact tower clears player movement mode first and highlights its active
+protection area; clicking an adjacent destroyed enemy tower while movement mode is active captures
+its hex. Selecting another object or the map background removes the tower highlight.
 The client locks map interaction while a request is pending, clears all selection after success, and
 keeps the original server state after failure. Dragging pans the map, while the mouse wheel or a pinch
 gesture changes its zoom level.
 
-The upper-left item palette exposes defensive-tower placement and the single-use Catapult. Placement
-mode highlights every enabled `BUILD_TOWER` coordinate returned by the
+The upper-left item palette exposes defensive-tower placement, the single-use Catapult, and the
+single-use Repair Kit. Placement
+buttons first open an item dialog with its purpose, cost, and relevant combat values. `Use` enters
+the corresponding placement or targeting mode, while `Back` returns to the map. There is no second
+team-resource confirmation dialog after a target is chosen. Tower placement mode highlights every enabled `BUILD_TOWER` coordinate returned by the
 server. Selecting one shows a translucent preview with confirm and choose-another controls; no request
 is sent until confirmation. The palette toggle, an invalid/background tap, Escape, or successful
-construction exits placement mode. Catapult mode highlights only attackable enemy towers whose
-protection boundary contains the current player. The displayed gold and AP prices, disabled state,
+construction exits placement mode. Catapult mode highlights attackable enemy towers when the current
+player occupies the first hex immediately outside the protected area, plus an adjacent enemy Town
+Hall when it has no defending player and is not protected by an active tower. The displayed gold and AP prices, disabled state,
 and disabled reason all come from the latest server read model. The overlay resource block beside the zoom controls shows the
 current participant team's projected gold and estimated score directly from the latest game state.
 Neutral ground uses a gray base so team territory and action overlays remain distinct.
+
+Defensive towers use destruction actions instead of hit points. A regular tower attack adds one
+destruction action, while a Catapult adds its configured number of destruction actions to the same
+counter. The tower becomes destroyed when the counter reaches its configured requirement. A Repair
+Kit removes its configured number of destruction actions from an adjacent allied damaged tower.
+After the first attack or capture contribution, a high-contrast
+`current/required` badge is rendered beneath the affected tower or building so its progress remains
+readable over the full-size structure artwork.
 
 Every game has exactly one distinct spawn hex per team. All active participants are placed on their
 own team's spawn atomically when the game activates, players added later join that spawn, and defeated
@@ -36,8 +49,8 @@ The map is the only movement input surface. The client does not render separate 
 a selection details card, current/spawn coordinates in the player summary, or an event history
 section. Server-side action events remain authoritative but are not fetched as a separate client feed.
 
-Resource buildings and towers use their configured Civilization artwork at a prominent scale while
-retaining a hit area limited to their own hex. Hovering a structure shows its available details on
+Mountains, resource buildings, and towers use their configured Civilization artwork at the full hex
+height while retaining a hit area limited to their own hex. Hovering a structure shows its available details on
 desktop. On touch devices, tapping a structure pins that tooltip until another structure or the map
 outside it is tapped. The popover is clamped to the map bounds, switches to a compact bottom placement
 on narrow screens, wraps long values, and follows a pinned structure while the camera moves or zooms.
@@ -102,32 +115,32 @@ Scheduled and active date ranges use a half-open PostgreSQL range (`[startAt, en
 
 Settings are copied into `settingsJson` and validated with Zod whenever loaded. They become immutable when the game starts except through an explicit audited correction.
 
-| Setting                        |                                   Default |
-| ------------------------------ | ----------------------------------------: |
-| Maximum AP                     |                  8 AP / 16 internal units |
-| Initial AP                     |                  8 AP / 16 internal units |
-| Regeneration                   |          1 AP / 2 units every 180 minutes |
-| Owned-tile move                |                           0.5 AP / 1 unit |
-| Neutral or empty-enemy move    |                            1 AP / 2 units |
-| Player attack                  |                            2 AP / 4 units |
-| Resource-building contribution |                            1 AP / 2 units |
-| Tower construction AP          |                            1 AP / 2 units |
-| Tower attack                   |                            3 AP / 6 units |
-| Town-hall contribution         |                            1 AP / 2 units |
-| Town-hall defense              |                            1 AP / 2 units |
-| Tower repair                   |                            1 AP / 2 units |
-| Ordinary connected tile income |                               5 gold/hour |
-| Gold building income           |                              25 gold/hour |
-| Attribute-building income      |  1 unit/hour for its configured attribute |
-| Resource capture requirement   |                        3 points / 6 units |
-| Attacker / defender chance     |                                 30% / 70% |
-| Tower construction             |           200 gold, 180 minutes, radius 1 |
-| Tower repair                   | 75 gold, 0 minutes (immediate by default) |
-| Catapult                       | 150 gold, 2 AP / 4 units, 50 tower damage |
-| Town-hall capture requirement  |                       8 points / 16 units |
-| Town-hall defense              |       50 gold, removes 0.5 point / 1 unit |
-| Score weights                  |             gold × 1; each attribute × 25 |
-| Winner bonus                   |                                         0 |
+| Setting                        |                                         Default |
+| ------------------------------ | ----------------------------------------------: |
+| Maximum AP                     |                        8 AP / 16 internal units |
+| Initial AP                     |                        8 AP / 16 internal units |
+| Regeneration                   |                1 AP / 2 units every 180 minutes |
+| Owned-tile move                |                                 0.5 AP / 1 unit |
+| Neutral or empty-enemy move    |                                  1 AP / 2 units |
+| Player attack                  |                                  2 AP / 4 units |
+| Resource-building contribution |                                  1 AP / 2 units |
+| Tower construction AP          |                                  1 AP / 2 units |
+| Tower attack                   |                                  3 AP / 6 units |
+| Town-hall contribution         |                                  1 AP / 2 units |
+| Town-hall defense              |                                  1 AP / 2 units |
+| Tower repair                   |                                  1 AP / 2 units |
+| Ordinary connected tile income |                                     5 gold/hour |
+| Gold building income           |                                    25 gold/hour |
+| Attribute-building income      |        1 unit/hour for its configured attribute |
+| Resource capture requirement   |                              3 points / 6 units |
+| Attacker / defender chance     |                                       30% / 70% |
+| Tower construction             |                 200 gold, 180 minutes, radius 1 |
+| Repair Kit                     |           75 gold, repairs 1 destruction action |
+| Catapult                       | 150 gold, 2 AP / 4 units, 2 destruction actions |
+| Town-hall capture requirement  |                             8 points / 16 units |
+| Town-hall defense              |             50 gold, removes 0.5 point / 1 unit |
+| Score weights                  |                   gold × 1; each attribute × 25 |
+| Winner bonus                   |                                               0 |
 
 All AP and capture values are persisted as integer half units. Decimal strings are used at API/settings boundaries so persisted currency never passes through JavaScript floating-point arithmetic.
 
@@ -141,7 +154,10 @@ Every available action includes its display target coordinate, but the client su
 target identifier or coordinate and never submits a derived cost or outcome.
 
 A move can finish only on an empty regular ground hex, except that allied players may share their own
-team spawn. Another team's spawn is never a valid movement destination. Building and non-cancelled tower hexes are never movement destinations. Their
+team spawn. Another team's spawn is never a valid movement destination. Building and active or
+constructing tower hexes are never movement destinations. A destroyed enemy tower no longer blocks
+its hex: entering that hex captures it for the normal neutral/enemy move cost and permanently removes
+the destroyed tower. Other
 capture, attack, repair, defense, or construction-contribution actions are performed from the
 actor's valid adjacent/current position without moving the actor onto the structure.
 
@@ -173,21 +189,29 @@ Combat uses a cryptographically secure server roll. The integer roll, configured
 ## Towers and town halls
 
 Tower centers must be farther apart than the sum of their protection radii. For two radius-1 towers
-the minimum center distance is 3 hexes. Construction may target any empty, connected, owned ground
-tile returned by the legal-action read model; the mutation repeats ownership, connectivity, structure
+the minimum center distance is 3 hexes. Construction may target any adjacent empty, connected, owned
+ground tile returned by the legal-action read model; the mutation repeats adjacency, ownership, connectivity, structure
 occupancy, player occupancy, team-spawn exclusion, radius-overlap, AP, and team-gold validation in its transaction. Construction creates an
 `UNDER_CONSTRUCTION` row and delayed completion job. Database time/status checks make completion
 idempotent. Players cannot move onto its construction tile.
 
-Only active, connected towers protect their radius. One valid adjacent tower attack spends the configured AP and makes the tower `DESTROYED`. A destroyed tower may be repaired only when its tile remains owned and connected, no enemy occupies it, the actor is in a valid position, and the team can pay both costs. Repair duration is configurable: zero restores it immediately, while a positive duration records `REPAIR` work and completes through the same idempotent tower scheduler.
+Only active, connected towers protect their radius. Each valid tower attack adds one destruction
+action; reaching the configured requirement changes the tower to `DESTROYED`. The Repair Kit can be
+used on an active damaged or destroyed allied tower only while the player is on an adjacent hex, the
+tower tile remains owned and connected, no enemy occupies it, and the team can pay the configured AP
+and gold. The item immediately removes its administrator-configured number of destruction actions.
 
-The Catapult is an atomic purchase-and-use action against an active enemy defensive tower. The server
-recomputes axial distance and accepts the target only when the player is exactly on the tower's
-configured protection-radius boundary. In one serializable transaction it validates game state,
-ownership, target HP, feature enablement, team gold, AP, and the action idempotency key; then it deducts
-the configured costs and applies configured damage. The action row prevents the same Catapult request
+The Catapult is an atomic purchase-and-use action against either an active enemy defensive tower or an
+adjacent enemy Town Hall. The server recomputes axial distance and accepts a tower only when the
+player is exactly on its configured protection-radius boundary. A Town Hall requires an adjacent
+player position, no defender on the building, and no active connected tower protection. In one
+serializable transaction the action validates game state, ownership, target type, feature enablement,
+team gold, AP, and the idempotency key; then it deducts the configured costs and applies configured
+damage. Against a Town Hall, `catapult.damage` adds capture-progress units and completes the game when
+the building's configured requirement is reached. The action row prevents the same Catapult request
 from being consumed twice. A successful event carries source/target tiles and damage so every polling
 client can play the short cannonball/impact animation; reduced-motion clients use an impact flash.
+The Repair Kit uses the same target-selection pattern for adjacent allied damaged towers.
 
 Town-hall progress is stored in half units. An attacker may contribute from the Town Hall hex or an
 adjacent hex; an adjacent enemy Town Hall is therefore exposed as `CAPTURE_TOWN_HALL`, not `MOVE`.
@@ -218,7 +242,9 @@ Jobs are hints; database status and timestamps remain authoritative. No AP, inco
 
 Generated assets live in `frontend/public/assets/civilization/`. `CIVILIZATION_ASSETS` in `frontend/src/entities/civilization/model/civilization-assets.ts` maps stable keys to files and records which sprites may receive a team-color treatment. Building ownership is shown with code-rendered overlays/tints, so neutral and team-controlled states do not duplicate every source bitmap.
 
-The set contains town hall, gold building, four attribute buildings, active/constructing/destroyed towers, spawn point, mountain, and neutral resource marker. Files are 512×512 transparent WebP images optimized for map rendering.
+The set contains town hall, gold building, four attribute buildings, active/constructing/destroyed
+towers, Catapult, Repair Kit, spawn point, mountain, and neutral resource marker. Files are 512×512
+transparent WebP images optimized for map rendering.
 
 All images were generated with the built-in image-generation tool using this shared production prompt:
 
@@ -233,6 +259,14 @@ Constraints: original isolated opaque object; uniform removable background; cris
 ```
 
 Subject prompts were: fortified crystal town hall; royal mint/mine; strength forge; charisma pavilion; endurance bastion; intelligence observatory; crystal defensive tower; matched under-construction and destroyed tower edits; teleport spawn dais; jagged impassable mountain; and dormant neutral resource pedestal. Chroma was removed locally, images were resized with containment to 512×512, and all four corner alpha values were validated as transparent.
+
+The item prompt additions were an ornate wooden Catapult with a violet crystal projectile and a
+dark-leather Repair Kit with a silver hammer, gold fittings, reinforcement plates, and a violet
+crystal vial. Both were generated with the built-in image tool, chroma-keyed locally, and saved as
+512×512 transparent WebP assets.
+
+After an `ATTACK_PLAYER` response, the attacking client displays a centered `YOU WON` or `YOU LOST`
+game-style animation over the battlefield based on the server-authoritative `attackerWon` result.
 
 ## Player map controls
 
@@ -250,11 +284,11 @@ Action responses update the authoritative React Query state immediately. Current
 6. Resolve every reported map/settings error and schedule the game. Database overlap protection is rechecked transactionally.
 7. To add a player after activation, open the active game, choose a team, and submit the audited add-player operation. The player receives configured initial AP on that team's spawn.
 
-The editor applies the selected tool directly through map clicks. Pointer conversion uses Pixi's logical screen size, so high-DPI displays select the hex under the cursor. Building relocation can be entered from the building context menu: valid destinations are highlighted, the source floats at reduced opacity, and hovering a valid target shows a translucent preview. Escape, secondary click, the visible cancel button, or clicking outside the editor cancels relocation. The server repeats complete map validation when the draft/scheduled configuration is saved. Right-clicking a building opens a compact delete menu and touch long-press opens the same menu; deletion still requires confirmation and no separate delete tool exists. On desktop, left-button drag pans and the mouse wheel zooms without scrolling the page. **Clear map** requires confirmation, removes all playable cells and placed objects, and records the change in editor history so it can be undone before leaving the form.
+The editor applies the selected tool directly through map clicks. The add/remove-hex tool paints continuously while the left mouse button is held; the first hex selects add or remove mode for the whole stroke, and one stroke is one undo step. Pointer conversion uses Pixi's logical screen size, so high-DPI displays select the hex under the cursor. Building relocation can be entered from the building context menu: valid destinations are highlighted, the source floats at reduced opacity, and hovering a valid target shows a translucent preview. Escape, secondary click, the visible cancel button, or clicking outside the editor cancels relocation. The server repeats complete map validation when the draft/scheduled configuration is saved. Right-clicking a building opens a compact delete menu and touch long-press opens the same menu; deletion still requires confirmation and no separate delete tool exists. On desktop, left-button drag pans with tools other than add/remove hex, and the mouse wheel zooms without scrolling the page. **Clear map** requires confirmation, removes all playable cells and placed objects, and records the change in editor history so it can be undone before leaving the form.
 
 Administrator mutations take their PostgreSQL advisory lock through an execute-only raw query. The lock function returns PostgreSQL `void`, which must not be deserialized as a result column by Prisma. Unexpected HTTP exceptions are logged server-side with their error name, code, message, and stack while the API continues to return the standard safe 500 response.
 
-Draft/scheduled configuration may be edited before start. Active-state corrections require an explicit audited administrator operation. Cancellation and force completion require confirmation.
+Draft and scheduled configuration may be edited before start. Active games use the same complete editor for dates, teams, players, map, and balance settings. The server settles accrued resources first, preserves existing player/action/event records, relocates players whose team or current tile becomes invalid, recalculates connectivity and income, reschedules deadlines and tower jobs, and records the configuration change in the audit log. Completed and cancelled games remain immutable historical records. Cancellation and force completion require confirmation.
 
 ## Local development and migrations
 

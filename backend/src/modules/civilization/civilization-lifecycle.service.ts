@@ -129,7 +129,7 @@ export class CivilizationLifecycleService implements OnModuleInit {
           {
             status: completed ? CivilizationTowerStatus.ACTIVE : CivilizationTowerStatus.CANCELLED,
             ...(completed && tower.workKind === CivilizationTowerWorkKind.REPAIR
-              ? { hitPoints: tower.maximumHitPoints, destroyedAt: null }
+              ? { destructionProgressActions: 0, destroyedAt: null }
               : {}),
             workKind: null,
           },
@@ -255,7 +255,7 @@ export class CivilizationLifecycleService implements OnModuleInit {
           {
             status: CivilizationTowerStatus.ACTIVE,
             ...(tower.workKind === CivilizationTowerWorkKind.REPAIR
-              ? { hitPoints: tower.maximumHitPoints, destroyedAt: null }
+              ? { destructionProgressActions: 0, destroyedAt: null }
               : {}),
             workKind: null,
           },

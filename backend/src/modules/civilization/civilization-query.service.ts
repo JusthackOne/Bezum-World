@@ -13,6 +13,7 @@ import {
   areHexesAdjacent,
   calculateTeamScore,
   hexDistance,
+  isOnTowerAttackBoundary,
   parseCivilizationSettings,
   settleActionPoints,
   settleDecimalResource,
@@ -115,8 +116,7 @@ export class CivilizationQueryService {
     const settings = parseCivilizationSettings(state.settingsJson);
     const assignedPlayer = state.players.find((player) => player.userId === userId);
     const currentPlayer =
-      assignedPlayer &&
-      (assignedPlayer.isActive || state.status !== CivilizationGameStatus.ACTIVE)
+      assignedPlayer && (assignedPlayer.isActive || state.status !== CivilizationGameStatus.ACTIVE)
         ? assignedPlayer
         : undefined;
     const tileById = new Map(state.tiles.map((tile) => [tile.id, tile]));
@@ -286,8 +286,8 @@ export class CivilizationQueryService {
         status: tower.status,
         workKind: tower.workKind,
         protectionRadius: tower.protectionRadius,
-        hitPoints: tower.hitPoints,
-        maximumHitPoints: tower.maximumHitPoints,
+        destructionProgressActions: tower.destructionProgressActions,
+        destructionRequiredActions: tower.destructionRequiredActions,
         isConnected: tileById.get(tower.tileId)?.isConnected ?? false,
         constructionStartedAt: tower.constructionStartedAt.toISOString(),
         constructionCompletesAt: tower.constructionCompletesAt?.toISOString() ?? null,
@@ -535,7 +535,10 @@ export class CivilizationQueryService {
       }
       if (
         state.towers.some(
-          (tower) => tower.tileId === tile.id && tower.status !== CivilizationTowerStatus.CANCELLED,
+          (tower) =>
+            tower.tileId === tile.id &&
+            tower.status !== CivilizationTowerStatus.CANCELLED &&
+            tower.status !== CivilizationTowerStatus.DESTROYED,
         )
       ) {
         continue;
@@ -558,9 +561,9 @@ export class CivilizationQueryService {
                 (spawn) => spawn.tileId === tile.id && spawn.teamId !== player.teamId,
               )
             ? CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY
-          : protectedByTower
-            ? CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER
-            : null;
+            : protectedByTower
+              ? CIVILIZATION_ERROR_CODES.TILE_PROTECTED_BY_TOWER
+              : null;
       actions.push({
         type: 'MOVE',
         targetCoordinate: { q: tile.q, r: tile.r },
@@ -647,6 +650,7 @@ export class CivilizationQueryService {
     const teamGold = new Prisma.Decimal(projectedGoldByTeamId.get(player.teamId) ?? '0');
     for (const placementTile of state.tiles) {
       if (
+        !areHexesAdjacent(currentTile, placementTile) ||
         placementTile.ownerTeamId !== player.teamId ||
         !placementTile.isConnected ||
         placementTile.terrainType === 'MOUNTAIN' ||
@@ -694,7 +698,10 @@ export class CivilizationQueryService {
       if (!towerTile) continue;
       if (
         tower.teamId !== player.teamId &&
-        areHexesAdjacent(currentTile, towerTile) &&
+        isOnTowerAttackBoundary(currentTile, {
+          center: towerTile,
+          radius: tower.protectionRadius,
+        }) &&
         (tower.status === CivilizationTowerStatus.ACTIVE ||
           tower.status === CivilizationTowerStatus.DESTROYED)
       ) {
@@ -710,13 +717,12 @@ export class CivilizationQueryService {
         });
       } else if (
         tower.teamId === player.teamId &&
-        tower.status === CivilizationTowerStatus.DESTROYED &&
+        (tower.status === CivilizationTowerStatus.ACTIVE ||
+          tower.status === CivilizationTowerStatus.DESTROYED) &&
+        tower.destructionProgressActions > 0 &&
         towerTile.ownerTeamId === player.teamId &&
         towerTile.isConnected &&
-        (currentTile.id === towerTile.id ||
-          (areHexesAdjacent(currentTile, towerTile) &&
-            currentTile.ownerTeamId === player.teamId &&
-            currentTile.isConnected)) &&
+        areHexesAdjacent(currentTile, towerTile) &&
         !state.players.some(
           (candidate) =>
             candidate.isActive &&
@@ -730,35 +736,41 @@ export class CivilizationQueryService {
           towerId: tower.id,
           targetCoordinate: { q: towerTile.q, r: towerTile.r },
           actionPointUnits: settings.costs.towerRepairUnits,
-          goldCost: settings.tower.repairGoldCost,
-          label: 'Repair tower',
+          goldCost: settings.repairKit.goldPrice,
+          label: 'Use Repair Kit',
           requiresConfirmation: true,
-          disabledReason: new Prisma.Decimal(gold).lessThan(
-            new Prisma.Decimal(settings.tower.repairGoldCost),
-          )
-            ? CIVILIZATION_ERROR_CODES.NOT_ENOUGH_TEAM_GOLD
-            : actionPointDisabledReason(settings.costs.towerRepairUnits),
+          disabledReason: !settings.repairKit.enabled
+            ? 'REPAIR_KIT_DISABLED'
+            : new Prisma.Decimal(gold).lessThan(new Prisma.Decimal(settings.repairKit.goldPrice))
+              ? CIVILIZATION_ERROR_CODES.NOT_ENOUGH_TEAM_GOLD
+              : actionPointDisabledReason(settings.costs.towerRepairUnits),
         });
       }
     }
 
-    const catapultTargets = state.towers.filter((tower) => {
+    const catapultTowerTargets = state.towers.filter((tower) => {
       if (
         tower.teamId === player.teamId ||
         tower.status !== CivilizationTowerStatus.ACTIVE ||
-        tower.hitPoints <= 0
+        tower.destructionProgressActions >= tower.destructionRequiredActions
       ) {
         return false;
       }
       const towerTile = state.tiles.find((tile) => tile.id === tower.tileId);
-      return Boolean(towerTile && hexDistance(currentTile, towerTile) === tower.protectionRadius);
+      return Boolean(
+        towerTile &&
+        isOnTowerAttackBoundary(currentTile, {
+          center: towerTile,
+          radius: tower.protectionRadius,
+        }),
+      );
     });
     const catapultResourceDisabledReason = !settings.catapult.enabled
       ? 'CATAPULT_DISABLED'
       : teamGold.lessThan(new Prisma.Decimal(settings.catapult.goldPrice))
         ? CIVILIZATION_ERROR_CODES.NOT_ENOUGH_TEAM_GOLD
         : actionPointDisabledReason(settings.catapult.actionPointUnits);
-    for (const tower of catapultTargets) {
+    for (const tower of catapultTowerTargets) {
       const towerTile = state.tiles.find((tile) => tile.id === tower.tileId)!;
       actions.push({
         type: 'CATAPULT_ATTACK',
@@ -771,7 +783,50 @@ export class CivilizationQueryService {
         disabledReason: catapultResourceDisabledReason,
       });
     }
-    if (catapultTargets.length === 0) {
+    const catapultTownHallTargets = state.buildings.filter((building) => {
+      if (
+        building.buildingType !== CivilizationBuildingType.TOWN_HALL ||
+        !building.ownerTeamId ||
+        building.ownerTeamId === player.teamId
+      ) {
+        return false;
+      }
+      const townHallTile = state.tiles.find((tile) => tile.id === building.tileId);
+      return Boolean(townHallTile && areHexesAdjacent(currentTile, townHallTile));
+    });
+    for (const townHall of catapultTownHallTargets) {
+      const townHallTile = state.tiles.find((tile) => tile.id === townHall.tileId)!;
+      const occupiedByEnemy = state.players.some(
+        (candidate) =>
+          candidate.isActive &&
+          candidate.currentTileId === townHall.tileId &&
+          candidate.teamId !== player.teamId,
+      );
+      const protectedByTower = state.towers.some((tower) => {
+        const towerTile = state.tiles.find((tile) => tile.id === tower.tileId);
+        return (
+          tower.teamId !== player.teamId &&
+          tower.status === CivilizationTowerStatus.ACTIVE &&
+          towerTile?.isConnected &&
+          hexDistance(townHallTile, towerTile) <= tower.protectionRadius
+        );
+      });
+      actions.push({
+        type: 'CATAPULT_ATTACK',
+        buildingId: townHall.id,
+        targetCoordinate: { q: townHallTile.q, r: townHallTile.r },
+        actionPointUnits: settings.catapult.actionPointUnits,
+        goldCost: settings.catapult.goldPrice,
+        label: 'Fire Catapult at Town Hall',
+        requiresConfirmation: true,
+        disabledReason: occupiedByEnemy
+          ? CIVILIZATION_ERROR_CODES.TILE_OCCUPIED_BY_ENEMY
+          : protectedByTower
+            ? CIVILIZATION_ERROR_CODES.TOWN_HALL_PROTECTED
+            : catapultResourceDisabledReason,
+      });
+    }
+    if (catapultTowerTargets.length === 0 && catapultTownHallTargets.length === 0) {
       actions.push({
         type: 'CATAPULT_ATTACK',
         actionPointUnits: settings.catapult.actionPointUnits,
@@ -779,8 +834,21 @@ export class CivilizationQueryService {
         label: 'Fire Catapult',
         requiresConfirmation: true,
         disabledReason: settings.catapult.enabled
-          ? 'NO_VALID_ENEMY_TOWER_TARGETS'
+          ? 'NO_VALID_CATAPULT_TARGETS'
           : 'CATAPULT_DISABLED',
+      });
+    }
+
+    if (!actions.some((action) => action.type === 'REPAIR_TOWER')) {
+      actions.push({
+        type: 'REPAIR_TOWER',
+        actionPointUnits: settings.costs.towerRepairUnits,
+        goldCost: settings.repairKit.goldPrice,
+        label: 'Use Repair Kit',
+        requiresConfirmation: true,
+        disabledReason: settings.repairKit.enabled
+          ? 'NO_DAMAGED_ADJACENT_ALLIED_TOWERS'
+          : 'REPAIR_KIT_DISABLED',
       });
     }
 
@@ -878,6 +946,10 @@ export class CivilizationQueryService {
           player.actionsUsed += 1;
           player.actionPointUnitsSpent += actionPointUnitsSpent;
           player.towerConstructionsStarted += 1;
+          break;
+        case CivilizationEventType.TOWER_ATTACKED:
+          player.actionsUsed += 1;
+          player.actionPointUnitsSpent += actionPointUnitsSpent;
           break;
         case CivilizationEventType.TOWER_DESTROYED:
           player.actionsUsed += 1;

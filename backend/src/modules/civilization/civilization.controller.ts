@@ -21,6 +21,7 @@ import {
   AttackCivilizationPlayerDto,
   BuildCivilizationTowerDto,
   CaptureCivilizationBuildingDto,
+  CivilizationCatapultActionDto,
   CivilizationGameIdParamsDto,
   CivilizationPaginationDto,
   CivilizationTowerActionDto,
@@ -137,14 +138,10 @@ export class CivilizationController {
   @UseGuards(CivilizationRateLimitGuard)
   async catapultAttack(
     @Param() params: CivilizationGameIdParamsDto,
-    @Body() body: CivilizationTowerActionDto,
+    @Body() body: CivilizationCatapultActionDto,
     @Req() request: RequestWithAuthUser,
   ): Promise<unknown> {
-    return this.actionsService.catapultAttack(
-      params.gameId,
-      this.requireUserId(request),
-      body,
-    );
+    return this.actionsService.catapultAttack(params.gameId, this.requireUserId(request), body);
   }
 
   @Post('games/:gameId/actions/repair-tower')

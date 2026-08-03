@@ -177,7 +177,7 @@ export function CivilizationGameDetails({ gameId }: { gameId: string }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {game.status === "DRAFT" || game.status === "SCHEDULED" ? (
+          {game.status === "DRAFT" || game.status === "SCHEDULED" || game.status === "ACTIVE" ? (
             <Button asChild variant="outline">
               <Link href={adminCivilizationRoutes.edit(game.id)}>
                 <PencilIcon className="size-4" /> Edit

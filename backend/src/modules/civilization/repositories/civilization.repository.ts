@@ -45,7 +45,7 @@ const civilizationStateInclude = {
 
 const civilizationAdminListInclude = {
   teams: {
-    include: { _count: { select: { players: true } } },
+    include: { _count: { select: { players: { where: { isActive: true } } } } },
     orderBy: { side: 'asc' as const },
   },
 } satisfies Prisma.CivilizationGameInclude;
@@ -63,6 +63,7 @@ const civilizationStatisticEventTypes = [
   CivilizationEventType.BUILDING_CAPTURE_PROGRESS,
   CivilizationEventType.BUILDING_CAPTURED,
   CivilizationEventType.TOWER_CONSTRUCTION_STARTED,
+  CivilizationEventType.TOWER_ATTACKED,
   CivilizationEventType.TOWER_DESTROYED,
   CivilizationEventType.TOWER_REPAIR_STARTED,
   CivilizationEventType.TOWER_REPAIRED,
@@ -445,6 +446,219 @@ export class CivilizationRepository {
     await tx.civilizationTile.deleteMany({ where: { gameId } });
     await tx.civilizationTeam.deleteMany({ where: { gameId } });
     await this.insertConfiguration(gameId, input, tx);
+    return (await this.findStateById(gameId, tx))!;
+  }
+
+  async replaceActiveConfiguration(
+    gameId: string,
+    input: ReplaceCivilizationConfigurationInput,
+    now: Date,
+    tx: CivilizationTransaction,
+  ): Promise<CivilizationStateRecord> {
+    const current = await this.findStateById(gameId, tx);
+    if (!current) throw new Error(`Civilization game ${gameId} was not found`);
+
+    await tx.civilizationGame.update({
+      where: { id: gameId },
+      data: {
+        name: input.name,
+        startAt: input.startAt,
+        endAt: input.endAt,
+        settingsJson: this.json(input.settings),
+        stateVersion: { increment: 1 },
+      },
+    });
+
+    const teamsBySide = new Map<CivilizationTeamSide, { id: string }>();
+    for (const configuredTeam of input.teams) {
+      const side = configuredTeam.side as CivilizationTeamSide;
+      const existingTeam = current.teams.find((team) => team.side === side);
+      if (!existingTeam) throw new Error(`Civilization game ${gameId} has no ${side} team`);
+      const team = await tx.civilizationTeam.update({
+        where: { id: existingTeam.id },
+        data: {
+          name: configuredTeam.name,
+          color: configuredTeam.color,
+          visualIdentifier: configuredTeam.visualKey,
+        },
+      });
+      teamsBySide.set(side, team);
+    }
+
+    const existingTilesByCoordinate = new Map(
+      current.tiles.map((tile) => [this.coordinateKey(tile), tile]),
+    );
+    const tilesByCoordinate = new Map<string, { id: string; terrainType: CivilizationTerrainType }>();
+    for (const configuredTile of input.map.tiles) {
+      const key = this.coordinateKey(configuredTile);
+      const owner = configuredTile.ownerTeamSide
+        ? teamsBySide.get(configuredTile.ownerTeamSide as CivilizationTeamSide)
+        : undefined;
+      const terrainType = configuredTile.terrainType as CivilizationTerrainType;
+      const existingTile = existingTilesByCoordinate.get(key);
+      const tile = existingTile
+        ? await tx.civilizationTile.update({
+            where: { id: existingTile.id },
+            data: { terrainType, ownerTeamId: owner?.id ?? null, isConnected: false },
+          })
+        : await tx.civilizationTile.create({
+            data: {
+              gameId,
+              q: configuredTile.q,
+              r: configuredTile.r,
+              terrainType,
+              ownerTeamId: owner?.id ?? null,
+            },
+          });
+      tilesByCoordinate.set(key, tile);
+    }
+
+    const spawnTileBySide = new Map<CivilizationTeamSide, { id: string }>();
+    for (const spawn of input.map.spawns) {
+      const tile = tilesByCoordinate.get(this.coordinateKey(spawn));
+      if (!tile) throw new Error(`Configured ${spawn.teamSide} spawn has no tile`);
+      spawnTileBySide.set(spawn.teamSide as CivilizationTeamSide, tile);
+    }
+
+    const configuredPlayerSideByUserId = new Map<string, CivilizationTeamSide>();
+    for (const configuredTeam of input.teams) {
+      for (const userId of configuredTeam.playerIds) {
+        configuredPlayerSideByUserId.set(userId, configuredTeam.side as CivilizationTeamSide);
+      }
+    }
+    const existingPlayerByUserId = new Map(current.players.map((player) => [player.userId, player]));
+    const maximumActionPointUnits = input.settings.actionPoints.maximumUnits;
+    for (const player of current.players) {
+      const configuredSide = configuredPlayerSideByUserId.get(player.userId);
+      const currentSide = current.teams.find((team) => team.id === player.teamId)?.side;
+      const destinationSide = configuredSide ?? currentSide;
+      const destinationTeam = destinationSide ? teamsBySide.get(destinationSide) : undefined;
+      const destinationSpawn = destinationSide ? spawnTileBySide.get(destinationSide) : undefined;
+      if (!destinationTeam || !destinationSpawn) {
+        throw new Error(`Player ${player.id} has no valid team spawn after configuration update`);
+      }
+      const currentTileRemainsPlayable = [...tilesByCoordinate.values()].some(
+        (tile) => tile.id === player.currentTileId && tile.terrainType !== CivilizationTerrainType.MOUNTAIN,
+      );
+      const teamChanged = configuredSide !== undefined && destinationTeam.id !== player.teamId;
+      await tx.civilizationGamePlayer.update({
+        where: { id: player.id },
+        data: {
+          teamId: destinationTeam.id,
+          initialTileId: destinationSpawn.id,
+          spawnTileId: destinationSpawn.id,
+          currentTileId:
+            teamChanged || !configuredSide || !currentTileRemainsPlayable
+              ? destinationSpawn.id
+              : player.currentTileId,
+          actionPointUnits: Math.min(player.actionPointUnits, maximumActionPointUnits),
+          isActive: configuredSide !== undefined,
+        },
+      });
+    }
+    for (const [userId, side] of configuredPlayerSideByUserId) {
+      if (existingPlayerByUserId.has(userId)) continue;
+      const team = teamsBySide.get(side)!;
+      const spawn = spawnTileBySide.get(side)!;
+      await tx.civilizationGamePlayer.create({
+        data: {
+          gameId,
+          teamId: team.id,
+          userId,
+          initialTileId: spawn.id,
+          spawnTileId: spawn.id,
+          currentTileId: spawn.id,
+          actionPointUnits: input.settings.actionPoints.initialUnits,
+          lastActionPointUpdateAt: now,
+        },
+      });
+    }
+
+    await tx.civilizationTower.deleteMany({ where: { gameId } });
+    await tx.civilizationBuilding.deleteMany({ where: { gameId } });
+    await tx.civilizationSpawnPoint.deleteMany({ where: { gameId } });
+    await tx.civilizationTeam.updateMany({ where: { gameId }, data: { townHallTileId: null } });
+    const retainedTileIds = [...tilesByCoordinate.values()].map((tile) => tile.id);
+    await tx.civilizationTile.deleteMany({
+      where: { gameId, id: { notIn: retainedTileIds } },
+    });
+
+    for (const spawn of input.map.spawns) {
+      await tx.civilizationSpawnPoint.create({
+        data: {
+          gameId,
+          teamId: teamsBySide.get(spawn.teamSide as CivilizationTeamSide)!.id,
+          tileId: spawnTileBySide.get(spawn.teamSide as CivilizationTeamSide)!.id,
+        },
+      });
+    }
+
+    const existingBuildingIds = new Set(current.buildings.map((building) => building.id));
+    for (const building of input.map.buildings) {
+      const tile = tilesByCoordinate.get(this.coordinateKey(building))!;
+      const owner = building.ownerTeamSide
+        ? teamsBySide.get(building.ownerTeamSide as CivilizationTeamSide)
+        : undefined;
+      const buildingType = building.type as CivilizationBuildingType;
+      const created = await tx.civilizationBuilding.create({
+        data: {
+          ...(building.id && existingBuildingIds.has(building.id) ? { id: building.id } : {}),
+          gameId,
+          tileId: tile.id,
+          buildingType,
+          attributeKey: (building.attributeKey as CivilizationAttributeKey | undefined) ?? null,
+          ownerTeamId: owner?.id ?? null,
+          captureRequiredUnits:
+            building.captureRequiredUnits ??
+            (buildingType === CivilizationBuildingType.TOWN_HALL
+              ? input.settings.townHall.captureRequiredUnits
+              : input.settings.buildingCapture.requiredUnits),
+          incomePerHour:
+            building.incomePerHour ??
+            this.defaultBuildingIncome(buildingType, building.attributeKey, input.settings),
+          status: CivilizationBuildingStatus.ACTIVE,
+        },
+      });
+      if (buildingType === CivilizationBuildingType.TOWN_HALL && owner) {
+        await tx.civilizationTeam.update({
+          where: { id: owner.id },
+          data: { townHallTileId: created.tileId },
+        });
+      }
+    }
+
+    for (const tower of input.map.towers) {
+      const team = teamsBySide.get(tower.teamSide as CivilizationTeamSide)!;
+      const tile = tilesByCoordinate.get(this.coordinateKey(tower))!;
+      const status = (tower.status ?? CivilizationTowerStatus.ACTIVE) as CivilizationTowerStatus;
+      await tx.civilizationTower.create({
+        data: {
+          gameId,
+          teamId: team.id,
+          tileId: tile.id,
+          status,
+          workKind:
+            status === CivilizationTowerStatus.UNDER_CONSTRUCTION
+              ? CivilizationTowerWorkKind.BUILD
+              : null,
+          protectionRadius: tower.protectionRadius ?? input.settings.tower.protectionRadius,
+          destructionProgressActions:
+            status === CivilizationTowerStatus.DESTROYED
+              ? (tower.destructionRequiredActions ??
+                input.settings.tower.destructionRequiredActions)
+              : 0,
+          destructionRequiredActions:
+            tower.destructionRequiredActions ?? input.settings.tower.destructionRequiredActions,
+          constructionStartedAt: now,
+          constructionCompletesAt:
+            status === CivilizationTowerStatus.UNDER_CONSTRUCTION
+              ? new Date(now.getTime() + input.settings.tower.constructionMinutes * 60_000)
+              : null,
+          destroyedAt: status === CivilizationTowerStatus.DESTROYED ? now : null,
+        },
+      });
+    }
+
     return (await this.findStateById(gameId, tx))!;
   }
 
@@ -832,8 +1046,13 @@ export class CivilizationRepository {
               ? CivilizationTowerWorkKind.BUILD
               : null,
           protectionRadius: tower.protectionRadius ?? input.settings.tower.protectionRadius,
-          hitPoints: status === CivilizationTowerStatus.DESTROYED ? 0 : 100,
-          maximumHitPoints: 100,
+          destructionProgressActions:
+            status === CivilizationTowerStatus.DESTROYED
+              ? (tower.destructionRequiredActions ??
+                input.settings.tower.destructionRequiredActions)
+              : 0,
+          destructionRequiredActions:
+            tower.destructionRequiredActions ?? input.settings.tower.destructionRequiredActions,
           constructionStartedAt: input.startAt,
           constructionCompletesAt:
             status === CivilizationTowerStatus.UNDER_CONSTRUCTION

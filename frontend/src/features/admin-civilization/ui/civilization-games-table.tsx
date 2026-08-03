@@ -60,7 +60,8 @@ function CivilizationRowActions({
   game: CivilizationGameSummary;
   onConfirm: (action: Exclude<ConfirmAction, null>) => void;
 }) {
-  const editable = game.status === "DRAFT" || game.status === "SCHEDULED";
+  const editable =
+    game.status === "DRAFT" || game.status === "SCHEDULED" || game.status === "ACTIVE";
   return (
     <div className="flex justify-end gap-1">
       <Button asChild size="icon" variant="outline">
@@ -180,7 +181,7 @@ export function CivilizationGamesTable() {
   }, [page, totalPages]);
 
   return (
-    <section className="min-w-0 max-w-full space-y-5 overflow-x-hidden">
+    <section className="max-w-full min-w-0 space-y-5 overflow-x-hidden">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Civilization</h1>
@@ -232,7 +233,7 @@ export function CivilizationGamesTable() {
         </Button>
       </div>
 
-      <Card className="min-w-0 max-w-full overflow-hidden">
+      <Card className="max-w-full min-w-0 overflow-hidden">
         <CardHeader>
           <CardTitle>
             {query.isPending
@@ -295,10 +296,7 @@ export function CivilizationGamesTable() {
                         {game.teams.map((team) => team.name).join(" / ")}
                       </TableCell>
                       <TableCell>{game.playerCount}</TableCell>
-                      <TableCell
-                        className="truncate"
-                        title={game.winnerTeam?.name ?? "No winner"}
-                      >
+                      <TableCell className="truncate" title={game.winnerTeam?.name ?? "No winner"}>
                         {game.winnerTeam?.name ?? "—"}
                       </TableCell>
                       <TableCell className="hidden whitespace-nowrap 2xl:table-cell">

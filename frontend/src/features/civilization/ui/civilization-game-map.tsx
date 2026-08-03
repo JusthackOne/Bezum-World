@@ -15,7 +15,6 @@ import { Viewport } from "pixi-viewport";
 import {
   CheckIcon,
   CoinsIcon,
-  CrosshairIcon,
   LocateFixedIcon,
   MinusIcon,
   PlusIcon,
@@ -38,14 +37,19 @@ import { cn } from "@/shared/lib/utils";
 import { clearPixiContainer, safelyLoadPixiTexture } from "@/shared/lib/pixi";
 import { Button } from "@/shared/ui/8bit";
 
-import { coordinateKey, createHexLayout, hexDistance } from "../model/hex-grid";
+import {
+  CIVILIZATION_HEX_RADIUS,
+  coordinateKey,
+  createHexLayout,
+  hexDistance,
+} from "../model/hex-grid";
 
 interface CivilizationGameMapProps {
   state: CivilizationGameState;
   selectedTileId: string | null;
   selectedPlayerId: string | null;
   selectedTowerId: string | null;
-  placementMode: "BUILD_TOWER" | "CATAPULT_ATTACK" | null;
+  placementMode: "BUILD_TOWER" | "CATAPULT_ATTACK" | "REPAIR_TOWER" | null;
   placementTileId: string | null;
   isInteractionDisabled?: boolean;
   onSelectTile: (tileId: string) => void;
@@ -53,6 +57,7 @@ interface CivilizationGameMapProps {
   onCancelSelection: () => void;
   onToggleTowerPlacement: () => void;
   onToggleCatapult: () => void;
+  onToggleRepairKit: () => void;
   onCancelPlacement: () => void;
   onCancelPlacementPreview: () => void;
   onConfirmPlacement: () => void;
@@ -111,6 +116,7 @@ const MINIMUM_MAP_ZOOM = 0.08;
 const MAXIMUM_MAP_ZOOM = 2.4;
 const MAP_ZOOM_STEP = 0.18;
 const STRUCTURE_TOOLTIP_WIDTH = 256;
+const MAP_STRUCTURE_SPRITE_SIZE = CIVILIZATION_HEX_RADIUS * 2;
 
 const BUILDING_PLACEMENT_CONTROLS = [
   {
@@ -222,7 +228,10 @@ function StructureTooltip({
       label: "Status",
       value: tower.status === "DESTROYED" ? "destroyed / damaged" : statusLabel(tower.status),
     });
-    rows.push({ label: "HP", value: `${tower.hitPoints} / ${tower.maximumHitPoints}` });
+    rows.push({
+      label: "Destruction progress",
+      value: `${tower.destructionProgressActions} / ${tower.destructionRequiredActions}`,
+    });
     if (tower.status === "UNDER_CONSTRUCTION" && tower.constructionCompletesAt) {
       const startedAt = new Date(tower.constructionStartedAt).getTime();
       const completesAt = new Date(tower.constructionCompletesAt).getTime();
@@ -265,7 +274,7 @@ function StructureTooltip({
 
   return (
     <div
-      className="absolute z-20 wrap-anywhere overflow-y-auto overflow-x-hidden rounded-md border border-white/20 bg-slate-950/95 p-3 text-[11px] text-slate-100 shadow-xl backdrop-blur-sm"
+      className="absolute z-20 overflow-x-hidden overflow-y-auto rounded-md border border-white/20 bg-slate-950/95 p-3 text-[11px] wrap-anywhere text-slate-100 shadow-xl backdrop-blur-sm"
       style={{
         left,
         top,
@@ -283,7 +292,7 @@ function StructureTooltip({
             className="grid grid-cols-1 gap-x-3 sm:grid-cols-2"
           >
             <dt className="text-slate-400">{row.label}</dt>
-            <dd className="min-w-0 capitalize wrap-break-word sm:text-right">{row.value}</dd>
+            <dd className="min-w-0 wrap-break-word capitalize sm:text-right">{row.value}</dd>
           </div>
         ))}
       </dl>
@@ -461,8 +470,8 @@ function renderStaticMap(
         const sprite = new Sprite(mountainTexture);
         sprite.anchor.set(0.5);
         sprite.position.set(center.x, center.y - 4);
-        sprite.width = 58;
-        sprite.height = 58;
+        sprite.width = MAP_STRUCTURE_SPRITE_SIZE;
+        sprite.height = MAP_STRUCTURE_SPRITE_SIZE;
         scene.layers.terrain.addChild(sprite);
       });
   });
@@ -501,6 +510,34 @@ function addStructureInteraction(
   layer.addChild(hitArea);
 }
 
+function addStructureProgressBadge(
+  layer: Container,
+  center: { x: number; y: number },
+  value: string,
+  accentColor: string,
+): void {
+  const badge = new Container();
+  badge.position.set(center.x, center.y + 29);
+  badge.addChild(
+    new Graphics()
+      .roundRect(-25, -10, 50, 20, 4)
+      .fill({ color: "#020617", alpha: 0.94 })
+      .stroke({ color: accentColor, width: 2 }),
+  );
+  const label = new Text({
+    text: value,
+    style: {
+      fill: "#ffffff",
+      fontFamily: "Arial",
+      fontSize: 12,
+      fontWeight: "700",
+    },
+  });
+  label.anchor.set(0.5);
+  badge.addChild(label);
+  layer.addChild(badge);
+}
+
 async function renderBaseScene(
   scene: PixiScene,
   state: CivilizationGameState,
@@ -510,7 +547,7 @@ async function renderBaseScene(
   onShowStructureTooltip: ShowStructureTooltip,
   onHideStructureTooltip: HideStructureTooltip,
   selectedPlayerId: string | null,
-  placementMode: "BUILD_TOWER" | "CATAPULT_ATTACK" | null,
+  placementMode: "BUILD_TOWER" | "CATAPULT_ATTACK" | "REPAIR_TOWER" | null,
   disabled: boolean,
 ): Promise<void> {
   const renderVersion = ++scene.renderVersion;
@@ -618,9 +655,8 @@ async function renderBaseScene(
     const sprite = new Sprite(texture);
     sprite.anchor.set(0.5);
     sprite.position.set(center.x, center.y - 7);
-    const buildingSize = building.type === "TOWN_HALL" ? 92 : 84;
-    sprite.width = buildingSize;
-    sprite.height = buildingSize;
+    sprite.width = MAP_STRUCTURE_SPRITE_SIZE;
+    sprite.height = MAP_STRUCTURE_SPRITE_SIZE;
     sprite.eventMode = "none";
     const team = building.ownerTeamId ? teamsById.get(building.ownerTeamId) : null;
     if (team) {
@@ -644,21 +680,18 @@ async function renderBaseScene(
       scene.layers.buildings.addChild(capturedLabel);
     }
 
-    if (building.capturingTeamId && building.captureProgress > 0) {
-      const captureTeam = teamsById.get(building.capturingTeamId);
-      const progress = new Text({
-        text: `${building.captureProgress / 2}/${building.captureRequired / 2}`,
-        style: {
-          fill: captureTeam?.resolvedColor ?? "#ffffff",
-          fontFamily: "Arial",
-          fontSize: 11,
-          fontWeight: "700",
-          stroke: { color: "#020617", width: 3 },
-        },
-      });
-      progress.anchor.set(0.5);
-      progress.position.set(center.x, center.y + 25);
-      scene.layers.buildings.addChild(progress);
+    if (
+      building.captureProgress > 0 &&
+      building.captureRequired > 0 &&
+      building.status !== "CAPTURED"
+    ) {
+      const captureTeam = building.capturingTeamId ? teamsById.get(building.capturingTeamId) : null;
+      addStructureProgressBadge(
+        scene.layers.buildings,
+        center,
+        `${building.captureProgress / 2}/${building.captureRequired / 2}`,
+        captureTeam?.resolvedColor ?? "#94a3b8",
+      );
     }
     addStructureInteraction(
       scene.layers.buildings,
@@ -686,11 +719,19 @@ async function renderBaseScene(
       const sprite = new Sprite(texture);
       sprite.anchor.set(0.5);
       sprite.position.set(center.x, center.y - 7);
-      sprite.width = 76;
-      sprite.height = 76;
+      sprite.width = MAP_STRUCTURE_SPRITE_SIZE;
+      sprite.height = MAP_STRUCTURE_SPRITE_SIZE;
       sprite.eventMode = "none";
       sprite.tint = teamsById.get(tower.teamId)?.resolvedColor ?? "#ffffff";
       scene.layers.buildings.addChild(sprite);
+      if (tower.destructionProgressActions > 0) {
+        addStructureProgressBadge(
+          scene.layers.buildings,
+          center,
+          `${tower.destructionProgressActions}/${tower.destructionRequiredActions}`,
+          tower.status === "DESTROYED" ? "#ef4444" : "#94a3b8",
+        );
+      }
       addStructureInteraction(
         scene.layers.buildings,
         layoutItem.corners,
@@ -798,7 +839,8 @@ const ACTION_HIGHLIGHTS: Record<ActionHighlightKind, { fill: string; stroke: str
 
 function actionHighlightKind(type: CivilizationActionType): ActionHighlightKind {
   if (type === "MOVE") return "movement";
-  if (type === "ATTACK_PLAYER" || type === "ATTACK_TOWER" || type === "CATAPULT_ATTACK") return "attack";
+  if (type === "ATTACK_PLAYER" || type === "ATTACK_TOWER" || type === "CATAPULT_ATTACK")
+    return "attack";
   if (type === "CAPTURE_BUILDING" || type === "CAPTURE_TOWN_HALL") return "capture";
   return "contribution";
 }
@@ -807,7 +849,7 @@ function renderLegalActionOverlays(
   scene: PixiScene,
   state: CivilizationGameState,
   selectedPlayerId: string | null,
-  placementMode: "BUILD_TOWER" | "CATAPULT_ATTACK" | null,
+  placementMode: "BUILD_TOWER" | "CATAPULT_ATTACK" | "REPAIR_TOWER" | null,
   onSelectTile: (tileId: string) => void,
   disabled: boolean,
 ): void {
@@ -825,7 +867,11 @@ function renderLegalActionOverlays(
           ? action.type === "BUILD_TOWER"
           : placementMode === "CATAPULT_ATTACK"
             ? action.type === "CATAPULT_ATTACK"
-            : action.type !== "BUILD_TOWER" && action.type !== "CATAPULT_ATTACK"),
+            : placementMode === "REPAIR_TOWER"
+              ? action.type === "REPAIR_TOWER"
+              : action.type !== "BUILD_TOWER" &&
+                action.type !== "CATAPULT_ATTACK" &&
+                action.type !== "REPAIR_TOWER"),
     )
     .forEach((action) => {
       const key = coordinateKey(action.targetCoordinate!);
@@ -936,6 +982,7 @@ export function CivilizationGameMap({
   onCancelSelection,
   onToggleTowerPlacement,
   onToggleCatapult,
+  onToggleRepairKit,
   onCancelPlacement,
   onCancelPlacementPreview,
   onConfirmPlacement,
@@ -1137,6 +1184,8 @@ export function CivilizationGameMap({
         scene.renderVersion += 1;
         scene.staticMapRenderVersion += 1;
         scene.renderedStaticMapFingerprint = null;
+        scene.app.stage.removeChild(scene.viewport);
+        scene.viewport.destroy({ children: true });
         scene.app.destroy(true, { children: true });
       }
       host.replaceChildren();
@@ -1253,7 +1302,14 @@ export function CivilizationGameMap({
       scene.viewport.off("moved", updatePosition);
       scene.viewport.off("zoomed", updatePosition);
     };
-  }, [mapSize.height, mapSize.width, state, structureTooltip?.id, structureTooltip?.isPinned, structureTooltip?.kind]);
+  }, [
+    mapSize.height,
+    mapSize.width,
+    state,
+    structureTooltip?.id,
+    structureTooltip?.isPinned,
+    structureTooltip?.kind,
+  ]);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -1282,9 +1338,7 @@ export function CivilizationGameMap({
           .rect(-13, -7, 26, 14)
           .fill({ color: "#a16207", alpha: 0.9 });
         catapult.position.set(source.x, source.y - 7);
-        const impact = new Graphics()
-          .circle(0, 0, 24)
-          .fill({ color: "#f97316", alpha: 0 });
+        const impact = new Graphics().circle(0, 0, 24).fill({ color: "#f97316", alpha: 0 });
         impact.position.set(target.x, target.y);
         scene.layers.effects.addChild(catapult, impact);
 
@@ -1375,7 +1429,14 @@ export function CivilizationGameMap({
   const catapultUnavailableReason =
     state.availableActions.find(
       (action) => action.type === "CATAPULT_ATTACK" && action.disabledReason !== null,
-    )?.disabledReason ?? "No valid enemy tower targets are available.";
+    )?.disabledReason ?? "No valid enemy tower or Town Hall targets are available.";
+  const enabledRepairTargets = state.availableActions.filter(
+    (action) => action.type === "REPAIR_TOWER" && action.disabledReason === null,
+  );
+  const repairUnavailableReason =
+    state.availableActions.find(
+      (action) => action.type === "REPAIR_TOWER" && action.disabledReason !== null,
+    )?.disabledReason ?? "No damaged adjacent allied towers are available.";
 
   return (
     <div
@@ -1440,7 +1501,7 @@ export function CivilizationGameMap({
             size="sm"
             variant={placementMode === "CATAPULT_ATTACK" ? "default" : "secondary"}
             className="h-auto min-w-18 flex-col gap-1 p-2"
-            aria-label="Target an enemy tower with a Catapult"
+            aria-label="Target an enemy tower or Town Hall with a Catapult"
             aria-pressed={placementMode === "CATAPULT_ATTACK"}
             disabled={isInteractionDisabled || enabledCatapultTargets.length === 0}
             title={
@@ -1450,7 +1511,13 @@ export function CivilizationGameMap({
             }
             onClick={onToggleCatapult}
           >
-            <CrosshairIcon className="size-8" />
+            <Image
+              src={CIVILIZATION_ASSETS["item.catapult"].path}
+              alt=""
+              width={32}
+              height={32}
+              className="size-8 object-contain"
+            />
             <span className="flex gap-2 text-[9px]">
               <span className="flex items-center gap-0.5">
                 <CoinsIcon className="size-3 text-amber-300" />
@@ -1459,6 +1526,39 @@ export function CivilizationGameMap({
               <span className="flex items-center gap-0.5">
                 <ZapIcon className="size-3 text-cyan-300" />
                 {state.game.settings.catapult.actionPointUnits / 2}
+              </span>
+            </span>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={placementMode === "REPAIR_TOWER" ? "default" : "secondary"}
+            className="h-auto min-w-18 flex-col gap-1 p-2"
+            aria-label="Repair an adjacent allied tower with a Repair Kit"
+            aria-pressed={placementMode === "REPAIR_TOWER"}
+            disabled={isInteractionDisabled || enabledRepairTargets.length === 0}
+            title={
+              enabledRepairTargets.length === 0
+                ? repairUnavailableReason.replaceAll("_", " ").toLowerCase()
+                : "Use Repair Kit"
+            }
+            onClick={onToggleRepairKit}
+          >
+            <Image
+              src={CIVILIZATION_ASSETS["item.repairKit"].path}
+              alt=""
+              width={32}
+              height={32}
+              className="size-8 object-contain"
+            />
+            <span className="flex gap-2 text-[9px]">
+              <span className="flex items-center gap-0.5">
+                <CoinsIcon className="size-3 text-amber-300" />
+                {state.game.settings.repairKit.goldPrice}
+              </span>
+              <span className="flex items-center gap-0.5">
+                <ZapIcon className="size-3 text-cyan-300" />
+                {state.game.settings.costs.towerRepairUnits / 2}
               </span>
             </span>
           </Button>
@@ -1608,9 +1708,6 @@ export function CivilizationGameMap({
             <LocateFixedIcon className="size-4" />
           </Button>
         </div>
-      </div>
-      <div className="pointer-events-none absolute bottom-3 left-3 rounded-sm border border-white/20 bg-slate-950/80 px-3 py-2 text-[10px] text-slate-200 backdrop-blur-sm">
-        Left-drag to pan · wheel to zoom
       </div>
       {selectedPlayerId === state.access.currentPlayerId ? (
         <div className="pointer-events-none absolute right-3 bottom-3 grid gap-1 rounded-sm border border-white/20 bg-slate-950/80 px-3 py-2 text-[10px] text-slate-200 backdrop-blur-sm">

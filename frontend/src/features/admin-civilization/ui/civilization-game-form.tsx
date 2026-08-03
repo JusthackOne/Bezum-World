@@ -159,7 +159,8 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
   const hasAdminSession = useAdminAuthStore((state) => Boolean(state.session));
   const usersQuery = useAdminUsersQuery(authInitialized, hasAdminSession);
   const saveMutation = useSaveAdminCivilizationGameMutation(game?.id);
-  const isEditable = !game || game.status === "DRAFT" || game.status === "SCHEDULED";
+  const isEditable =
+    !game || game.status === "DRAFT" || game.status === "SCHEDULED" || game.status === "ACTIVE";
   const form = useForm<FormValues>({
     resolver: zodResolver(civilizationGameFormSchema),
     defaultValues: game ? gameToInput(game) : createDefaultCivilizationGameInput(),
@@ -275,10 +276,14 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
         </Button>
       </header>
 
-      {!isEditable ? (
+      {game?.status === "ACTIVE" ? (
         <div className="border border-amber-400/50 bg-amber-500/10 p-3 text-xs text-amber-200">
-          This game has started. Configuration is immutable; use the audited active-state controls
-          from the details page.
+          Saving applies the new settings and map to the running game immediately. Players on
+          removed or impassable hexes are moved to their team spawn.
+        </div>
+      ) : !isEditable ? (
+        <div className="border border-amber-400/50 bg-amber-500/10 p-3 text-xs text-amber-200">
+          Completed and cancelled games are retained as immutable history.
         </div>
       ) : null}
 
@@ -510,7 +515,7 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 register={form.register}
               />
               <NumberField
-                label="Tower repair cost (units)"
+                label="Repair Kit cost (units)"
                 name="settings.costs.towerRepairUnits"
                 register={form.register}
               />
@@ -537,8 +542,30 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 register={form.register}
               />
               <NumberField
-                label="Tower damage"
+                label="Damage / capture-progress units"
                 name="settings.catapult.damage"
+                register={form.register}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Repair Kit</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" {...form.register("settings.repairKit.enabled")} />
+                Enabled for this game
+              </label>
+              <DecimalField
+                label="Gold price"
+                name="settings.repairKit.goldPrice"
+                register={form.register}
+              />
+              <NumberField
+                label="Tower damage actions repaired"
+                name="settings.repairKit.repairActions"
                 register={form.register}
               />
             </CardContent>
@@ -610,14 +637,9 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 name="settings.tower.protectionRadius"
                 register={form.register}
               />
-              <DecimalField
-                label="Tower repair gold"
-                name="settings.tower.repairGoldCost"
-                register={form.register}
-              />
               <NumberField
-                label="Tower repair minutes"
-                name="settings.tower.repairMinutes"
+                label="Tower destruction actions"
+                name="settings.tower.destructionRequiredActions"
                 register={form.register}
               />
             </CardContent>
@@ -708,9 +730,8 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
               </div>
             </div>
             <div className="border bg-muted/20 p-4 text-[10px] text-muted-foreground">
-              Saving creates or updates a draft. Scheduling is a separate confirmed operation that
-              runs full backend validation, including date overlap, connectivity, positions and
-              tower-radius rules.
+              Saving updates the current game configuration. Active changes apply immediately; draft
+              scheduling remains a separate confirmed operation with full backend validation.
             </div>
           </CardContent>
         </Card>
