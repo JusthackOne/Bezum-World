@@ -148,7 +148,7 @@ export class CivilizationActionsService {
       userId,
       input,
       CivilizationActionType.CONTRIBUTE_TOWN_HALL_CAPTURE,
-      (context) => this.captureTownHallInTransaction(context, input),
+      () => this.rejectDirectTownHallCapture(),
     );
   }
 
@@ -1302,10 +1302,7 @@ export class CivilizationActionsService {
     return { event };
   }
 
-  private captureTownHallInTransaction(
-    _context: ActionExecutionContext,
-    _input: CivilizationTownHallActionDto,
-  ): Promise<ActionMutationResult> {
+  private rejectDirectTownHallCapture(): Promise<ActionMutationResult> {
     return Promise.reject(
       new CivilizationException(
         CIVILIZATION_ERROR_CODES.TOWN_HALL_REQUIRES_CATAPULT,

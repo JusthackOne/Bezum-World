@@ -284,6 +284,12 @@ The set contains town hall, gold building, four attribute buildings, active/cons
 towers, Catapult, Repair Kit, spawn point, mountain, and neutral resource marker. Files are 512×512
 transparent WebP images optimized for map rendering.
 
+The Russian instruction video is stored as a regular Git asset at
+`frontend/public/assets/civilization/instruction.mp4`. It is encoded as a browser-compatible H.264
+MP4 at 1216x720 and 30 FPS with AAC audio and fast-start metadata. Keeping the optimized file below
+the normal Git hosting limit ensures production checkouts and Docker builds receive the actual video
+instead of a Git LFS pointer.
+
 All images were generated with the built-in image-generation tool using this shared production prompt:
 
 ```text

@@ -11,10 +11,7 @@ export function CivilizationTeamStatistics({ team }: { team: CivilizationTeamSta
     <Card className="overflow-hidden">
       <div className="h-1.5" style={{ backgroundColor: team.color }} />
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between gap-3 text-sm">
-          <span className="truncate">{team.name}</span>
-          <span className="text-[10px] text-muted-foreground">{team.side}</span>
-        </CardTitle>
+        <CardTitle className="truncate text-sm">{team.name}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-xs">
         <div className="grid grid-cols-2 gap-2">
