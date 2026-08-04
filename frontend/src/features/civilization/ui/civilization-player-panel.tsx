@@ -1,13 +1,164 @@
 "use client";
 
-import { Clock3Icon, ShieldIcon, ZapIcon } from "lucide-react";
+import { useState } from "react";
+import {
+  Building2Icon,
+  Clock3Icon,
+  CoinsIcon,
+  CrosshairIcon,
+  FootprintsIcon,
+  HammerIcon,
+  MapIcon,
+  ShieldIcon,
+  SwordsIcon,
+  WrenchIcon,
+  ZapIcon,
+} from "lucide-react";
 
 import type { CivilizationGameState, CivilizationPlayer } from "@/entities/civilization";
 import { AvatarImage } from "@/shared/ui";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/8bit";
 import { useCountdown } from "@/shared/hooks";
-import { formatDurationClock } from "@/shared/lib/date-time";
+import { formatDurationClock, formatMinutesDuration } from "@/shared/lib/date-time";
 import { formatNumber } from "@/shared/lib/number-format";
+
+type GuideTab = "energy" | "gold";
+
+interface EnergyCost {
+  label: string;
+  units: number;
+  icon: typeof ZapIcon;
+  disabled?: boolean;
+}
+
+function CivilizationEconomyGuide({ state }: { state: CivilizationGameState }) {
+  const [activeTab, setActiveTab] = useState<GuideTab>("energy");
+  const { settings } = state.game;
+  const energyCosts: EnergyCost[] = [
+    { label: "Move on allied field", units: settings.costs.ownedMoveUnits, icon: FootprintsIcon },
+    { label: "Capture another field", units: settings.costs.otherMoveUnits, icon: MapIcon },
+    { label: "Attack player", units: settings.costs.attackPlayerUnits, icon: SwordsIcon },
+    {
+      label: "Capture building",
+      units: settings.costs.buildingCaptureUnits,
+      icon: Building2Icon,
+    },
+    { label: "Build tower", units: settings.costs.towerBuildUnits, icon: HammerIcon },
+    {
+      label: "Fire Catapult",
+      units: settings.catapult.actionPointUnits,
+      icon: CrosshairIcon,
+      disabled: !settings.catapult.enabled,
+    },
+    {
+      label: "Use Repair Kit",
+      units: settings.costs.towerRepairUnits,
+      icon: WrenchIcon,
+      disabled: !settings.repairKit.enabled,
+    },
+  ];
+  const regenerationPoints = settings.actionPoints.regenerationUnits / 2;
+
+  return (
+    <section className="border" aria-label="Game economy guide">
+      <div className="grid grid-cols-2 border-b" role="tablist" aria-label="Economy guide">
+        {([
+          ["energy", "Energy", ZapIcon],
+          ["gold", "Gold income", CoinsIcon],
+        ] as const).map(([tab, label, Icon]) => {
+          const isActive = activeTab === tab;
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`${tab}-guide-panel`}
+              id={`${tab}-guide-tab`}
+              className={`flex items-center justify-center gap-1.5 px-2 py-2 transition-colors ${
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              onClick={() => setActiveTab(tab)}
+            >
+              <Icon className="size-3" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === "energy" ? (
+        <div
+          id="energy-guide-panel"
+          role="tabpanel"
+          aria-labelledby="energy-guide-tab"
+          className="space-y-2 p-2"
+        >
+          <div className="space-y-1">
+            {energyCosts.map((cost) => {
+              const Icon = cost.icon;
+              return (
+                <div
+                  key={cost.label}
+                  className="flex items-center justify-between gap-2 bg-muted/40 px-2 py-1.5"
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <Icon className="size-3 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{cost.label}</span>
+                    {cost.disabled ? (
+                      <span className="text-[8px] text-muted-foreground">disabled</span>
+                    ) : null}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1 text-cyan-300">
+                    <ZapIcon className="size-3" /> {cost.units / 2} AP
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2 border border-cyan-400/30 bg-cyan-500/10 p-2 text-cyan-100">
+            <Clock3Icon className="size-4 shrink-0 text-cyan-300" />
+            <p>
+              Restores <span className="text-cyan-300">+{regenerationPoints} AP</span> every{" "}
+              {formatMinutesDuration(settings.actionPoints.regenerationIntervalMinutes)}, up to{" "}
+              {settings.actionPoints.maximumUnits / 2} AP.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div
+          id="gold-guide-panel"
+          role="tabpanel"
+          aria-labelledby="gold-guide-tab"
+          className="space-y-2 p-2"
+        >
+          <div className="flex items-center justify-between gap-3 bg-muted/40 p-2">
+            <span className="flex items-center gap-2">
+              <MapIcon className="size-4 text-amber-300" /> Connected captured field
+            </span>
+            <span className="shrink-0 text-amber-300">
+              +{formatNumber(settings.territoryGoldPerHour)} G/h
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3 bg-muted/40 p-2">
+            <span className="flex items-center gap-2">
+              <Building2Icon className="size-4 text-amber-300" /> Connected Gold Building
+            </span>
+            <span className="shrink-0 text-amber-300">
+              +{formatNumber(settings.goldBuildingIncomePerHour)} G/h
+            </span>
+          </div>
+          <p className="px-1 text-[9px] leading-relaxed text-muted-foreground">
+            Income is added to the team treasury while the territory stays connected to your Town
+            Hall.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
 
 export function CivilizationPlayerPanel({
   player,
@@ -110,6 +261,7 @@ export function CivilizationPlayerPanel({
             </div>
           </dl>
         </div>
+        <CivilizationEconomyGuide state={state} />
       </CardContent>
     </Card>
   );

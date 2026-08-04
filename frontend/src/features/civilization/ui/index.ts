@@ -4,5 +4,6 @@ export * from "./civilization-game-view";
 export * from "./civilization-history-page";
 export * from "./civilization-instructions-dialog";
 export * from "./civilization-player-panel";
+export * from "./civilization-result-dialog";
 export * from "./civilization-status-badge";
 export * from "./civilization-team-statistics";

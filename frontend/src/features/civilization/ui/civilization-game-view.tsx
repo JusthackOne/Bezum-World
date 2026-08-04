@@ -24,16 +24,6 @@ import { getApiRequestErrorMessage } from "@/shared/lib/api-request";
 import { formatDateTime } from "@/shared/lib/date-time";
 import { createRandomUuid } from "@/shared/lib/random-uuid";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/ui/alert-dialog";
-import {
   Button,
   Card,
   CardContent,
@@ -55,6 +45,7 @@ import { coordinateKey, useCivilizationUiStore } from "../model";
 import { civilizationRoutes } from "../routes";
 import type { CivilizationActionPayload } from "../api/requests";
 import { CivilizationPlayerPanel } from "./civilization-player-panel";
+import { CivilizationResultDialog } from "./civilization-result-dialog";
 import { CivilizationInstructionsDialog } from "./civilization-instructions-dialog";
 import { CivilizationStatusBadge } from "./civilization-status-badge";
 import { CivilizationTeamStatistics } from "./civilization-team-statistics";
@@ -637,75 +628,22 @@ export function CivilizationGameView({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={resultOpen} onOpenChange={setResultDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Game result</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 text-left">
-                <p>
-                  Winner: {state.game.winnerTeam?.name ?? "Draw"}. Loser:{" "}
-                  {state.game.winnerTeamId
-                    ? (state.game.teams.find((team) => team.id !== state.game.winnerTeamId)?.name ??
-                      "None")
-                    : "None"}
-                  .
-                </p>
-                <p>
-                  Final score:{" "}
-                  {state.game.teams
-                    .map((team) => `${team.name} ${team.finalScore ?? "0"}`)
-                    .join(" · ")}
-                </p>
-                <p>
-                  Reason:{" "}
-                  {state.game.completionReason === "TOWN_HALL_CAPTURED"
-                    ? "Town Hall destroyed"
-                    : (state.game.completionReason?.replaceAll("_", " ").toLowerCase() ??
-                      "event completion")}
-                </p>
-                {state.rewardClaim ? (
-                  state.rewardClaim.eligible ? (
-                    <p>
-                      Reward: {state.rewardClaim.reward.gold} gold
-                      {state.rewardClaim.claimedAt
-                        ? ` · Claimed ${formatDateTime(state.rewardClaim.claimedAt)}`
-                        : " · Ready to claim"}
-                    </p>
-                  ) : (
-                    <p className="text-destructive">
-                      {state.rewardClaim.unavailableReason ?? "No reward is available."}
-                    </p>
-                  )
-                ) : (
-                  <p>No reward is available for this account.</p>
-                )}
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {claimRewardMutation.isError ? (
-            <p className="text-xs text-destructive">
-              {getApiRequestErrorMessage(claimRewardMutation.error, "Unable to claim reward.")}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={claimRewardMutation.isPending}>Close</AlertDialogCancel>
-            {state.rewardClaim?.eligible && !state.rewardClaim.claimedAt ? (
-              <AlertDialogAction
-                disabled={claimRewardMutation.isPending}
-                onClick={(event) => {
-                  event.preventDefault();
-                  claimRewardMutation.mutate(undefined, {
-                    onSuccess: () => toast.success("Civilization reward claimed."),
-                  });
-                }}
-              >
-                {claimRewardMutation.isPending ? "Claiming..." : "Claim reward"}
-              </AlertDialogAction>
-            ) : null}
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CivilizationResultDialog
+        state={state}
+        open={resultOpen}
+        isClaimPending={claimRewardMutation.isPending}
+        claimErrorMessage={
+          claimRewardMutation.isError
+            ? getApiRequestErrorMessage(claimRewardMutation.error, "Unable to claim reward.")
+            : null
+        }
+        onOpenChange={setResultDialogOpen}
+        onClaimReward={() => {
+          claimRewardMutation.mutate(undefined, {
+            onSuccess: () => toast.success("Civilization reward claimed."),
+          });
+        }}
+      />
     </section>
   );
 }

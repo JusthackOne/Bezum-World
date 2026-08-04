@@ -593,26 +593,45 @@ export class CivilizationRepository {
       });
     }
 
-    const existingBuildingIds = new Set(current.buildings.map((building) => building.id));
+    const existingBuildingById = new Map(
+      current.buildings.map((building) => [building.id, building]),
+    );
     for (const building of input.map.buildings) {
       const tile = tilesByCoordinate.get(this.coordinateKey(building))!;
       const owner = building.ownerTeamSide
         ? teamsBySide.get(building.ownerTeamSide as CivilizationTeamSide)
         : undefined;
       const buildingType = building.type as CivilizationBuildingType;
+      const attributeKey =
+        (building.attributeKey as CivilizationAttributeKey | undefined) ?? null;
+      const ownerTeamId = owner?.id ?? null;
+      const captureRequiredUnits =
+        building.captureRequiredUnits ??
+        (buildingType === CivilizationBuildingType.TOWN_HALL
+          ? input.settings.townHall.captureRequiredUnits
+          : input.settings.buildingCapture.requiredUnits);
+      const existingBuilding = building.id
+        ? existingBuildingById.get(building.id)
+        : undefined;
+      const canPreserveCaptureState =
+        existingBuilding !== undefined &&
+        existingBuilding.buildingType === buildingType &&
+        existingBuilding.attributeKey === attributeKey &&
+        existingBuilding.ownerTeamId === ownerTeamId &&
+        existingBuilding.captureProgressUnits < captureRequiredUnits;
       const created = await tx.civilizationBuilding.create({
         data: {
-          ...(building.id && existingBuildingIds.has(building.id) ? { id: building.id } : {}),
+          ...(existingBuilding ? { id: existingBuilding.id } : {}),
           gameId,
           tileId: tile.id,
           buildingType,
-          attributeKey: (building.attributeKey as CivilizationAttributeKey | undefined) ?? null,
-          ownerTeamId: owner?.id ?? null,
-          captureRequiredUnits:
-            building.captureRequiredUnits ??
-            (buildingType === CivilizationBuildingType.TOWN_HALL
-              ? input.settings.townHall.captureRequiredUnits
-              : input.settings.buildingCapture.requiredUnits),
+          attributeKey,
+          ownerTeamId,
+          captureTeamId: canPreserveCaptureState ? existingBuilding.captureTeamId : null,
+          captureProgressUnits: canPreserveCaptureState
+            ? existingBuilding.captureProgressUnits
+            : 0,
+          captureRequiredUnits,
           incomePerHour:
             building.incomePerHour ??
             this.defaultBuildingIncome(buildingType, building.attributeKey, input.settings),

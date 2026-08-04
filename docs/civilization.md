@@ -66,6 +66,13 @@ The map is the only movement input surface. The client does not render separate 
 a selection details card, current/spawn coordinates in the player summary, or an event history
 section. Server-side action events remain authoritative but are not fetched as a separate client feed.
 
+Below the current player's statistics, an economy guide reads the active game's configured balance.
+Its Energy tab lists the action-point cost of allied and non-allied movement, player attacks,
+building capture, tower construction, Catapult attacks, and Repair Kit use, followed by the exact
+regeneration amount, interval, and maximum. A separate Gold income tab shows the hourly team-gold
+income from each connected captured field and connected Gold Building and reminds players that
+disconnected territory produces no income.
+
 Mountains, resource buildings, and towers use their configured Civilization artwork at the full hex
 height while retaining a hit area limited to their own hex. Hovering a structure shows its available details on
 desktop. On touch devices, tapping a structure pins that tooltip until another structure or the map
@@ -265,7 +272,7 @@ never below zero.
 
 ## Completion and rewards
 
-Completion first settles resources and freezes a final snapshot. Town-hall capture selects the capturing team. Deadline or forced completion uses configured weights. Cancellation is audited and does not accept further gameplay actions.
+Completion first settles resources and freezes a final snapshot. Town-hall capture selects the capturing team. Deadline or forced completion uses configured weights. Cancellation is audited and does not accept further gameplay actions. The result dialog presents the winner or draw, completion reason, and responsive team cards with the application GameScore, gold, and attribute icons. Each team card shows its final score and complete final resource snapshot, while a separate personal-reward card uses the same standard reward badges and retains claim, claimed, unavailable, and error states.
 
 Each team's remaining gold and four attribute pools are divided among every assigned player, including inactive and post-start players. Completion creates pending distribution and claim rows but does not mutate account balances. The result popup shows winner, loser, final score, completion reason, and the current user's reward. A user must call `POST /api/civilization/games/:gameId/reward/claim`; the backend locks the game, rechecks eligibility and expiration, applies every pending distribution, and stamps the claim in one transaction. Repeated clicks, reloads, devices, and direct replay return the already-claimed result without another grant. If Town Hall capture ends the game, only the winning team is eligible and the losing team receives a specific no-reward reason.
 
@@ -338,7 +345,7 @@ The editor applies the selected tool directly through map clicks. The add/remove
 
 Administrator mutations take their PostgreSQL advisory lock through an execute-only raw query. The lock function returns PostgreSQL `void`, which must not be deserialized as a result column by Prisma. Unexpected HTTP exceptions are logged server-side with their error name, code, message, and stack while the API continues to return the standard safe 500 response.
 
-Draft and scheduled configuration may be edited before start. Active games use the same complete editor for dates, teams, players, map, and balance settings. The server settles accrued resources first, preserves existing player/action/event records, relocates players whose team or current tile becomes invalid, recalculates connectivity and income, reschedules deadlines and tower jobs, and records the configuration change in the audit log. Completed and cancelled games remain immutable historical records. Cancellation and force completion require confirmation.
+Draft and scheduled configuration may be edited before start. Active games use the same complete editor for dates, teams, players, map, and balance settings. The server settles accrued resources first, preserves existing player/action/event records and compatible in-progress building captures, relocates players whose team or current tile becomes invalid, recalculates connectivity and income, reschedules deadlines and tower jobs, and records the configuration change in the audit log. Capture progress is retained when a building keeps the same identifier, type, attribute, and owner; replacing any of those semantics starts the configured building with no capture progress. Completed and cancelled games remain immutable historical records. Cancellation and force completion require confirmation.
 
 ## Local development and migrations
 

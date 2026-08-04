@@ -52,3 +52,17 @@ export function formatDurationClock(milliseconds: number): string {
   const seconds = differenceInSeconds(remaining, 0) % 60;
   return [hours, minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
 }
+
+export function formatMinutesDuration(minutes: number): string {
+  const safeMinutes = Math.max(0, Math.floor(minutes));
+  const hours = Math.floor(safeMinutes / 60);
+  const remainingMinutes = safeMinutes % 60;
+
+  if (hours === 0) {
+    return `${remainingMinutes} min`;
+  }
+  if (remainingMinutes === 0) {
+    return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  }
+  return `${hours} h ${remainingMinutes} min`;
+}
