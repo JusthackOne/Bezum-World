@@ -943,29 +943,27 @@ export class CivilizationAdminService {
 
         return {
           ...building,
-          captureRequiredUnits:
-            (isTownHall && townHallCaptureChanged) || (!isTownHall && resourceCaptureChanged)
-              ? isTownHall
-                ? next.townHall.captureRequiredUnits
-                : next.buildingCapture.requiredUnits
-              : building.captureRequiredUnits,
-          incomePerHour: isGoldBuilding
-            ? goldIncomeChanged
-              ? next.goldBuildingIncomePerHour
-              : building.incomePerHour
+          ...((isTownHall && townHallCaptureChanged) ||
+          (!isTownHall && resourceCaptureChanged)
+            ? {
+                captureRequiredUnits: isTownHall
+                  ? next.townHall.captureRequiredUnits
+                  : next.buildingCapture.requiredUnits,
+              }
+            : {}),
+          ...(isGoldBuilding && goldIncomeChanged
+            ? { incomePerHour: next.goldBuildingIncomePerHour }
             : attributeIncomeChanged && building.attributeKey
-              ? next.attributeBuildingIncomePerHour[building.attributeKey]
-              : building.incomePerHour,
+              ? { incomePerHour: next.attributeBuildingIncomePerHour[building.attributeKey] }
+              : {}),
         };
       }),
       towers: map.towers.map((tower) => ({
         ...tower,
-        protectionRadius: towerRadiusChanged
-          ? next.tower.protectionRadius
-          : tower.protectionRadius,
-        destructionRequiredActions: towerDurabilityChanged
-          ? next.tower.destructionRequiredActions
-          : tower.destructionRequiredActions,
+        ...(towerRadiusChanged ? { protectionRadius: next.tower.protectionRadius } : {}),
+        ...(towerDurabilityChanged
+          ? { destructionRequiredActions: next.tower.destructionRequiredActions }
+          : {}),
       })),
     };
   }
