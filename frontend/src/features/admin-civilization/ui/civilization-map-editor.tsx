@@ -34,6 +34,7 @@ import {
 import {
   civilizationHalfUnitsToPoints,
   civilizationPointsToHalfUnits,
+  mirrorCivilizationMap,
 } from "@/features/admin-civilization/model";
 import {
   coordinateKey,
@@ -345,22 +346,6 @@ function moveObjects(
   } else if (sourceTower) {
     targetTile.ownerTeamSide = sourceTower.teamSide;
   }
-  return map;
-}
-
-function mirrorCoordinate({ q, r }: HexCoordinate): HexCoordinate {
-  return { q: -q, r: q + r };
-}
-
-function mirrorMap(current: CivilizationAdminMapInput): CivilizationAdminMapInput {
-  const map = cloneMap(current);
-  const existingTiles = new Set(map.tiles.map(coordinateKey));
-  current.tiles.forEach((tile) => {
-    const mirrored = mirrorCoordinate(tile);
-    if (!existingTiles.has(coordinateKey(mirrored))) {
-      map.tiles.push({ ...tile, ...mirrored, ownerTeamSide: null });
-    }
-  });
   return map;
 }
 
@@ -1119,7 +1104,7 @@ export function CivilizationMapEditor({
             type="button"
             variant="outline"
             disabled={disabled}
-            onClick={() => commit(mirrorMap(value))}
+            onClick={() => commit(mirrorCivilizationMap(value))}
           >
             <CopyIcon className="size-4" /> Mirror shape
           </Button>
