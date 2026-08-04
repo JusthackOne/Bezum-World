@@ -113,8 +113,8 @@ export class CivilizationActionsService {
   }
 
   attackTower(gameId: string, userId: string, input: CivilizationTowerActionDto): Promise<unknown> {
-    return this.execute(gameId, userId, input, CivilizationActionType.ATTACK_TOWER, (context) =>
-      this.attackTowerInTransaction(context, input),
+    return this.execute(gameId, userId, input, CivilizationActionType.ATTACK_TOWER, () =>
+      this.rejectDirectTowerAttack(),
     );
   }
 
@@ -790,82 +790,6 @@ export class CivilizationActionsService {
     return { event, towerJob: { towerId: tower.id, gameId: context.gameId, completesAt } };
   }
 
-  private async attackTowerInTransaction(
-    context: ActionExecutionContext,
-    input: CivilizationTowerActionDto,
-  ): Promise<ActionMutationResult> {
-    const tower = context.state.towers.find((candidate) => candidate.id === input.towerId);
-    if (
-      !tower ||
-      tower.teamId === context.player.teamId ||
-      (tower.status !== CivilizationTowerStatus.ACTIVE &&
-        tower.status !== CivilizationTowerStatus.DESTROYED)
-    ) {
-      throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.TOWER_NOT_ATTACKABLE,
-        'Target tower is not attackable',
-      );
-    }
-    const playerTile = this.tile(context.state, context.player.currentTileId);
-    const towerTile = this.tile(context.state, tower.tileId);
-    if (
-      !isOnTowerAttackBoundary(playerTile, {
-        center: towerTile,
-        radius: tower.protectionRadius,
-      })
-    ) {
-      throw new CivilizationException(
-        CIVILIZATION_ERROR_CODES.TOWER_NOT_ATTACKABLE,
-        'The player must stand directly outside the tower protection area',
-      );
-    }
-    await this.spendActionPoints(
-      context.player,
-      context.settings.costs.towerAttackUnits,
-      context.tx,
-    );
-    const removingDestroyedTower = tower.status === CivilizationTowerStatus.DESTROYED;
-    const destructionProgressActions = removingDestroyedTower
-      ? tower.destructionRequiredActions
-      : Math.min(tower.destructionRequiredActions, tower.destructionProgressActions + 1);
-    const destroyed = destructionProgressActions >= tower.destructionRequiredActions;
-    await this.repository.updateTower(
-      tower.id,
-      {
-        status: removingDestroyedTower
-          ? CivilizationTowerStatus.CANCELLED
-          : destroyed
-            ? CivilizationTowerStatus.DESTROYED
-            : CivilizationTowerStatus.ACTIVE,
-        destructionProgressActions,
-        destroyedAt: destroyed ? context.now : null,
-      },
-      context.tx,
-    );
-    const event = await this.repository.createEvent(
-      {
-        gameId: context.gameId,
-        teamId: context.player.teamId,
-        actorPlayerId: context.player.id,
-        tileId: tower.tileId,
-        eventType:
-          destroyed || removingDestroyedTower
-            ? CivilizationEventType.TOWER_DESTROYED
-            : CivilizationEventType.TOWER_ATTACKED,
-        payload: {
-          towerId: tower.id,
-          destructionProgressActions,
-          destructionRequiredActions: tower.destructionRequiredActions,
-          destroyed,
-          structureRemoved: removingDestroyedTower,
-          actionPointUnitsSpent: context.settings.costs.towerAttackUnits,
-        },
-      },
-      context.tx,
-    );
-    return { event };
-  }
-
   private async catapultAttackInTransaction(
     context: ActionExecutionContext,
     input: CivilizationCatapultActionDto,
@@ -1307,6 +1231,15 @@ export class CivilizationActionsService {
       new CivilizationException(
         CIVILIZATION_ERROR_CODES.TOWN_HALL_REQUIRES_CATAPULT,
         'The town hall can only be attacked with a Catapult',
+      ),
+    );
+  }
+
+  private rejectDirectTowerAttack(): Promise<ActionMutationResult> {
+    return Promise.reject(
+      new CivilizationException(
+        CIVILIZATION_ERROR_CODES.TOWER_NOT_ATTACKABLE,
+        'Defensive towers can only be attacked with a Catapult',
       ),
     );
   }

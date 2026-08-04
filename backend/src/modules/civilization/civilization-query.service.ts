@@ -653,25 +653,6 @@ export class CivilizationQueryService {
       const towerTile = state.tiles.find((tile) => tile.id === tower.tileId);
       if (!towerTile) continue;
       if (
-        tower.teamId !== player.teamId &&
-        isOnTowerAttackBoundary(currentTile, {
-          center: towerTile,
-          radius: tower.protectionRadius,
-        }) &&
-        (tower.status === CivilizationTowerStatus.ACTIVE ||
-          tower.status === CivilizationTowerStatus.DESTROYED)
-      ) {
-        actions.push({
-          type: 'ATTACK_TOWER',
-          towerId: tower.id,
-          targetCoordinate: { q: towerTile.q, r: towerTile.r },
-          actionPointUnits: settings.costs.towerAttackUnits,
-          goldCost: '0',
-          label: 'Attack tower',
-          requiresConfirmation: false,
-          disabledReason: actionPointDisabledReason(settings.costs.towerAttackUnits),
-        });
-      } else if (
         tower.teamId === player.teamId &&
         (tower.status === CivilizationTowerStatus.ACTIVE ||
           tower.status === CivilizationTowerStatus.DESTROYED) &&

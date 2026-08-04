@@ -319,13 +319,10 @@ describe('Civilization query access', () => {
           targetCoordinate: { q: 0, r: 0 },
           disabledReason: null,
         }),
-        expect.objectContaining({
-          type: 'ATTACK_TOWER',
-          towerId: 'tower-b',
-          targetCoordinate: { q: 1, r: 0 },
-          disabledReason: null,
-        }),
       ]),
+    );
+    expect(response.availableActions).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'ATTACK_TOWER' })]),
     );
   });
 
@@ -374,7 +371,7 @@ describe('Civilization query access', () => {
     ).toEqual([{ q: 1, r: 0 }]);
   });
 
-  test('offers a tower attack from the configured protection boundary', () => {
+  test('offers only Catapult against a tower from its configured protection boundary', () => {
     const state = createQueryState(CivilizationGameStatus.ACTIVE);
     state.tiles.push({
       id: 'tile-b-radius-two',
@@ -424,18 +421,15 @@ describe('Civilization query access', () => {
     expect(response.availableActions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          type: 'ATTACK_TOWER',
-          towerId: 'tower-b-radius-two',
-          targetCoordinate: { q: 2, r: -1 },
-          disabledReason: null,
-        }),
-        expect.objectContaining({
           type: 'CATAPULT_ATTACK',
           towerId: 'tower-b-radius-two',
           targetCoordinate: { q: 2, r: -1 },
           disabledReason: null,
         }),
       ]),
+    );
+    expect(response.availableActions).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'ATTACK_TOWER' })]),
     );
   });
 

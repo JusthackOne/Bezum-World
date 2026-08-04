@@ -154,14 +154,11 @@ type PointFieldName =
   | "settings.costs.attackPlayerUnits"
   | "settings.costs.buildingCaptureUnits"
   | "settings.costs.towerBuildUnits"
-  | "settings.costs.towerAttackUnits"
-  | "settings.costs.townHallCaptureUnits"
   | "settings.costs.towerRepairUnits"
   | "settings.catapult.actionPointUnits"
   | "settings.buildingCapture.requiredUnits"
   | "settings.buildingCapture.contributionUnits"
-  | "settings.townHall.captureRequiredUnits"
-  | "settings.townHall.contributionUnits";
+  | "settings.townHall.captureRequiredUnits";
 
 function PointField({
   label,
@@ -568,21 +565,6 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 name="settings.costs.towerBuildUnits"
                 control={form.control}
               />
-              <PointField
-                label="Attack tower (AP)"
-                name="settings.costs.towerAttackUnits"
-                control={form.control}
-              />
-              <PointField
-                label="Town Hall capture (AP)"
-                name="settings.costs.townHallCaptureUnits"
-                control={form.control}
-              />
-              <PointField
-                label="Repair Kit (AP)"
-                name="settings.costs.towerRepairUnits"
-                control={form.control}
-              />
             </CardContent>
           </Card>
 
@@ -617,7 +599,7 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
             <CardHeader>
               <CardTitle>Repair Kit</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="flex items-center gap-2 text-xs">
                 <input type="checkbox" {...form.register("settings.repairKit.enabled")} />
                 Enabled for this game
@@ -626,6 +608,11 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
                 label="Gold price"
                 name="settings.repairKit.goldPrice"
                 register={form.register}
+              />
+              <PointField
+                label="Repair Kit (AP)"
+                name="settings.costs.towerRepairUnits"
+                control={form.control}
               />
               <NumberField
                 label="Repair points per use"
@@ -717,11 +704,6 @@ export function CivilizationGameForm({ game }: { game?: CivilizationAdminGame })
               <PointField
                 label="Town Hall capture required (points)"
                 name="settings.townHall.captureRequiredUnits"
-                control={form.control}
-              />
-              <PointField
-                label="Progress per action (points)"
-                name="settings.townHall.contributionUnits"
                 control={form.control}
               />
               <DecimalField

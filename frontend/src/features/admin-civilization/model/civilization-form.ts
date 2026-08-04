@@ -185,13 +185,6 @@ export const civilizationGameFormSchema = z
         message: "Building contribution cannot exceed the required progress",
       });
     }
-    if (value.settings.townHall.contributionUnits > value.settings.townHall.captureRequiredUnits) {
-      context.addIssue({
-        code: "custom",
-        path: ["settings", "townHall", "contributionUnits"],
-        message: "Town-hall contribution cannot exceed the required progress",
-      });
-    }
     if (
       value.settings.townHall.defenseReductionUnits > value.settings.townHall.captureRequiredUnits
     ) {

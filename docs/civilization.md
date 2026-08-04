@@ -47,9 +47,9 @@ Team attribute pools use the application's standard strength, charisma, enduranc
 icons instead of visible attribute names; accessible labels and hover titles retain the full names.
 Neutral ground uses a gray base so team territory and action overlays remain distinct.
 
-Defensive towers use destruction actions instead of hit points. A regular tower attack adds one
-destruction action, while a Catapult adds its configured number of destruction actions to the same
-counter. The tower becomes destroyed when the counter reaches its configured requirement. A Repair
+Defensive towers use destruction actions instead of hit points. A Catapult adds its configured
+number of destruction actions to the counter. The tower becomes destroyed when the counter reaches
+its configured requirement. A Repair
 Kit removes its configured number of destruction actions from an adjacent allied damaged tower.
 After the first attack or capture contribution, a high-contrast
 `current/required` badge is rendered beneath the affected tower or building so its progress remains
@@ -142,8 +142,6 @@ Settings are copied into `settingsJson` and validated with Zod whenever loaded. 
 | Player attack                  |                                  2 AP / 4 units |
 | Resource-building contribution |                                  1 AP / 2 units |
 | Tower construction AP          |                                  1 AP / 2 units |
-| Tower attack                   |                                  3 AP / 6 units |
-| Town-hall contribution         |                                  1 AP / 2 units |
 | Tower repair                   |                                  1 AP / 2 units |
 | Ordinary connected tile income |                                     5 gold/hour |
 | Gold building income           |                                    25 gold/hour |
@@ -213,8 +211,9 @@ occupancy, player occupancy, team-spawn exclusion, radius-overlap, AP, and team-
 `UNDER_CONSTRUCTION` row and delayed completion job. Database time/status checks make completion
 idempotent. Players cannot move onto its construction tile.
 
-Only active, connected towers protect their radius. Each valid tower attack adds one destruction
-action; reaching the configured requirement changes the tower to `DESTROYED`. The Repair Kit can be
+Only active, connected towers protect their radius. Only Catapult attacks add destruction progress;
+reaching the configured requirement changes the tower to `DESTROYED`. The legacy direct tower-attack
+endpoint rejects calls and is never exposed as an available action. The Repair Kit can be
 used on an active damaged or destroyed allied tower only while the player is on an adjacent hex, the
 tower tile remains owned and connected, no enemy occupies it, and the team can pay the configured AP
 and gold. The item immediately removes its administrator-configured number of destruction actions.
@@ -230,7 +229,9 @@ half-units, so the applied damage matches the progress displayed to players. Com
 building's progress captures it normally; completing Town Hall progress ends the game. Gold and
 attribute buildings remain capturable through the normal item-free `CAPTURE_BUILDING` action. A
 Town Hall can only be damaged and captured with a Catapult; the legacy `CAPTURE_TOWN_HALL` endpoint
-rejects direct calls and the action is never exposed to clients. The action row prevents the same Catapult
+rejects direct calls and the action is never exposed to clients. Legacy direct-attack AP and Town Hall
+contribution settings remain in stored settings for backward compatibility, but are hidden from the
+administration form and do not affect available actions or Catapult damage. The action row prevents the same Catapult
 request from being consumed twice. A successful event carries source/target tiles and damage so every
 polling client can play the short cannonball/impact animation; reduced-motion clients use an impact
 flash. The Repair Kit uses the same target-selection pattern for adjacent allied damaged towers and
@@ -243,6 +244,11 @@ progress in player-visible points: a configured value of `1` means exactly `1 AP
 point`. Half-point increments remain available where the game supports them. The API continues to
 persist these values as integer half-units for backward compatibility, and the form performs the
 conversion at its input boundary.
+
+When an administrator changes a global balance value that is copied onto map objects, saving the
+game refreshes that value on every affected object. This applies to resource- and Town Hall capture
+requirements, gold and per-attribute building income, tower protection radius, and tower durability.
+Per-object map values remain unchanged when their corresponding global balance value did not change.
 
 An enemy defensive tower that is still under construction is also a valid Catapult target at its
 normal attack boundary. One Catapult use always destroys that unfinished tower regardless of the

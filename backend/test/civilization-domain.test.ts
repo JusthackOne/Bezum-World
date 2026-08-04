@@ -56,6 +56,14 @@ describe('Civilization settings', () => {
 
     expect(civilizationSettingsSchema.safeParse(settings).success).toBe(true);
   });
+
+  test('ignores legacy Town Hall contribution progress when validating Catapult-only capture', () => {
+    const settings: CivilizationSettings = structuredClone(defaultCivilizationSettings);
+    settings.townHall.captureRequiredUnits = 1;
+    settings.townHall.contributionUnits = 2;
+
+    expect(civilizationSettingsSchema.safeParse(settings).success).toBe(true);
+  });
 });
 
 describe('action-point settlement', () => {

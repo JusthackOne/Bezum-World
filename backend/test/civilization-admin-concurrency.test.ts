@@ -22,10 +22,15 @@ import { CivilizationQueryService } from '../src/modules/civilization/civilizati
 import { CivilizationRuntimeService } from '../src/modules/civilization/civilization-runtime.service';
 import { CivilizationScheduleService } from '../src/modules/civilization/civilization-schedule.service';
 import { CivilizationSettlementService } from '../src/modules/civilization/civilization-settlement.service';
-import { defaultCivilizationSettings } from '../src/modules/civilization/domain';
+import {
+  defaultCivilizationSettings,
+  type CivilizationSettings,
+} from '../src/modules/civilization/domain';
+import type { CreateCivilizationGameDto } from '../src/modules/civilization/dto';
 import {
   CivilizationRepository,
   type CivilizationEventInput,
+  type ReplaceCivilizationConfigurationInput,
   type CivilizationStateRecord,
   type CivilizationTransaction,
 } from '../src/modules/civilization/repositories';
@@ -53,6 +58,7 @@ class InMemoryAdminRepository {
   readonly events: CivilizationEventInput[] = [];
   readonly operationOrder: string[] = [];
   readonly gameUpdates: Array<Record<string, unknown>> = [];
+  readonly configurationReplacements: ReplaceCivilizationConfigurationInput[] = [];
   dateOverlap = false;
   private nextTransactionError: unknown;
   private transactionTail: Promise<void> = Promise.resolve();
@@ -131,13 +137,9 @@ class InMemoryAdminRepository {
 
   async replaceActiveConfiguration(
     _gameId: string,
-    input: {
-      name: string;
-      startAt: Date;
-      endAt: Date;
-      settings: unknown;
-    },
+    input: ReplaceCivilizationConfigurationInput,
   ): Promise<CivilizationStateRecord> {
+    this.configurationReplacements.push(input);
     this.state.name = input.name;
     this.state.startAt = input.startAt;
     this.state.endAt = input.endAt;
@@ -382,6 +384,78 @@ describe('Civilization admin idempotency', () => {
     expect(harness.repository.operationOrder).toContain('overlap-check');
     expect(harness.successfulGameSchedules).toHaveLength(1);
     expect(harness.repository.audits).toHaveLength(1);
+  });
+
+  test('refreshes map object values when their global balance settings change', async () => {
+    const harness = createAdminHarness(CivilizationGameStatus.ACTIVE);
+    const settings: CivilizationSettings = structuredClone(defaultCivilizationSettings);
+    settings.buildingCapture.requiredUnits = 10;
+    settings.townHall.captureRequiredUnits = 20;
+    settings.goldBuildingIncomePerHour = '40';
+    settings.attributeBuildingIncomePerHour.strength = '4';
+    settings.tower.protectionRadius = 2;
+    settings.tower.destructionRequiredActions = 5;
+    const map: CreateCivilizationGameDto['map'] = {
+      tiles: [],
+      spawns: [],
+      buildings: [
+        {
+          q: 0,
+          r: 0,
+          type: 'TOWN_HALL',
+          ownerTeamSide: 'TEAM_A',
+          captureRequiredUnits: 16,
+          incomePerHour: '0',
+        },
+        {
+          q: 1,
+          r: 0,
+          type: 'GOLD_BUILDING',
+          ownerTeamSide: 'TEAM_B',
+          captureRequiredUnits: 6,
+          incomePerHour: '25',
+        },
+        {
+          q: 2,
+          r: 0,
+          type: 'ATTRIBUTE_BUILDING',
+          attributeKey: 'strength',
+          ownerTeamSide: 'TEAM_B',
+          captureRequiredUnits: 6,
+          incomePerHour: '1',
+        },
+      ],
+      towers: [
+        {
+          q: 3,
+          r: 0,
+          teamSide: 'TEAM_B',
+          status: 'ACTIVE',
+          protectionRadius: 1,
+          destructionRequiredActions: 3,
+        },
+      ],
+    };
+
+    await harness.service.updateGame(GAME_ID, ADMIN_ID, IDEMPOTENCY_KEY, {
+      map,
+      settings,
+    });
+
+    const replacement = harness.repository.configurationReplacements[0];
+    expect(replacement.map.buildings).toMatchObject([
+      { type: 'TOWN_HALL', captureRequiredUnits: 20, incomePerHour: '0' },
+      { type: 'GOLD_BUILDING', captureRequiredUnits: 10, incomePerHour: '40' },
+      {
+        type: 'ATTRIBUTE_BUILDING',
+        attributeKey: 'strength',
+        captureRequiredUnits: 10,
+        incomePerHour: '4',
+      },
+    ]);
+    expect(replacement.map.towers).toMatchObject([
+      { protectionRadius: 2, destructionRequiredActions: 5 },
+    ]);
   });
 
   test('serializes concurrent same-key force completion and rejects key reuse with another winner', async () => {

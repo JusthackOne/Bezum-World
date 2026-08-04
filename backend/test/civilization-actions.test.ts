@@ -1030,7 +1030,7 @@ describe('Civilization tower actions', () => {
     expect(state.teamResources[0]!.goldAmount.toString()).toBe('500');
   });
 
-  test('tracks attacks and destroys an enemy tower at its configured action limit', async () => {
+  test('rejects direct tower attacks because defensive towers require a Catapult', async () => {
     const state = createState();
     const tower = createTower(
       'enemy-tower',
@@ -1043,72 +1043,18 @@ describe('Civilization tower actions', () => {
     state.towers.push(tower);
     const harness = createActionHarness(state);
 
-    await harness.service.attackTower(GAME_ID, USER_A_ID, {
-      actionId: '00000000-0000-4000-8000-000000040003',
-      towerId: tower.id,
-    });
-
-    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(10);
-    expect(findTower(state, tower.id)).toMatchObject({
-      status: CivilizationTowerStatus.ACTIVE,
-      destructionProgressActions: 1,
-    });
-
-    await harness.service.attackTower(GAME_ID, USER_A_ID, {
-      actionId: '00000000-0000-4000-8000-000000040015',
-      towerId: tower.id,
-    });
-
-    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(4);
-    expect(findTower(state, tower.id).status).toBe(CivilizationTowerStatus.DESTROYED);
-    expect(findTower(state, tower.id).destructionProgressActions).toBe(2);
-    expect(findTower(state, tower.id).destroyedAt).toEqual(FIXED_NOW);
-  });
-
-  test('attacks an enemy tower from its configured protection boundary', async () => {
-    const state = createState();
-    player(state, PLAYER_B_ID).currentTileId = TARGET_TILE_ID;
-    const tower = createTower(
-      'radius-two-enemy-tower',
-      TEAM_B_ID,
-      TEAM_B_SPAWN_TILE_ID,
-      CivilizationTowerStatus.ACTIVE,
-    );
-    tower.protectionRadius = 1;
-    state.towers.push(tower);
-    const harness = createActionHarness(state);
-
-    await harness.service.attackTower(GAME_ID, USER_A_ID, {
-      actionId: '00000000-0000-4000-8000-000000040013',
-      towerId: tower.id,
-    });
-
-    expect(findTower(state, tower.id)).toMatchObject({
-      status: CivilizationTowerStatus.ACTIVE,
-      destructionProgressActions: 1,
-    });
-  });
-
-  test('rejects a tower attack from inside its protection boundary', async () => {
-    const state = createState();
-    const tower = createTower(
-      'radius-two-adjacent-tower',
-      TEAM_B_ID,
-      TARGET_TILE_ID,
-      CivilizationTowerStatus.ACTIVE,
-    );
-    tower.protectionRadius = 2;
-    state.towers.push(tower);
-    const harness = createActionHarness(state);
-
     await expectCivilizationError(
       harness.service.attackTower(GAME_ID, USER_A_ID, {
-        actionId: '00000000-0000-4000-8000-000000040014',
+        actionId: '00000000-0000-4000-8000-000000040003',
         towerId: tower.id,
       }),
       CIVILIZATION_ERROR_CODES.TOWER_NOT_ATTACKABLE,
     );
-    expect(findTower(state, tower.id).status).toBe(CivilizationTowerStatus.ACTIVE);
+    expect(player(state, PLAYER_A_ID).actionPointUnits).toBe(16);
+    expect(findTower(state, tower.id)).toMatchObject({
+      status: CivilizationTowerStatus.ACTIVE,
+      destructionProgressActions: 0,
+    });
   });
 
   test('applies configured Catapult damage and charges one idempotent purchase', async () => {

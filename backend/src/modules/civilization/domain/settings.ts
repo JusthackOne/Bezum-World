@@ -130,14 +130,6 @@ export const civilizationSettingsSchema = z
       });
     }
 
-    if (settings.townHall.contributionUnits > settings.townHall.captureRequiredUnits) {
-      context.addIssue({
-        code: 'custom',
-        message: 'Town-hall contribution cannot exceed required progress',
-        path: ['townHall', 'contributionUnits'],
-      });
-    }
-
     if (settings.townHall.defenseReductionUnits > settings.townHall.captureRequiredUnits) {
       context.addIssue({
         code: 'custom',

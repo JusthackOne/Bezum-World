@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {
   CivilizationAdminActionType,
+  CivilizationBuildingType,
   CivilizationCompletionReason,
   CivilizationEventType,
   CivilizationGameSnapshotType,
@@ -22,9 +23,14 @@ import { CivilizationRuntimeService } from './civilization-runtime.service';
 import { CivilizationScheduleService } from './civilization-schedule.service';
 import { serializeCivilizationSnapshot } from './civilization-snapshot';
 import { CivilizationSettlementService } from './civilization-settlement.service';
-import { defaultCivilizationSettings, parseCivilizationSettings } from './domain';
+import {
+  defaultCivilizationSettings,
+  parseCivilizationSettings,
+  type CivilizationSettings,
+} from './domain';
 import type {
   AddActiveCivilizationPlayerDto,
+  CivilizationMapInputDto,
   CreateCivilizationGameDto,
   UpdateCivilizationGameDto,
 } from './dto';
@@ -180,7 +186,13 @@ export class CivilizationAdminService {
           settings: patch.settings ?? current.settings,
         };
         this.assertValid(this.configurationService.validate(merged));
+        const previousSettings = parseCivilizationSettings(before.settingsJson);
         const settings = parseCivilizationSettings(merged.settings);
+        merged.map = this.synchronizeMapBalanceValues(
+          merged.map,
+          previousSettings,
+          settings,
+        );
         if (
           before.status === CivilizationGameStatus.SCHEDULED ||
           before.status === CivilizationGameStatus.ACTIVE
@@ -216,7 +228,6 @@ export class CivilizationAdminService {
         let next: CivilizationStateRecord;
         if (before.status === CivilizationGameStatus.ACTIVE) {
           await this.settlementService.settleAllResources(before, now, tx);
-          const previousSettings = parseCivilizationSettings(before.settingsJson);
           for (const player of before.players.filter((candidate) => candidate.isActive)) {
             await this.settlementService.settlePlayer(player, previousSettings, now, tx);
           }
@@ -898,6 +909,64 @@ export class CivilizationAdminService {
             };
           }),
       },
+    };
+  }
+
+  private synchronizeMapBalanceValues(
+    map: CivilizationMapInputDto,
+    previous: CivilizationSettings,
+    next: CivilizationSettings,
+  ): CivilizationMapInputDto {
+    const resourceCaptureChanged =
+      previous.buildingCapture.requiredUnits !== next.buildingCapture.requiredUnits;
+    const townHallCaptureChanged =
+      previous.townHall.captureRequiredUnits !== next.townHall.captureRequiredUnits;
+    const goldIncomeChanged =
+      previous.goldBuildingIncomePerHour !== next.goldBuildingIncomePerHour;
+    const towerRadiusChanged = previous.tower.protectionRadius !== next.tower.protectionRadius;
+    const towerDurabilityChanged =
+      previous.tower.destructionRequiredActions !== next.tower.destructionRequiredActions;
+
+    return {
+      ...map,
+      buildings: map.buildings.map((building) => {
+        const isTownHall = building.type === CivilizationBuildingType.TOWN_HALL;
+        const isGoldBuilding = building.type === CivilizationBuildingType.GOLD_BUILDING;
+        const isAttributeBuilding =
+          building.type === CivilizationBuildingType.ATTRIBUTE_BUILDING;
+        const attributeIncomeChanged =
+          isAttributeBuilding &&
+          building.attributeKey !== null &&
+          building.attributeKey !== undefined &&
+          previous.attributeBuildingIncomePerHour[building.attributeKey] !==
+            next.attributeBuildingIncomePerHour[building.attributeKey];
+
+        return {
+          ...building,
+          captureRequiredUnits:
+            (isTownHall && townHallCaptureChanged) || (!isTownHall && resourceCaptureChanged)
+              ? isTownHall
+                ? next.townHall.captureRequiredUnits
+                : next.buildingCapture.requiredUnits
+              : building.captureRequiredUnits,
+          incomePerHour: isGoldBuilding
+            ? goldIncomeChanged
+              ? next.goldBuildingIncomePerHour
+              : building.incomePerHour
+            : attributeIncomeChanged && building.attributeKey
+              ? next.attributeBuildingIncomePerHour[building.attributeKey]
+              : building.incomePerHour,
+        };
+      }),
+      towers: map.towers.map((tower) => ({
+        ...tower,
+        protectionRadius: towerRadiusChanged
+          ? next.tower.protectionRadius
+          : tower.protectionRadius,
+        destructionRequiredActions: towerDurabilityChanged
+          ? next.tower.destructionRequiredActions
+          : tower.destructionRequiredActions,
+      })),
     };
   }
 
