@@ -347,6 +347,18 @@ Administrator mutations take their PostgreSQL advisory lock through an execute-o
 
 Draft and scheduled configuration may be edited before start. Active games use the same complete editor for dates, teams, players, map, and balance settings. The server settles accrued resources first, preserves existing player/action/event records and compatible in-progress building captures, relocates players whose team or current tile becomes invalid, recalculates connectivity and income, reschedules deadlines and tower jobs, and records the configuration change in the audit log. Capture progress is retained when a building keeps the same identifier, type, attribute, and owner; replacing any of those semantics starts the configured building with no capture progress. Completed and cancelled games remain immutable historical records. Cancellation and force completion require confirmation.
 
+## Telegram completion announcement
+
+When a game reaches `COMPLETED`, the completion transaction writes a
+`CIVILIZATION_GAME_COMPLETED` event to the notification outbox. The event is deduplicated by game
+ID and is delivered through the existing Telegram notification queues when
+`TELEGRAM_NOTIFICATIONS_ENABLED=true`. The Russian post contains the completion reason, winner or
+draw, and each team's final score, active player count, gold, and attribute resources. Cancelled
+games do not produce an announcement.
+
+The outbox record is created in the same database transaction as the final snapshot and rewards,
+so a rolled-back completion cannot be announced.
+
 ## Local development and migrations
 
 Install dependencies with Bun in each package. The backend process also runs BullMQ workers; no separate worker command is required.

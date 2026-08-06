@@ -13,6 +13,7 @@ import {
 import { CivilizationCompletionService } from '../src/modules/civilization/civilization-completion.service';
 import { CivilizationConnectivityService } from '../src/modules/civilization/civilization-connectivity.service';
 import { CivilizationRuntimeService } from '../src/modules/civilization/civilization-runtime.service';
+import type { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { defaultCivilizationSettings } from '../src/modules/civilization/domain';
 import {
   CivilizationRepository,
@@ -48,6 +49,11 @@ describe('Civilization completion, scoring, and rewards', () => {
     }> = [];
     const events: CivilizationEventInput[] = [];
     let snapshotCount = 0;
+    const notifications: Array<{
+      event: unknown;
+      deduplicationKey: string;
+      tx: unknown;
+    }> = [];
     const repository = {
       async findStateById(): Promise<CivilizationStateRecord> {
         return state;
@@ -116,6 +122,11 @@ describe('Civilization completion, scoring, and rewards', () => {
       repository as unknown as CivilizationRepository,
       connectivity as unknown as CivilizationConnectivityService,
       {} as CivilizationRuntimeService,
+      {
+        enqueue: async (event: unknown, deduplicationKey: string, tx: unknown) => {
+          notifications.push({ event, deduplicationKey, tx });
+        },
+      } as NotificationsService,
     );
 
     await service.completeInTransaction(
@@ -189,6 +200,22 @@ describe('Civilization completion, scoring, and rewards', () => {
       },
     });
     expect(snapshotCount).toBe(1);
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({
+      deduplicationKey: `civilization-game-completed:${GAME_ID}`,
+      event: {
+        type: 'CIVILIZATION_GAME_COMPLETED',
+        payload: {
+          gameId: GAME_ID,
+          gameName: 'Completion fixture',
+          winnerTeamId: TEAM_A_ID,
+          teams: [
+            expect.objectContaining({ id: TEAM_A_ID, score: '80', playerCount: 2, gold: '5' }),
+            expect.objectContaining({ id: TEAM_B_ID, score: '20', playerCount: 1, gold: '20' }),
+          ],
+        },
+      },
+    });
 
     const rewardCount = rewards.length;
     const incrementCount = accountIncrements.length;
@@ -205,6 +232,7 @@ describe('Civilization completion, scoring, and rewards', () => {
     expect(accountIncrements).toHaveLength(incrementCount);
     expect(events).toHaveLength(eventCount);
     expect(snapshotCount).toBe(1);
+    expect(notifications).toHaveLength(1);
   });
 });
 

@@ -52,6 +52,29 @@ export interface DailyDigestNotificationPayload {
   purchases: DailyDigestPurchasePayload[];
 }
 
+export interface CivilizationTeamResultPayload {
+  id: string;
+  name: string;
+  score: string;
+  playerCount: number;
+  gold: string;
+  attributes: {
+    strength: string;
+    charisma: string;
+    endurance: string;
+    intelligence: string;
+  };
+}
+
+export interface CivilizationGameCompletedNotificationPayload {
+  gameId: string;
+  gameName: string;
+  completedAt: string;
+  reason: 'TOWN_HALL_CAPTURED' | 'END_TIME_REACHED' | 'ADMIN_FORCE_COMPLETED';
+  winnerTeamId: string | null;
+  teams: CivilizationTeamResultPayload[];
+}
+
 export type NotificationEvent =
   | {
       type: typeof NotificationEventType.TASK_SUGGESTED;
@@ -68,6 +91,10 @@ export type NotificationEvent =
   | {
       type: typeof NotificationEventType.DAILY_DIGEST;
       payload: DailyDigestNotificationPayload;
+    }
+  | {
+      type: typeof NotificationEventType.CIVILIZATION_GAME_COMPLETED;
+      payload: CivilizationGameCompletedNotificationPayload;
     };
 
 export interface TelegramNotificationJobData {

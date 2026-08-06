@@ -5,6 +5,7 @@ import { CivilizationCompletionService } from './civilization-completion.service
 import { CivilizationException } from './civilization.errors';
 import type { CivilizationConnectivityService } from './civilization-connectivity.service';
 import type { CivilizationRuntimeService } from './civilization-runtime.service';
+import type { NotificationsService } from '../notifications/notifications.service';
 import type {
   CivilizationRepository,
   CivilizationStateRecord,
@@ -48,11 +49,13 @@ function createRewardHarness(options: {
     findRewardClaim: async () => claim,
     listPendingRewardDistributions: async () =>
       appliedDistributionCount === 0
-        ? [{
-            id: 'distribution-1',
-            amount: 25,
-            attributeKey: null,
-          }]
+        ? [
+            {
+              id: 'distribution-1',
+              amount: 25,
+              attributeKey: null,
+            },
+          ]
         : [],
     incrementAccountReward: async (_userId: string, _key: string, amount: number) => {
       accountReward += amount;
@@ -72,7 +75,9 @@ function createRewardHarness(options: {
   const connectivity = {} as CivilizationConnectivityService;
 
   return {
-    service: new CivilizationCompletionService(repository, connectivity, runtime),
+    service: new CivilizationCompletionService(repository, connectivity, runtime, {
+      enqueue: async () => undefined,
+    } as NotificationsService),
     accountReward: () => accountReward,
     appliedDistributionCount: () => appliedDistributionCount,
     claimedEventCount: () => claimedEventCount,

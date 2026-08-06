@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 
 import { QueueModule } from '../../infrastructure/queue/queue.module';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AdminCivilizationController } from './admin-civilization.controller';
 import { CivilizationActionsService } from './civilization-actions.service';
 import { CivilizationAdminService } from './civilization-admin.service';
@@ -21,7 +22,12 @@ import { CivilizationSettlementService } from './civilization-settlement.service
 import { CivilizationRepository } from './repositories';
 
 @Module({
-  imports: [AuthModule, QueueModule, BullModule.registerQueue({ name: CIVILIZATION_QUEUE })],
+  imports: [
+    AuthModule,
+    NotificationsModule,
+    QueueModule,
+    BullModule.registerQueue({ name: CIVILIZATION_QUEUE }),
+  ],
   controllers: [CivilizationController, AdminCivilizationController],
   providers: [
     CivilizationRepository,

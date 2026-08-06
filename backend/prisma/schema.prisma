@@ -64,6 +64,7 @@ enum NotificationEventType {
   BOSS_ACTIVATED
   BOSS_DEFEATED
   DAILY_DIGEST
+  CIVILIZATION_GAME_COMPLETED
 }
 
 enum NotificationOutboxStatus {
