@@ -58,6 +58,7 @@ export interface BossBattle extends BossAttributes {
   endsAt: string;
   initialHp: number;
   currentHp: number;
+  defaultDamage: number;
   status: BossBattleStatus;
   rewardsEnabled: boolean;
   resultsFinalizedAt: string | null;
@@ -70,6 +71,8 @@ export interface BossBattle extends BossAttributes {
   canAttack: boolean;
   nextAttackAt: string | null;
   damageRange: { min: number; max: number } | null;
+  superAttackMultiplierRange: { min: number; max: number };
+  superAttackGoldCost: number;
 }
 
 export interface BossBattleHistoryItem {
@@ -125,6 +128,8 @@ export interface BossLeaderboard {
 }
 
 export interface BossAttackResult {
+  attackType: BossAttackType;
+  multiplier: number;
   appliedDamage: number;
   currentHp: number;
   initialHp: number;
@@ -133,3 +138,5 @@ export interface BossAttackResult {
   nextAttackAt: string;
   bossDefeated: boolean;
 }
+
+export type BossAttackType = "NORMAL" | "SUPER";

@@ -192,7 +192,7 @@ export function AdminTaskForm({
           }}
         />
 
-        <p className="text-muted-foreground text-xs">Allowed: JPG, PNG, WEBP, GIF (up to 5MB).</p>
+        <p className="text-xs text-muted-foreground">Allowed: JPG, PNG, WEBP, GIF (up to 5MB).</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

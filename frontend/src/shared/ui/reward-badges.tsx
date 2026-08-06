@@ -154,7 +154,7 @@ export function RewardBadgesList({
   className,
 }: RewardBadgesListProps) {
   if (rewards.length === 0) {
-    return <span className="text-muted-foreground text-sm">{emptyLabel}</span>;
+    return <span className="text-sm text-muted-foreground">{emptyLabel}</span>;
   }
 
   return (

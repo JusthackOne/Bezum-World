@@ -26,6 +26,8 @@
   - Reusable domain-level primitives (types, small domain UI blocks).
 - `shared/*`:
   - Cross-feature utilities, base UI components, configs, HTTP helpers.
+  - Any helper, hook, formatter, parser, or model that is not inherently tied to one domain must be placed in `src/shared` from the start, not inside a feature or entity.
+  - Before finishing a frontend change, audit newly added helpers and move reusable project-wide code into the appropriate `shared/lib`, `shared/hooks`, `shared/model`, or `shared/config` module.
 - `widgets/*`:
   - Composed UI blocks that combine multiple features/entities.
 
@@ -106,11 +108,10 @@
 - Preserve existing naming/style patterns unless there is a clear project-wide reason to change.
 - No hidden side effects.
 
-## Quality Gates (Before Completion)
+## Optional Quality Checks
 
-- Run lint for changed areas.
-- Run type-check when feasible and report if blocked by existing unrelated errors.
-- If command cannot be run, state it explicitly in the final response.
+- Do not automatically run Prettier, lint, type-check, or production build after changes.
+- Run these checks only when the user explicitly requests them.
 
 ## Do
 

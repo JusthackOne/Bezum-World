@@ -5,7 +5,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   NotificationEventType,
   Prisma,
@@ -15,6 +14,12 @@ import {
 } from '@prisma/client';
 import { randomInt } from 'node:crypto';
 
+import {
+  getMoscowDateKey,
+  getMoscowDayRange,
+  getMoscowIsoWeekRange,
+} from '../../common/time/moscow-time';
+import { PrismaService } from '../../database/prisma/prisma.service';
 import type { AccessTokenPayload } from '../auth/types/access-token-payload.type';
 import { AccountRepository } from '../auth/repositories';
 import { EventsService } from '../events/events.service';
@@ -48,7 +53,6 @@ import {
   type UpdateTaskInput,
 } from './repositories';
 import type { TaskRewardAttributes } from './types/task-reward-attributes.type';
-import { PrismaService } from '../../database/prisma/prisma.service';
 
 const DEFAULT_ADMIN_TASKS_PAGE = 1;
 const DEFAULT_ADMIN_TASKS_LIMIT = 20;
@@ -57,7 +61,6 @@ const DEFAULT_DAILY_SUBMISSION_LIMIT = 1;
 @Injectable()
 export class TasksService {
   constructor(
-    private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly taskRepository: TaskRepository,
     private readonly taskSuggestionRepository: TaskSuggestionRepository,
@@ -104,7 +107,7 @@ export class TasksService {
       throw new NotFoundException('User is not found');
     }
 
-    const suggestedForDate = this.getConfiguredDateKey(new Date());
+    const suggestedForDate = getMoscowDateKey(new Date());
 
     try {
       const suggestion = await this.prisma.$transaction(async (tx) => {
@@ -167,7 +170,7 @@ export class TasksService {
     }
 
     const suggestions = await this.taskSuggestionRepository.findCurrentDaySuggestions(
-      this.getConfiguredDateKey(new Date()),
+      getMoscowDateKey(new Date()),
     );
     const hasVotedToday = suggestions.some((suggestion) =>
       suggestion.votes.some((vote) => vote.voterUserId === userId),
@@ -244,7 +247,7 @@ export class TasksService {
         throw new ConflictException('Task suggestion voting is closed');
       }
 
-      const todayDateKey = this.getConfiguredDateKey(new Date());
+      const todayDateKey = getMoscowDateKey(new Date());
       if (suggestion.suggestedForDate.getTime() !== todayDateKey.getTime()) {
         throw new ConflictException('Task suggestion voting is closed');
       }
@@ -286,7 +289,7 @@ export class TasksService {
   }
 
   async processPendingSuggestionDays(): Promise<void> {
-    const todayDateKey = this.getConfiguredDateKey(new Date());
+    const todayDateKey = getMoscowDateKey(new Date());
     const pendingDates =
       await this.taskSuggestionRepository.findPendingSuggestionDatesBefore(todayDateKey);
 
@@ -402,8 +405,8 @@ export class TasksService {
     }
 
     const now = new Date();
-    const dailyRange = this.getUtcDayRange(now);
-    const weeklyRange = this.getUtcIsoWeekRange(now);
+    const dailyRange = getMoscowDayRange(now);
+    const weeklyRange = getMoscowIsoWeekRange(now);
 
     const [tasks, completedEventSubmissions, dailySubmissionCounts, weeklySubmissionCounts] =
       await Promise.all([
@@ -545,7 +548,7 @@ export class TasksService {
     tx: Prisma.TransactionClient,
   ): Promise<void> {
     if (task.type === TaskType.daily) {
-      const dayRange = this.getUtcDayRange(now);
+      const dayRange = getMoscowDayRange(now);
       const todaySubmissionsCount = await this.taskSubmissionRepository.countByTaskAndUserInRange(
         task.id,
         userId,
@@ -564,7 +567,7 @@ export class TasksService {
     }
 
     if (task.type === TaskType.weekly) {
-      const weekRange = this.getUtcIsoWeekRange(now);
+      const weekRange = getMoscowIsoWeekRange(now);
       const weeklySubmissionsCount = await this.taskSubmissionRepository.countByTaskAndUserInRange(
         task.id,
         userId,
@@ -585,46 +588,6 @@ export class TasksService {
     if (eventAlreadyCompleted) {
       throw new ConflictException('Event task is already completed');
     }
-  }
-
-  private getUtcDayRange(value: Date): { start: Date; end: Date } {
-    const start = new Date(
-      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 0, 0, 0, 0),
-    );
-    const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 1);
-
-    return { start, end };
-  }
-
-  private getConfiguredDateKey(value: Date): Date {
-    const parts = this.getDatePartsInConfiguredTimeZone(value);
-
-    return new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0));
-  }
-
-  private getDatePartsInConfiguredTimeZone(value: Date): { year: number; month: number; day: number } {
-    const timeZone = this.configService.get<string>('app.timeZone') ?? 'UTC';
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    const formattedParts = formatter.formatToParts(value);
-    const year = Number(formattedParts.find((part) => part.type === 'year')?.value);
-    const month = Number(formattedParts.find((part) => part.type === 'month')?.value);
-    const day = Number(formattedParts.find((part) => part.type === 'day')?.value);
-
-    if (!year || !month || !day) {
-      return {
-        year: value.getUTCFullYear(),
-        month: value.getUTCMonth() + 1,
-        day: value.getUTCDate(),
-      };
-    }
-
-    return { year, month, day };
   }
 
   private async processSuggestionDate(suggestedForDate: Date): Promise<void> {
@@ -680,22 +643,6 @@ export class TasksService {
         tx,
       );
     });
-  }
-
-  private getUtcIsoWeekRange(value: Date): { start: Date; end: Date } {
-    const start = new Date(
-      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 0, 0, 0, 0),
-    );
-    const day = start.getUTCDay();
-    const isoDay = day === 0 ? 7 : day;
-    const daysFromWeekStart = isoDay - 1;
-
-    start.setUTCDate(start.getUTCDate() - daysFromWeekStart);
-
-    const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 7);
-
-    return { start, end };
   }
 
   private resolveSubmissionLimit(
@@ -915,7 +862,7 @@ export class TasksService {
     if (suggestion.creatorUserId !== userId) {
       throw new ForbiddenException('Only the suggestion owner can change it');
     }
-    const today = this.getConfiguredDateKey(new Date());
+    const today = getMoscowDateKey(new Date());
     if (suggestion.status !== 'pending' || suggestion.publishedTaskId !== null ||
         suggestion.suggestedForDate.getTime() !== today.getTime()) {
       throw new ConflictException('Task suggestion can no longer be changed');

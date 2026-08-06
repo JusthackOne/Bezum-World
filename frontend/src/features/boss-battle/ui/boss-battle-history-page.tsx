@@ -42,7 +42,7 @@ function Winner({ winner }: { winner: BossBattleHistoryItem["winner"] }) {
   return (
     <Link
       href={publicUserRoutes.profile(winner.username)}
-      className="inline-flex max-w-full items-center gap-2 rounded-sm font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex max-w-full items-center gap-2 rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       onClick={(event) => event.stopPropagation()}
     >
       <AvatarImage
@@ -133,7 +133,7 @@ export function BossBattleHistoryPage() {
                       key={battle.id}
                       tabIndex={0}
                       role="link"
-                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       onClick={() => router.push(href)}
                       onKeyDown={(event) => navigateFromRow(event, href, router.push)}
                     >
@@ -144,7 +144,7 @@ export function BossBattleHistoryPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="whitespace-nowrap rounded-full border px-2 py-1 text-xs font-semibold">
+                        <span className="rounded-full border px-2 py-1 text-xs font-semibold whitespace-nowrap">
                           {getBossBattleOutcomeLabel(battle.status)}
                         </span>
                       </TableCell>
@@ -158,7 +158,7 @@ export function BossBattleHistoryPage() {
                       <TableCell className="min-w-48">
                         <Winner winner={battle.winner} />
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs">
+                      <TableCell className="text-xs whitespace-nowrap">
                         {formatDate(battle.finishedAt ?? battle.endsAt)}
                       </TableCell>
                     </TableRow>
@@ -175,7 +175,7 @@ export function BossBattleHistoryPage() {
                   key={battle.id}
                   role="link"
                   tabIndex={0}
-                  className="rounded-lg border p-4 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="rounded-lg border p-4 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   onClick={() => router.push(href)}
                   onKeyDown={(event) => navigateFromRow(event, href, router.push)}
                 >

@@ -22,7 +22,7 @@ import "@/shared/ui/8bit/styles/retro.css";
 export const tableVariants = cva("", {
   variants: {
     variant: {
-      default: "p-4 py-2.5 border-y-6 border-foreground dark:border-ring",
+      default: "border-y-6 border-foreground p-4 py-2.5 dark:border-ring",
       borderless: "",
     },
     font: {
@@ -51,7 +51,7 @@ function Table({
 
       {variant !== "borderless" && (
         <div
-          className="absolute inset-0 border-x-6 -mx-1.5 border-foreground dark:border-ring pointer-events-none"
+          className="pointer-events-none absolute inset-0 -mx-1.5 border-x-6 border-foreground dark:border-ring"
           aria-hidden="true"
         />
       )}
@@ -79,7 +79,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <ShadcnTableRow
-      className={cn(className, "border-dashed border-b-4 border-foreground dark:border-ring")}
+      className={cn(className, "border-b-4 border-dashed border-foreground dark:border-ring")}
       {...props}
     />
   );

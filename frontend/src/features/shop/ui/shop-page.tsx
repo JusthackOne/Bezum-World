@@ -282,7 +282,7 @@ export function ShopPage() {
           {purchaseError ? <p className="text-sm text-destructive">{purchaseError}</p> : null}
 
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <div ref={rarityDropdownRef} className="relative w-full sm:w-[230px]">
+            <div ref={rarityDropdownRef} className="relative w-full sm:w-57.5">
               <Button
                 type="button"
                 variant="outline"
@@ -293,13 +293,13 @@ export function ShopPage() {
                 }}
               >
                 <span>Rarity</span>
-                <span className="max-w-[130px] truncate text-[10px] text-muted-foreground">
+                <span className="max-w-32.5 truncate text-[10px] text-muted-foreground">
                   {raritySummary}
                 </span>
               </Button>
 
               {isRarityDropdownOpen ? (
-                <div className="bg-card absolute z-30 mt-1.5 w-full rounded-md border p-2 shadow-lg">
+                <div className="absolute z-30 mt-1.5 w-full rounded-md border bg-card p-2 shadow-lg">
                   <div className="space-y-1">
                     {rarityFilterOptions.map((option) => {
                       const isChecked =
@@ -341,7 +341,7 @@ export function ShopPage() {
               <span className="text-xs font-medium">Player Listings</span>
             </label>
 
-            <div ref={sortDropdownRef} className="relative w-full sm:w-[230px]">
+            <div ref={sortDropdownRef} className="relative w-full sm:w-57.5">
               <Button
                 type="button"
                 variant="outline"
@@ -355,13 +355,13 @@ export function ShopPage() {
                   <SparklesIcon className="size-4" />
                   Sort
                 </span>
-                <span className="max-w-[130px] truncate text-[10px] text-muted-foreground">
+                <span className="max-w-32.5 truncate text-[10px] text-muted-foreground">
                   {selectedSortOption.label}
                 </span>
               </Button>
 
               {isSortDropdownOpen ? (
-                <div className="bg-card absolute z-30 mt-1.5 w-full rounded-md border p-2 shadow-lg">
+                <div className="absolute z-30 mt-1.5 w-full rounded-md border bg-card p-2 shadow-lg">
                   <div className="space-y-1">
                     {sortOptions.map((option) => {
                       const isSelected = selectedSort === option.value;
@@ -390,9 +390,9 @@ export function ShopPage() {
           </div>
 
           {itemsQuery.isPending ? (
-            <p className="text-muted-foreground text-sm">Loading items...</p>
+            <p className="text-sm text-muted-foreground">Loading items...</p>
           ) : filteredAndSortedItems.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No items match the selected filters.</p>
+            <p className="text-sm text-muted-foreground">No items match the selected filters.</p>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
               {filteredAndSortedItems.map((item) => {

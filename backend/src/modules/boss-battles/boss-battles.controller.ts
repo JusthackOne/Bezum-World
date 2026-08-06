@@ -71,7 +71,13 @@ export class BossBattlesController {
     @Param() params: BossBattleIdParamsDto,
     @Req() request: RequestWithAuthUser,
   ) {
-    return this.service.attack(params.id, this.userId(request));
+    return this.service.attack(params.id, this.userId(request), 'NORMAL');
+  }
+  @Post(':id/attacks/super') superAttack(
+    @Param() params: BossBattleIdParamsDto,
+    @Req() request: RequestWithAuthUser,
+  ) {
+    return this.service.attack(params.id, this.userId(request), 'SUPER');
   }
   @Post(':id/rewards/claim') claim(
     @Param() params: BossBattleIdParamsDto,

@@ -154,6 +154,18 @@ export class BossBattlesRepository {
     return tx.account.findUnique({ where: { id: userId } });
   }
 
+  async decrementUserBalanceIfEnough(
+    userId: string,
+    amount: number,
+    tx: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const result = await tx.account.updateMany({
+      where: { id: userId, balance: { gte: amount } },
+      data: { balance: { decrement: amount } },
+    });
+    return result.count === 1;
+  }
+
   createAttack(data: Prisma.BossAttackUncheckedCreateInput, tx: Prisma.TransactionClient) {
     return tx.bossAttack.create({ data });
   }

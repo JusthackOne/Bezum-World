@@ -104,13 +104,26 @@ Core mechanics:
 - use shadcn/ui as base
 - use Tailwind for layout
 - use canonical Tailwind CSS v4 utility classes whenever an equivalent utility exists
-- treat `tailwindcss(suggestCanonicalClasses)` diagnostics in changed code as errors and resolve them before finishing
+- do not automatically run or fix lint, Tailwind CSS diagnostics (including `tailwindcss(suggestCanonicalClasses)`), type-check, or build errors after changes; do so only when the user explicitly requests the corresponding check or fix
 - prefer theme utilities and spacing-scale utilities over arbitrary values; use arbitrary values only when no exact canonical utility exists
+- after every UI feature or UI bug fix, use Playwright MCP to verify the affected user flow in a running application before finishing
+- during Playwright MCP verification, inspect the rendered UI at relevant desktop and mobile viewport sizes, exercise the changed interactions, and check the browser console and failed network requests
+- treat visible layout regressions, broken interactions, unexpected console errors, and failed requests caused by the change as blocking issues
+- if Playwright MCP or the required local application is unavailable, do not silently skip UI verification; report what could not be verified and provide the exact command or setup needed to complete it
 - custom CSS only for game-specific components:
   - cards
   - items
   - effects
   - battle UI
+
+---
+
+## Verification Rules
+
+- after changing code, run the smallest relevant test set that covers the changed files and affected behavior
+- prefer targeted test files, test-name filters, or package-scoped tests over the full test suite
+- do not automatically run or fix lint, Tailwind CSS diagnostics, type-check, or production build checks after each change
+- run or fix lint, Tailwind CSS diagnostics, type-check, and production build checks only when the user explicitly requests them
 
 ---
 
@@ -131,6 +144,26 @@ Core mechanics:
 - do not ignore validation
 - do not refactor unrelated code
 - do not invent missing fields silently
+
+---
+
+## Git and Commit Rules
+
+- Use Conventional Commits with the format `type(scope): imperative summary`.
+- Keep each commit focused on one logical change.
+- Before committing, review the staged diff and stage only files or hunks related to the requested change.
+- Preserve unrelated tracked and untracked changes in the working tree.
+- When the user asks to commit changes, create a local commit only.
+- Do not push, open or update a pull request, publish a branch, or perform any other remote Git action unless the user explicitly requests it.
+- Do not amend, squash, rebase, or otherwise rewrite existing commits unless the user explicitly requests it.
+
+---
+
+## Documentation Rules
+
+- When adding or changing a feature whose behavior, domain logic, configuration, architecture, or operational workflow needs explanation, update the documentation in the same task.
+- Prefer updating the relevant existing document; if none exists, create a new English Markdown file in `docs/`.
+- Documentation must describe how the feature works and remain consistent with the implemented behavior before the task is considered complete.
 
 ---
 

@@ -34,4 +34,14 @@ export const queryKeys = {
   publicUserProfile: (username: string) => ["users", "public-profile", username] as const,
   publicUserItems: (username: string) => ["users", "items", username] as const,
   userEquipment: (userId: string) => ["users", "equipment", userId] as const,
+  civilizationCurrent: ["civilization", "current"] as const,
+  civilizationState: (gameId: string) => ["civilization", "games", gameId, "state"] as const,
+  civilizationHistory: (page: number, limit: number) =>
+    ["civilization", "history", page, limit] as const,
+  adminCivilizationGames: ["admin", "civilization", "games"] as const,
+  adminCivilizationGamesPage: (page: number, limit: number, search: string, status?: string) =>
+    ["admin", "civilization", "games", "page", page, limit, search, status ?? "ALL"] as const,
+  adminCivilizationGame: (gameId: string) => ["admin", "civilization", "games", gameId] as const,
+  adminCivilizationAudit: (gameId: string, page: number, limit: number) =>
+    ["admin", "civilization", "games", gameId, "audit", page, limit] as const,
 };

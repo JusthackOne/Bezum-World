@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type Prisma } from '@prisma/client';
+import { type BattleAttribute, type Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
@@ -39,6 +39,7 @@ export interface BattlePlayerRecord {
 }
 
 export interface CreateBattleLogInput {
+  dailyBattleId: string;
   attackerUserId: string;
   defenderUserId: string;
   attackerPower: number;
@@ -48,6 +49,18 @@ export interface CreateBattleLogInput {
   loserUserId: string;
   transferredCoins: number;
   gameScoreReward: number;
+}
+
+export interface CreateDailyBattleInput {
+  playerOneId: string;
+  playerTwoId: string;
+  dayStartsAt: Date;
+  featuredAttribute: BattleAttribute;
+}
+
+export interface DailyBattleRecord extends CreateDailyBattleInput {
+  id: string;
+  completedAt: Date | null;
 }
 
 @Injectable()
@@ -149,54 +162,84 @@ export class BattleRepository {
     });
   }
 
-  async hasBattleForPairInRange(
-    attackerUserId: string,
-    defenderUserId: string,
-    rangeStart: Date,
-    rangeEnd: Date,
-    tx?: Prisma.TransactionClient,
-  ): Promise<boolean> {
-    const battleLog = await this.getClient(tx).battleLog.findFirst({
+  async createDailyBattles(inputs: CreateDailyBattleInput[]): Promise<void> {
+    if (inputs.length === 0) {
+      return;
+    }
+
+    await this.prisma.dailyBattle.createMany({
+      data: inputs,
+      skipDuplicates: true,
+    });
+  }
+
+  async findDailyBattlesForPlayer(
+    playerId: string,
+    dayStartsAt: Date,
+  ): Promise<DailyBattleRecord[]> {
+    return this.prisma.dailyBattle.findMany({
       where: {
-        attackerUserId,
-        defenderUserId,
-        createdAt: {
-          gte: rangeStart,
-          lt: rangeEnd,
-        },
+        dayStartsAt,
+        OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
       },
       select: {
         id: true,
+        playerOneId: true,
+        playerTwoId: true,
+        dayStartsAt: true,
+        featuredAttribute: true,
+        completedAt: true,
       },
     });
-
-    return Boolean(battleLog);
   }
 
-  async findBattledDefenderIdsInRange(
-    attackerUserId: string,
-    rangeStart: Date,
-    rangeEnd: Date,
-  ): Promise<Set<string>> {
-    const rows = await this.prisma.battleLog.findMany({
+  async findOrCreateDailyBattle(
+    input: CreateDailyBattleInput,
+    tx: Prisma.TransactionClient,
+  ): Promise<DailyBattleRecord> {
+    return tx.dailyBattle.upsert({
       where: {
-        attackerUserId,
-        createdAt: {
-          gte: rangeStart,
-          lt: rangeEnd,
+        playerOneId_playerTwoId_dayStartsAt: {
+          playerOneId: input.playerOneId,
+          playerTwoId: input.playerTwoId,
+          dayStartsAt: input.dayStartsAt,
         },
       },
+      create: input,
+      update: {},
       select: {
-        defenderUserId: true,
+        id: true,
+        playerOneId: true,
+        playerTwoId: true,
+        dayStartsAt: true,
+        featuredAttribute: true,
+        completedAt: true,
+      },
+    });
+  }
+
+  async completeDailyBattle(
+    dailyBattleId: string,
+    completedAt: Date,
+    tx: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const result = await tx.dailyBattle.updateMany({
+      where: {
+        id: dailyBattleId,
+        completedAt: null,
+      },
+      data: {
+        completedAt,
       },
     });
 
-    return new Set(rows.map((row: { defenderUserId: string }) => row.defenderUserId));
+    return result.count === 1;
   }
 
   async createBattleLog(input: CreateBattleLogInput, tx: Prisma.TransactionClient): Promise<void> {
     await this.getClient(tx).battleLog.create({
       data: {
+        dailyBattleId: input.dailyBattleId,
         attackerUserId: input.attackerUserId,
         defenderUserId: input.defenderUserId,
         attackerPower: input.attackerPower,

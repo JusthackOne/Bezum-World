@@ -1,3 +1,5 @@
+import { MOSCOW_TIME_ZONE } from '../common/time/moscow-time';
+
 export interface AppConfig {
   app: {
     nodeEnv: 'development' | 'production' | 'test';
@@ -41,7 +43,7 @@ export const configFactory = (): AppConfig => ({
     nodeEnv: (process.env.NODE_ENV as AppConfig['app']['nodeEnv']) ?? 'development',
     port: Number(process.env.PORT ?? 3000),
     logLevel: (process.env.LOG_LEVEL as AppConfig['app']['logLevel']) ?? 'info',
-    timeZone: process.env.APP_TIME_ZONE ?? 'UTC',
+    timeZone: MOSCOW_TIME_ZONE,
   },
   database: {
     url: process.env.DATABASE_URL ?? '',

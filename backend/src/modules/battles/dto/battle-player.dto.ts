@@ -3,6 +3,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { BattlePlayerEquipmentDto } from './battle-player-equipment.dto';
 import { BattlePlayerStatsDto } from './battle-player-stats.dto';
 
+const BATTLE_ATTRIBUTES = ['strength', 'charisma', 'endurance', 'intelligence'] as const;
+
 export class BattlePlayerDto {
   @ApiProperty({
     description: 'Opponent user id',
@@ -34,6 +36,19 @@ export class BattlePlayerDto {
     type: BattlePlayerStatsDto,
   })
   stats!: BattlePlayerStatsDto;
+
+  @ApiProperty({
+    description: 'Attribute weighted by the daily battle multiplier for this player pair',
+    enum: BATTLE_ATTRIBUTES,
+    example: 'strength',
+  })
+  featuredAttribute!: (typeof BATTLE_ATTRIBUTES)[number];
+
+  @ApiProperty({
+    description: 'Multiplier applied to the featured attribute',
+    example: 1.6,
+  })
+  featuredAttributeMultiplier!: number;
 
   @ApiProperty({
     description: 'Chance for current user to win against this opponent in percent',

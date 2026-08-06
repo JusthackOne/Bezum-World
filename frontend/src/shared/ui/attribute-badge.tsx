@@ -65,7 +65,7 @@ export function AttributeBadge({ attribute, value, tooltipLabel, className }: At
           type="button"
           className={cn(
             "flex w-full touch-manipulation items-center justify-between rounded-lg border px-3 py-2 text-left",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
             visual.accentClassName,
             className,
           )}

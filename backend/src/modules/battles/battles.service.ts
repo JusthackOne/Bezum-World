@@ -4,11 +4,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EquipmentSlotType, Prisma } from '@prisma/client';
+import { BattleAttribute, EquipmentSlotType, Prisma } from '@prisma/client';
 
+import { getMoscowDayRange } from '../../common/time/moscow-time';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { EventsService } from '../events/events.service';
-import { calculateBattlesPower } from './battle-power';
+import {
+  calculateBattlesPower,
+  calculateBattleWinProbability,
+  FEATURED_ATTRIBUTE_MULTIPLIER,
+  type FeaturedBattleAttribute,
+} from './battle-power';
 import type {
   BattlePlayerDto,
   BattlePlayerEquipmentDto,
@@ -21,6 +27,12 @@ import { BattleRepository, type BattlePlayerRecord } from './repositories';
 const MIN_COIN_REWARD = 0;
 const MAX_COIN_REWARD = 20;
 const BATTLE_WIN_GAME_SCORE_REWARD = 5;
+const BATTLE_ATTRIBUTES: readonly BattleAttribute[] = [
+  BattleAttribute.strength,
+  BattleAttribute.charisma,
+  BattleAttribute.endurance,
+  BattleAttribute.intelligence,
+];
 
 interface FinalBattleStats {
   strength: number;
@@ -48,19 +60,44 @@ export class BattlesService {
     }
 
     const currentUserStats = this.getFinalStats(currentUser);
-    const currentUserPower = this.calculatePower(currentUserStats);
-    const dayRange = this.getUtcDayRange(new Date());
-    const battledDefenderIds = await this.battleRepository.findBattledDefenderIdsInRange(
+    const dayRange = getMoscowDayRange(new Date());
+    await this.battleRepository.createDailyBattles(
+      opponents.map((opponent) => {
+        const [playerOneId, playerTwoId] = this.orderPlayerIds(currentUserId, opponent.id);
+
+        return {
+          playerOneId,
+          playerTwoId,
+          dayStartsAt: dayRange.start,
+          featuredAttribute: this.selectRandomFeaturedAttribute(),
+        };
+      }),
+    );
+    const dailyBattles = await this.battleRepository.findDailyBattlesForPlayer(
       currentUserId,
       dayRange.start,
-      dayRange.end,
+    );
+    const dailyBattlesByOpponentId = new Map(
+      dailyBattles.map((battle) => [
+        battle.playerOneId === currentUserId ? battle.playerTwoId : battle.playerOneId,
+        battle,
+      ]),
     );
 
     const players = opponents
       .map((opponent) => {
+        const dailyBattle = dailyBattlesByOpponentId.get(opponent.id);
+        if (!dailyBattle) {
+          throw new ConflictException('Daily battle could not be created');
+        }
+
         const opponentStats = this.getFinalStats(opponent);
-        const opponentPower = this.calculatePower(opponentStats);
-        const winProbability = this.calculateWinProbability(currentUserPower, opponentPower);
+        const currentUserPower = this.calculatePower(
+          currentUserStats,
+          dailyBattle.featuredAttribute,
+        );
+        const opponentPower = this.calculatePower(opponentStats, dailyBattle.featuredAttribute);
+        const winProbability = calculateBattleWinProbability(currentUserPower, opponentPower);
 
         return {
           gameScore: opponent.gameScore,
@@ -69,15 +106,17 @@ export class BattlesService {
           avatar: opponent.avatarUrl,
           equipment: this.toBattleEquipment(opponent),
           stats: this.toBattleStatsDto(opponentStats),
+          featuredAttribute: dailyBattle.featuredAttribute,
+          featuredAttributeMultiplier: FEATURED_ATTRIBUTE_MULTIPLIER,
           winChancePercent: this.toWinChancePercent(winProbability),
           winGameScoreReward: BATTLE_WIN_GAME_SCORE_REWARD,
           winGoldReward: this.calculateCoinReward(winProbability),
-          isBattleAvailableToday: !battledDefenderIds.has(opponent.id),
+          isBattleAvailableToday: dailyBattle.completedAt === null,
         };
       })
       .sort((left, right) => {
-        const leftPower = this.calculatePower(left.stats);
-        const rightPower = this.calculatePower(right.stats);
+        const leftPower = this.calculatePower(left.stats, left.featuredAttribute);
+        const rightPower = this.calculatePower(right.stats, right.featuredAttribute);
 
         if (rightPower !== leftPower) {
           return rightPower - leftPower;
@@ -95,6 +134,8 @@ export class BattlesService {
         avatar: entry.avatar,
         equipment: entry.equipment,
         stats: entry.stats,
+        featuredAttribute: entry.featuredAttribute,
+        featuredAttributeMultiplier: entry.featuredAttributeMultiplier,
         winChancePercent: entry.winChancePercent,
         winGameScoreReward: entry.winGameScoreReward,
         winGoldReward: entry.winGoldReward,
@@ -128,32 +169,40 @@ export class BattlesService {
         throw new NotFoundException('Opponent is not found');
       }
 
-      const dayRange = this.getUtcDayRange(new Date());
-      const hasBattleToday = await this.battleRepository.hasBattleForPairInRange(
-        currentUserId,
-        opponentUserId,
-        dayRange.start,
-        dayRange.end,
+      const dayRange = getMoscowDayRange(new Date());
+      const [playerOneId, playerTwoId] = this.orderPlayerIds(currentUserId, opponentUserId);
+      const dailyBattle = await this.battleRepository.findOrCreateDailyBattle(
+        {
+          playerOneId,
+          playerTwoId,
+          dayStartsAt: dayRange.start,
+          featuredAttribute: this.selectRandomFeaturedAttribute(),
+        },
         tx,
       );
 
-      if (hasBattleToday) {
+      if (dailyBattle.completedAt) {
         throw new ConflictException('Already battled today');
       }
 
       const currentUserStats = this.getFinalStats(currentUser);
       const opponentStats = this.getFinalStats(opponentUser);
 
-      const currentUserPower = this.calculatePower(currentUserStats);
-      const opponentPower = this.calculatePower(opponentStats);
-      const currentUserWinProbability = this.calculateWinProbability(
+      const currentUserPower = this.calculatePower(
+        currentUserStats,
+        dailyBattle.featuredAttribute,
+      );
+      const opponentPower = this.calculatePower(opponentStats, dailyBattle.featuredAttribute);
+      const currentUserWinProbability = calculateBattleWinProbability(
         currentUserPower,
         opponentPower,
       );
       const noisyCurrentUserPower = this.applyPowerNoise(currentUserPower);
       const noisyOpponentPower = this.applyPowerNoise(opponentPower);
-      const delta = noisyCurrentUserPower - noisyOpponentPower;
-      const attackerWinProbability = 1 / (1 + Math.exp(-delta / 20));
+      const attackerWinProbability = calculateBattleWinProbability(
+        noisyCurrentUserPower,
+        noisyOpponentPower,
+      );
       const attackerWon = Math.random() < attackerWinProbability;
 
       const winner = attackerWon ? currentUser : opponentUser;
@@ -164,6 +213,15 @@ export class BattlesService {
       const coinReward = this.calculateCoinReward(winnerWinProbability);
       const gameScoreReward = BATTLE_WIN_GAME_SCORE_REWARD;
 
+      const completed = await this.battleRepository.completeDailyBattle(
+        dailyBattle.id,
+        new Date(),
+        tx,
+      );
+      if (!completed) {
+        throw new ConflictException('Already battled today');
+      }
+
       await this.battleRepository.applyWinnerBattleRewards(
         winner.id,
         coinReward,
@@ -173,6 +231,7 @@ export class BattlesService {
 
       await this.battleRepository.createBattleLog(
         {
+          dailyBattleId: dailyBattle.id,
           attackerUserId: currentUserId,
           defenderUserId: opponentUserId,
           attackerPower: noisyCurrentUserPower,
@@ -261,17 +320,15 @@ export class BattlesService {
     };
   }
 
-  private calculatePower(stats: FinalBattleStats): number {
-    return calculateBattlesPower(stats);
+  private calculatePower(
+    stats: FinalBattleStats,
+    featuredAttribute: FeaturedBattleAttribute,
+  ): number {
+    return calculateBattlesPower(stats, featuredAttribute);
   }
 
   private applyPowerNoise(power: number): number {
     return power * (0.9 + Math.random() * 0.2);
-  }
-
-  private calculateWinProbability(attackerPower: number, defenderPower: number): number {
-    const delta = attackerPower - defenderPower;
-    return 1 / (1 + Math.exp(-delta / 20));
   }
 
   private toWinChancePercent(probability: number): number {
@@ -288,14 +345,16 @@ export class BattlesService {
     return Math.max(min, Math.min(max, value));
   }
 
-  private getUtcDayRange(value: Date): { start: Date; end: Date } {
-    const start = new Date(
-      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 0, 0, 0, 0),
-    );
-    const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 1);
+  private orderPlayerIds(firstPlayerId: string, secondPlayerId: string): [string, string] {
+    return firstPlayerId < secondPlayerId
+      ? [firstPlayerId, secondPlayerId]
+      : [secondPlayerId, firstPlayerId];
+  }
 
-    return { start, end };
+  private selectRandomFeaturedAttribute(): BattleAttribute {
+    const selectedIndex = Math.floor(Math.random() * BATTLE_ATTRIBUTES.length);
+
+    return BATTLE_ATTRIBUTES[selectedIndex] ?? BattleAttribute.strength;
   }
 
   private toBattleEquipment(player: BattlePlayerRecord): BattlePlayerEquipmentDto {

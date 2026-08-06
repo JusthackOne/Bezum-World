@@ -4,5 +4,6 @@ export const bossBattleEndpoints = {
   details: (id: string) => `/boss-battles/${encodeURIComponent(id)}`,
   leaderboard: (id: string) => `/boss-battles/${encodeURIComponent(id)}/leaderboard`,
   attack: (id: string) => `/boss-battles/${encodeURIComponent(id)}/attacks`,
+  superAttack: (id: string) => `/boss-battles/${encodeURIComponent(id)}/attacks/super`,
   claim: (id: string) => `/boss-battles/${encodeURIComponent(id)}/rewards/claim`,
 };

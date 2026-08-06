@@ -43,7 +43,7 @@ function TooltipContent({ className, children, font, ...props }: BitTooltipConte
     >
       {children}
       <div className={cn("absolute top-1.5 bottom-1.5 -left-1.5 w-1.5 bg-primary", color)} />
-      <div className={cn("absolute top-1.5 bottom-1.5 -right-1.5 w-1.5 bg-primary ", color)} />
+      <div className={cn("absolute top-1.5 -right-1.5 bottom-1.5 w-1.5 bg-primary", color)} />
     </ShadcnTooltipContent>
   );
 }

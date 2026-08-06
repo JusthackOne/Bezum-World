@@ -77,7 +77,7 @@ function TopLeaderCard({
     >
       <span
         className={cn(
-          "absolute left-3 top-3 inline-flex min-w-8 items-center justify-center rounded-full px-2 py-1 text-xs font-semibold",
+          "absolute top-3 left-3 inline-flex min-w-8 items-center justify-center rounded-full px-2 py-1 text-xs font-semibold",
           visuals.badgeClassName,
         )}
       >
@@ -92,7 +92,7 @@ function TopLeaderCard({
         />
         <p
           className={cn(
-            "w-full max-w-full min-w-0 font-semibold break-words [overflow-wrap:anywhere]",
+            "w-full max-w-full min-w-0 font-semibold wrap-anywhere wrap-break-word",
             emphasized ? "text-lg" : "text-base",
           )}
         >
@@ -102,7 +102,7 @@ function TopLeaderCard({
           <GameScoreIcon className="size-4" />
           {formatBalance(leader.score)}
         </div>
-        <p className="text-muted-foreground text-xs">{scoreLabel}</p>
+        <p className="text-xs text-muted-foreground">{scoreLabel}</p>
       </div>
     </Link>
   );
@@ -114,16 +114,16 @@ function LeaderListRow({ leader }: { leader: LeaderboardLeader }) {
       href={publicUserRoutes.profile(leader.username)}
       className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border bg-card px-3 py-2 transition-colors hover:bg-muted/30"
     >
-      <span className="text-muted-foreground w-8 text-right text-sm font-semibold tabular-nums">
+      <span className="w-8 text-right text-sm font-semibold text-muted-foreground tabular-nums">
         #{leader.rank}
       </span>
-      <div className="min-w-0 flex flex-col items-start gap-1">
+      <div className="flex min-w-0 flex-col items-start gap-1">
         <LeaderAvatar avatar={leader.avatar} username={leader.username} sizeClassName="h-10 w-10" />
-        <p className="min-w-0 text-xs font-medium break-words [overflow-wrap:anywhere]">
+        <p className="min-w-0 text-xs font-medium wrap-anywhere wrap-break-word">
           {leader.username}
         </p>
       </div>
-      <div className="min-w-[66px] text-right">
+      <div className="min-w-16.5 text-right">
         <div className="inline-flex items-center gap-1.5 rounded-full border bg-background/85 px-2.5 py-1 text-sm font-semibold">
           <GameScoreIcon className="size-4" />
           {formatBalance(leader.score)}
@@ -172,19 +172,19 @@ export function LeaderBoardPage() {
           <CrownIcon className="size-5 text-amber-500" />
           <h1 className="text-2xl font-semibold">LeaderBoard</h1>
         </div>
-        <p className="text-muted-foreground text-sm">Track top players by total score.</p>
+        <p className="text-sm text-muted-foreground">Track top players by total score.</p>
       </div>
 
       {leaderboardQuery.isPending ? (
         <Card>
           <CardContent className="py-10">
-            <p className="text-muted-foreground text-sm">Loading leaderboard...</p>
+            <p className="text-sm text-muted-foreground">Loading leaderboard...</p>
           </CardContent>
         </Card>
       ) : leaders.length === 0 ? (
         <Card>
           <CardContent className="py-10">
-            <p className="text-muted-foreground text-sm">Leaderboard is empty for now.</p>
+            <p className="text-sm text-muted-foreground">Leaderboard is empty for now.</p>
           </CardContent>
         </Card>
       ) : (
@@ -243,7 +243,7 @@ export function LeaderBoardPage() {
             </CardHeader>
             <CardContent>
               {remaining.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No additional players yet.</p>
+                <p className="text-sm text-muted-foreground">No additional players yet.</p>
               ) : (
                 <div className="space-y-2">
                   {remaining.map((leader) => (

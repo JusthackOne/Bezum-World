@@ -4,10 +4,12 @@ import {
   type ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
 interface ErrorPayload {
+  code?: string;
   message: string;
   details?: unknown;
 }
@@ -18,6 +20,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
@@ -47,13 +51,31 @@ export class HttpExceptionFilter implements ExceptionFilter {
         if (exceptionResponse.error !== undefined && error.details === undefined) {
           error.details = exceptionResponse.error;
         }
+
+        if (typeof exceptionResponse.code === 'string') {
+          error.code = exceptionResponse.code;
+        }
+
+        if (exceptionResponse.details !== undefined) {
+          error.details = exceptionResponse.details;
+        }
       }
+    } else {
+      const errorName = exception instanceof Error ? exception.name : 'UnknownError';
+      const errorMessage = exception instanceof Error ? exception.message : String(exception);
+      const errorCode =
+        isRecord(exception) && typeof exception.code === 'string' ? ` [${exception.code}]` : '';
+      this.logger.error(
+        `${request.method} ${request.url} failed with ${errorName}${errorCode}: ${errorMessage}`,
+        exception instanceof Error ? exception.stack : undefined,
+      );
     }
 
     response.status(statusCode).json({
       success: false,
       error: {
-        code: statusCode,
+        code: error.code ?? statusCode,
+        ...(error.code ? { statusCode } : {}),
         ...error,
       },
       meta: {

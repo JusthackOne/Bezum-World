@@ -12,21 +12,27 @@ import {
   Prisma,
 } from '@prisma/client';
 import type { Queue } from 'bullmq';
-import { BATTLES_FORMULA_IDENTIFIER, BATTLES_FORMULA_VERSION } from '../battles/battle-power';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
   BOSS_BATTLES_QUEUE,
   ACTIVATE_JOB,
   EXPIRE_JOB,
   FINALIZE_JOB,
+  getBossBattleJobId,
+  type BossBattleJobName,
 } from './boss-battles.constants';
 import { BossBattlesRepository } from './boss-battles.repository';
 import type { BossRewardDto, CreateBossBattleDto, UpdateBossBattleDto } from './dto';
 import {
   calculateBossDamage,
   denseRank,
+  getBossAttackMultiplier,
   getCooldownSlot,
   resolveReward,
+  SUPER_ATTACK_GOLD_COST,
+  SUPER_ATTACK_MAX_MULTIPLIER,
+  SUPER_ATTACK_MIN_MULTIPLIER,
+  type BossAttackType,
   validateRewardRanges,
 } from './boss-battle.utils';
 
@@ -57,6 +63,7 @@ export class BossBattlesService {
           endsAt: new Date(input.endsAt),
           initialHp: input.initialHp,
           currentHp: input.initialHp,
+          defaultDamage: input.defaultDamage,
           ...input.attributes,
           attackCooldownSeconds: input.attackCooldownSeconds,
           status,
@@ -119,17 +126,10 @@ export class BossBattlesService {
       battle = await this.repository.findBattle(id);
       if (!battle) throw this.error('BOSS_BATTLE_NOT_FOUND', 404);
     }
-    const [participant, result, user] = await Promise.all([
+    const [participant, result] = await Promise.all([
       userId ? this.repository.findParticipant(id, userId) : null,
       userId ? this.repository.findResult(id, userId) : null,
-      userId ? this.repository.findUser(userId) : null,
     ]);
-    const damageRange = user
-      ? {
-          min: calculateBossDamage(user, battle, 0.9).calculatedDamage,
-          max: calculateBossDamage(user, battle, 1.1).calculatedDamage,
-        }
-      : null;
     return {
       ...battle,
       serverTime: new Date(),
@@ -147,7 +147,12 @@ export class BossBattlesService {
         new Date() < battle.endsAt &&
         (!participant || participant.nextAttackAt <= new Date()),
       nextAttackAt: participant?.nextAttackAt ?? null,
-      damageRange,
+      damageRange: userId ? { min: battle.defaultDamage, max: battle.defaultDamage } : null,
+      superAttackMultiplierRange: {
+        min: SUPER_ATTACK_MIN_MULTIPLIER,
+        max: SUPER_ATTACK_MAX_MULTIPLIER,
+      },
+      superAttackGoldCost: SUPER_ATTACK_GOLD_COST,
     };
   }
 
@@ -182,7 +187,13 @@ export class BossBattlesService {
     return { items: mapped, own, page: 1, limit: total, total };
   }
 
-  async attack(id: string, userId: string, now = new Date(), random = Math.random) {
+  async attack(
+    id: string,
+    userId: string,
+    attackType: BossAttackType,
+    now = new Date(),
+    random = Math.random,
+  ) {
     let defeated = false;
     const result = await this.repository.transaction(async (tx) => {
       const battle = await this.repository.lockBattle(id, tx);
@@ -207,23 +218,24 @@ export class BossBattlesService {
         endurance: battle.endurance,
         intelligence: battle.intelligence,
       };
-      const randomMultiplier = 0.9 + random() * 0.2;
-      const damage = calculateBossDamage(userAttributes, bossAttributes, randomMultiplier);
-      const appliedDamage = Math.min(damage.calculatedDamage, battle.currentHp);
+      const randomMultiplier = getBossAttackMultiplier(attackType, random);
+      const calculatedDamage = calculateBossDamage(battle.defaultDamage, randomMultiplier);
+      const appliedDamage = Math.min(calculatedDamage, battle.currentHp);
       try {
         await this.repository.createAttack(
           {
             bossBattleId: id,
             userId,
-            calculatedDamage: damage.calculatedDamage,
+            calculatedDamage,
             appliedDamage,
-            userPower: damage.userPower,
-            bossPower: damage.bossPower,
+            userPower: 0,
+            bossPower: 0,
             randomMultiplier,
             userAttributesSnapshot: userAttributes,
             bossAttributesSnapshot: bossAttributes,
-            formulaIdentifier: BATTLES_FORMULA_IDENTIFIER,
-            formulaVersion: BATTLES_FORMULA_VERSION,
+            formulaIdentifier:
+              attackType === 'SUPER' ? 'BOSS_DEFAULT_DAMAGE_SUPER' : 'BOSS_DEFAULT_DAMAGE_NORMAL',
+            formulaVersion: attackType === 'SUPER' ? 3 : 1,
             attackedAt: now,
             cooldownSlot: slot,
           },
@@ -233,6 +245,15 @@ export class BossBattlesService {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
           throw this.error('ATTACK_ALREADY_USED_FOR_CURRENT_SLOT', 409);
         throw error;
+      }
+      if (
+        attackType === 'SUPER' &&
+        !(await this.repository.decrementUserBalanceIfEnough(userId, SUPER_ATTACK_GOLD_COST, tx))
+      ) {
+        throw new BadRequestException({
+          code: 'INSUFFICIENT_GOLD_FOR_SUPER_ATTACK',
+          message: 'Not enough gold for Super Attack',
+        });
       }
       const participant = await this.repository.upsertParticipant(
         id,
@@ -259,7 +280,9 @@ export class BossBattlesService {
       );
       return {
         battleId: id,
-        calculatedDamage: damage.calculatedDamage,
+        attackType,
+        multiplier: randomMultiplier,
+        calculatedDamage,
         appliedDamage,
         currentHp: hp,
         initialHp: battle.initialHp,
@@ -445,6 +468,7 @@ export class BossBattlesService {
           ...(input.attackCooldownSeconds !== undefined
             ? { attackCooldownSeconds: input.attackCooldownSeconds }
             : {}),
+          ...(input.defaultDamage !== undefined ? { defaultDamage: input.defaultDamage } : {}),
           ...(input.attributes ?? {}),
           ...(publicationStatus !== undefined ? { status: publicationStatus } : {}),
           version: { increment: 1 },
@@ -514,30 +538,33 @@ export class BossBattlesService {
 
   private async schedule(id: string, startsAt: Date, endsAt: Date) {
     await Promise.all([
-      this.replaceJob(`boss-battle-activate:${id}`, ACTIVATE_JOB, id, startsAt),
-      this.replaceJob(`boss-battle-expire:${id}`, EXPIRE_JOB, id, endsAt),
+      this.replaceJob(ACTIVATE_JOB, id, startsAt),
+      this.replaceJob(EXPIRE_JOB, id, endsAt),
     ]);
   }
   private async unschedule(id: string) {
-    await Promise.all(
-      [`boss-battle-activate:${id}`, `boss-battle-expire:${id}`].map(async (jobId) => {
-        const job = await this.queue.getJob(jobId);
-        if (job) await job.remove();
-      }),
-    );
+    await Promise.all([this.removeJobs(ACTIVATE_JOB, id), this.removeJobs(EXPIRE_JOB, id)]);
   }
-  private async replaceJob(jobId: string, name: string, id: string, at: Date) {
-    const old = await this.queue.getJob(jobId);
-    if (old) await old.remove();
+  private async replaceJob(name: BossBattleJobName, id: string, at: Date) {
+    await this.removeJobs(name, id);
     await this.queue.add(
       name,
       { battleId: id },
       {
-        jobId,
+        jobId: getBossBattleJobId(name, id),
         delay: Math.max(0, at.getTime() - Date.now()),
         attempts: 5,
         backoff: { type: 'exponential', delay: 1000 },
       },
+    );
+  }
+  private async removeJobs(name: BossBattleJobName, id: string) {
+    const jobIds = [getBossBattleJobId(name, id), `boss-battle-${name}:${id}`];
+    await Promise.all(
+      jobIds.map(async (jobId) => {
+        const job = await this.queue.getJob(jobId);
+        if (job) await job.remove();
+      }),
     );
   }
   private enqueueFinalize(id: string) {
@@ -545,7 +572,7 @@ export class BossBattlesService {
       FINALIZE_JOB,
       { battleId: id },
       {
-        jobId: `boss-battle-finalize:${id}`,
+        jobId: getBossBattleJobId(FINALIZE_JOB, id),
         attempts: 5,
         backoff: { type: 'exponential', delay: 1000 },
       },
