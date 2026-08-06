@@ -96,4 +96,53 @@ describe('NotificationTemplateRenderer', () => {
     expect(post.messages.join('\n')).toContain('player-99');
     expect(post.messages[0]).toContain('Выполнено заданий: <b>42</b>');
   });
+
+  test('renders Civilization completion standings and escapes team names', () => {
+    const post = renderer.render({
+      eventType: NotificationEventType.CIVILIZATION_GAME_COMPLETED,
+      payload: json({
+        gameId: 'game-1',
+        gameName: 'Summer <final>',
+        completedAt: '2026-08-06T18:00:00.000Z',
+        reason: 'TOWN_HALL_CAPTURED',
+        winnerTeamId: 'team-a',
+        teams: [
+          {
+            id: 'team-a',
+            name: 'Red & Gold',
+            score: '12345.5',
+            playerCount: 4,
+            gold: '9000.25',
+            attributes: {
+              strength: '10',
+              charisma: '20',
+              endurance: '30',
+              intelligence: '40',
+            },
+          },
+          {
+            id: 'team-b',
+            name: 'Blue',
+            score: '10000',
+            playerCount: 3,
+            gold: '7000',
+            attributes: {
+              strength: '9',
+              charisma: '8',
+              endurance: '7',
+              intelligence: '6',
+            },
+          },
+        ],
+      }),
+    });
+
+    expect(post.image).toBeNull();
+    expect(post.messages).toHaveLength(1);
+    expect(post.messages[0]).toContain('Summer &lt;final&gt;');
+    expect(post.messages[0]).toContain('<b>Red &amp; Gold</b>');
+    expect(post.messages[0]).toContain('<b>12 345,5');
+    expect(post.messages[0]).toContain('9 000,25');
+    expect(post.messages[0]!.length).toBeLessThanOrEqual(4_096);
+  });
 });

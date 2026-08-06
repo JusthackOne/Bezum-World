@@ -5,9 +5,11 @@ import {
   CivilizationGameSnapshotType,
   CivilizationGameStatus,
   CivilizationRewardResourceType,
+  NotificationEventType,
   Prisma,
 } from '@prisma/client';
 
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   CIVILIZATION_ATTRIBUTE_KEYS,
   CIVILIZATION_RESOURCE_DECIMAL_SCALE,
@@ -34,6 +36,7 @@ export class CivilizationCompletionService {
     private readonly repository: CivilizationRepository,
     private readonly connectivityService: CivilizationConnectivityService,
     private readonly runtime: CivilizationRuntimeService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   completeGame(
@@ -119,7 +122,11 @@ export class CivilizationCompletionService {
           teamId: player.teamId,
           actorPlayerId: player.id,
           eventType: CivilizationEventType.REWARD_CLAIMED,
-          payload: { claimId: claim.id, reward: claim.rewardJson, claimedAt: claimedAt.toISOString() },
+          payload: {
+            claimId: claim.id,
+            reward: claim.rewardJson,
+            claimedAt: claimedAt.toISOString(),
+          },
         },
         tx,
       );
@@ -254,6 +261,53 @@ export class CivilizationCompletionService {
       serializeCivilizationSnapshot(state),
       tx,
     );
+    if (reason !== CivilizationCompletionReason.ADMIN_CANCELLED) {
+      await this.notificationsService.enqueue(
+        {
+          type: NotificationEventType.CIVILIZATION_GAME_COMPLETED,
+          payload: {
+            gameId: state.id,
+            gameName: state.name,
+            completedAt: completionAt.toISOString(),
+            reason,
+            winnerTeamId,
+            teams: [...state.teams]
+              .sort((left, right) =>
+                (right.finalScore ?? new Prisma.Decimal(0)).cmp(
+                  left.finalScore ?? new Prisma.Decimal(0),
+                ),
+              )
+              .map((team) => {
+                const attributes = new Map(
+                  state.attributeResources
+                    .filter((resource) => resource.teamId === team.id)
+                    .map((resource) => [resource.attributeKey, resource.amount.toString()]),
+                );
+                return {
+                  id: team.id,
+                  name: team.name,
+                  score: team.finalScore?.toString() ?? '0',
+                  playerCount: state.players.filter(
+                    (player) => player.teamId === team.id && player.isActive,
+                  ).length,
+                  gold:
+                    state.teamResources
+                      .find((resource) => resource.teamId === team.id)
+                      ?.goldAmount.toString() ?? '0',
+                  attributes: {
+                    strength: attributes.get('strength') ?? '0',
+                    charisma: attributes.get('charisma') ?? '0',
+                    endurance: attributes.get('endurance') ?? '0',
+                    intelligence: attributes.get('intelligence') ?? '0',
+                  },
+                };
+              }),
+          },
+        },
+        `civilization-game-completed:${gameId}`,
+        tx,
+      );
+    }
     return state;
   }
 
@@ -323,7 +377,7 @@ export class CivilizationCompletionService {
             eligible,
             unavailableReason: eligible
               ? null
-              : 'No reward is available because your team\'s Town Hall was destroyed.',
+              : "No reward is available because your team's Town Hall was destroyed.",
             rewardJson: {
               gold: eligible
                 ? (goldSplit.shares.find((share) => share.playerId === player.id)?.amount ?? 0)

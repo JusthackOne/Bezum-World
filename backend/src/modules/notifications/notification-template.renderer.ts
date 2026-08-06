@@ -4,6 +4,7 @@ import { NotificationEventType, type NotificationOutbox } from '@prisma/client';
 import {
   bossActivatedPayloadSchema,
   bossDefeatedPayloadSchema,
+  civilizationGameCompletedPayloadSchema,
   dailyDigestPayloadSchema,
   taskSuggestedPayloadSchema,
 } from './notification-event.schemas';
@@ -29,7 +30,47 @@ export class NotificationTemplateRenderer {
         return this.renderBossDefeated(bossDefeatedPayloadSchema.parse(outbox.payload));
       case NotificationEventType.DAILY_DIGEST:
         return this.renderDailyDigest(dailyDigestPayloadSchema.parse(outbox.payload));
+      case NotificationEventType.CIVILIZATION_GAME_COMPLETED:
+        return this.renderCivilizationGameCompleted(
+          civilizationGameCompletedPayloadSchema.parse(outbox.payload),
+        );
     }
+  }
+
+  private renderCivilizationGameCompleted(
+    payload: ReturnType<typeof civilizationGameCompletedPayloadSchema.parse>,
+  ): RenderedTelegramPost {
+    const winner = payload.teams.find((team) => team.id === payload.winnerTeamId);
+    const lines = [
+      '🏰 <b>ИГРА CIVA ЗАВЕРШЕНА</b>',
+      '',
+      `⚔️ <b>${this.escapeHtml(this.truncate(payload.gameName, 180))}</b>`,
+      `📅 ${this.formatMoscowDateTime(payload.completedAt)} (МСК)`,
+      '',
+      winner
+        ? `🏆 Победитель: <b>${this.escapeHtml(this.truncate(winner.name, 100))}</b>`
+        : '🤝 <b>Ничья — силы команд оказались равны</b>',
+      `📜 ${this.civilizationCompletionReasonLabel(payload.reason)}`,
+      '',
+      '📊 <b>Итоговая таблица</b>',
+    ];
+
+    for (const [index, team] of payload.teams.entries()) {
+      const winnerMark = team.id === payload.winnerTeamId ? ' 👑' : '';
+      lines.push(
+        '',
+        `${index + 1}. <b>${this.escapeHtml(this.truncate(team.name, 100))}</b>${winnerMark} — <b>${this.formatDecimal(team.score)} очков</b>`,
+        `   👥 ${team.playerCount} · 🪙 ${this.formatDecimal(team.gold)}`,
+        `   💪 ${this.formatDecimal(team.attributes.strength)} · 💬 ${this.formatDecimal(team.attributes.charisma)} · 🛡 ${this.formatDecimal(team.attributes.endurance)} · 🧠 ${this.formatDecimal(team.attributes.intelligence)}`,
+      );
+    }
+
+    lines.push('', '🎉 Спасибо всем участникам! Награды можно забрать в игре.');
+    const text = lines.join('\n');
+    if (text.length > TELEGRAM_MESSAGE_LIMIT) {
+      throw new Error(`Telegram message exceeds ${TELEGRAM_MESSAGE_LIMIT} characters`);
+    }
+    return { image: null, messages: [text] };
   }
 
   private renderTaskSuggested(payload: ReturnType<typeof taskSuggestedPayloadSchema.parse>) {
@@ -190,6 +231,23 @@ export class NotificationTemplateRenderer {
       sigma: '🟣 Sigma',
       bezumnyy: '🟠 Bezumnyy',
     }[rarity];
+  }
+
+  private civilizationCompletionReasonLabel(
+    reason: 'TOWN_HALL_CAPTURED' | 'END_TIME_REACHED' | 'ADMIN_FORCE_COMPLETED',
+  ): string {
+    return {
+      TOWN_HALL_CAPTURED: 'Вражеская ратуша была захвачена.',
+      END_TIME_REACHED: 'Время игры истекло.',
+      ADMIN_FORCE_COMPLETED: 'Игра завершена администратором.',
+    }[reason];
+  }
+
+  private formatDecimal(value: string): string {
+    const [integer, fraction] = value.split('.');
+    const groupedInteger = integer!.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const trimmedFraction = fraction?.replace(/0+$/, '');
+    return trimmedFraction ? `${groupedInteger},${trimmedFraction}` : groupedInteger;
   }
 
   private placeMedal(index: number): string {

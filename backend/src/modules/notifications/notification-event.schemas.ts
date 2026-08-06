@@ -55,6 +55,33 @@ export const dailyDigestPayloadSchema = z.object({
   ),
 });
 
+const civilizationResourceAmountSchema = z.string().regex(/^\d+(?:\.\d+)?$/);
+
+export const civilizationGameCompletedPayloadSchema = z.object({
+  gameId: z.string().min(1),
+  gameName: z.string().min(1),
+  completedAt: z.string().datetime(),
+  reason: z.enum(['TOWN_HALL_CAPTURED', 'END_TIME_REACHED', 'ADMIN_FORCE_COMPLETED']),
+  winnerTeamId: z.string().min(1).nullable(),
+  teams: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        score: civilizationResourceAmountSchema,
+        playerCount: z.number().int().nonnegative(),
+        gold: civilizationResourceAmountSchema,
+        attributes: z.object({
+          strength: civilizationResourceAmountSchema,
+          charisma: civilizationResourceAmountSchema,
+          endurance: civilizationResourceAmountSchema,
+          intelligence: civilizationResourceAmountSchema,
+        }),
+      }),
+    )
+    .length(2),
+});
+
 export function parseNotificationPayload(
   eventType: NotificationEventType,
   payload: Prisma.JsonValue,
@@ -68,5 +95,7 @@ export function parseNotificationPayload(
       return bossDefeatedPayloadSchema.parse(payload);
     case NotificationEventType.DAILY_DIGEST:
       return dailyDigestPayloadSchema.parse(payload);
+    case NotificationEventType.CIVILIZATION_GAME_COMPLETED:
+      return civilizationGameCompletedPayloadSchema.parse(payload);
   }
 }
