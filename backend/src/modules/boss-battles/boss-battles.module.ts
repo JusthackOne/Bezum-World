@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../database/prisma/prisma.module';
 import { QueueModule } from '../../infrastructure/queue/queue.module';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { BOSS_BATTLES_QUEUE } from './boss-battles.constants';
 import { AdminBossBattlesController, BossBattlesController } from './boss-battles.controller';
 import { BossBattlesProcessor } from './boss-battles.processor';
@@ -15,6 +16,7 @@ import { BossBattlesService } from './boss-battles.service';
     QueueModule,
     BullModule.registerQueue({ name: BOSS_BATTLES_QUEUE }),
     AuthModule,
+    NotificationsModule,
   ],
   controllers: [BossBattlesController, AdminBossBattlesController],
   providers: [BossBattlesService, BossBattlesRepository, BossBattlesProcessor],

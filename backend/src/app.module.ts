@@ -16,6 +16,7 @@ import { CivilizationModule } from './modules/civilization/civilization.module';
 import { EventsModule } from './modules/events/events.module';
 import { ItemsModule } from './modules/items/items.module';
 import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SlotsModule } from './modules/slots/slots.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { UsersModule } from './modules/users/users.module';
@@ -26,6 +27,7 @@ import { UsersModule } from './modules/users/users.module';
       isGlobal: true,
       cache: true,
       expandVariables: true,
+      envFilePath: ['.env.local', '.env'],
       load: [configFactory],
       validate: validateEnvironment,
     }),
@@ -33,6 +35,7 @@ import { UsersModule } from './modules/users/users.module';
     PrismaModule,
     RedisModule,
     QueueModule,
+    NotificationsModule,
     AuthModule,
     EventsModule,
     BattlesModule,
