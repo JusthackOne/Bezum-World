@@ -253,6 +253,19 @@ export class BossBattlesRepository {
     });
   }
 
+  findTopFinalLeaderboard(battleId: string, take: number, tx: Prisma.TransactionClient) {
+    return tx.bossBattleResult.findMany({
+      where: { bossBattleId: battleId },
+      select: {
+        place: true,
+        totalDamage: true,
+        user: { select: { username: true } },
+      },
+      orderBy: [{ place: 'asc' }, { lastAttackAt: 'asc' }, { userId: 'asc' }],
+      take,
+    });
+  }
+
   createResult(data: Prisma.BossBattleResultUncheckedCreateInput, tx: Prisma.TransactionClient) {
     return tx.bossBattleResult.upsert({
       where: { bossBattleId_userId: { bossBattleId: data.bossBattleId, userId: data.userId } },

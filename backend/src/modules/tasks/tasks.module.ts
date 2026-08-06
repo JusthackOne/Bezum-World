@@ -5,6 +5,7 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
 import { QueueModule } from '../../infrastructure/queue/queue.module';
 import { AuthModule } from '../auth/auth.module';
 import { EventsModule } from '../events/events.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { TaskRepository, TaskSuggestionRepository, TaskSubmissionRepository } from './repositories';
 import { TASK_SUGGESTIONS_QUEUE_NAME } from './task-suggestions-queue.constants';
 import { TaskSuggestionsProcessor } from './task-suggestions.processor';
@@ -19,6 +20,7 @@ import { TasksService } from './tasks.service';
     BullModule.registerQueue({ name: TASK_SUGGESTIONS_QUEUE_NAME }),
     AuthModule,
     EventsModule,
+    NotificationsModule,
   ],
   controllers: [TasksController],
   providers: [

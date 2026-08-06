@@ -19,6 +19,13 @@ export interface AppConfig {
   queue: {
     defaultName: string;
   };
+  telegram: {
+    enabled: boolean;
+    botToken: string;
+    chatId: string;
+    proxyUrl: string;
+    requestTimeoutMs: number;
+  };
   auth: {
     jwtAccessSecret: string;
     jwtRefreshSecret: string;
@@ -49,6 +56,13 @@ export const configFactory = (): AppConfig => ({
   },
   queue: {
     defaultName: process.env.QUEUE_DEFAULT_NAME ?? 'default',
+  },
+  telegram: {
+    enabled: process.env.TELEGRAM_NOTIFICATIONS_ENABLED === 'true',
+    botToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
+    chatId: process.env.TELEGRAM_CHAT_ID ?? '',
+    proxyUrl: process.env.TELEGRAM_PROXY_URL ?? '',
+    requestTimeoutMs: Number(process.env.TELEGRAM_REQUEST_TIMEOUT_MS ?? 10_000),
   },
   auth: {
     jwtAccessSecret: process.env.AUTH_JWT_ACCESS_SECRET ?? '',
