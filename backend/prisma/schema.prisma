@@ -61,6 +61,7 @@ enum BossRewardClaimStatus {
 
 enum NotificationEventType {
   TASK_SUGGESTED
+  TASK_COMPLETED
   BOSS_ACTIVATED
   BOSS_DEFEATED
   DAILY_DIGEST

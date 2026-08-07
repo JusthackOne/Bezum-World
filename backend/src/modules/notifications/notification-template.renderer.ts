@@ -6,6 +6,7 @@ import {
   bossDefeatedPayloadSchema,
   civilizationGameCompletedPayloadSchema,
   dailyDigestPayloadSchema,
+  taskCompletedPayloadSchema,
   taskSuggestedPayloadSchema,
 } from './notification-event.schemas';
 
@@ -24,6 +25,8 @@ export class NotificationTemplateRenderer {
     switch (outbox.eventType) {
       case NotificationEventType.TASK_SUGGESTED:
         return this.renderTaskSuggested(taskSuggestedPayloadSchema.parse(outbox.payload));
+      case NotificationEventType.TASK_COMPLETED:
+        return this.renderTaskCompleted(taskCompletedPayloadSchema.parse(outbox.payload));
       case NotificationEventType.BOSS_ACTIVATED:
         return this.renderBossActivated(bossActivatedPayloadSchema.parse(outbox.payload));
       case NotificationEventType.BOSS_DEFEATED:
@@ -35,6 +38,30 @@ export class NotificationTemplateRenderer {
           civilizationGameCompletedPayloadSchema.parse(outbox.payload),
         );
     }
+  }
+
+  private renderTaskCompleted(payload: ReturnType<typeof taskCompletedPayloadSchema.parse>) {
+    const rewards = [
+      payload.rewards.money > 0 ? `🪙 ${payload.rewards.money.toLocaleString('ru-RU')}` : null,
+      payload.rewards.gameScore > 0
+        ? `⭐ ${payload.rewards.gameScore.toLocaleString('ru-RU')}`
+        : null,
+      payload.rewards.strength > 0 ? `💪 ${payload.rewards.strength}` : null,
+      payload.rewards.intelligence > 0 ? `🧠 ${payload.rewards.intelligence}` : null,
+      payload.rewards.charisma > 0 ? `💬 ${payload.rewards.charisma}` : null,
+      payload.rewards.endurance > 0 ? `🛡 ${payload.rewards.endurance}` : null,
+    ].filter((reward): reward is string => reward !== null);
+    const lines = [
+      '🏆 <b>СОБЫТИЕ ЗАВЕРШЕНО</b>',
+      '',
+      `🎯 <b>${this.escapeHtml(this.truncate(payload.title, 220))}</b>`,
+      `🏷 Тип: <b>${this.taskTypeLabel(payload.taskType)}</b>`,
+      `👤 Выполнил: <b>${this.escapeHtml(this.truncate(payload.completedByUsername, 80))}</b>`,
+      `🎁 Награда: <b>${rewards.length > 0 ? rewards.join(' · ') : 'без награды'}</b>`,
+      `🕒 ${this.formatMoscowDateTime(payload.completedAt)} (МСК)`,
+    ];
+
+    return this.singleMediaPost(payload.proofImage, lines.join('\n'));
   }
 
   private renderCivilizationGameCompleted(

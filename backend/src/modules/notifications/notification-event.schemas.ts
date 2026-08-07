@@ -13,6 +13,24 @@ export const taskSuggestedPayloadSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+export const taskCompletedPayloadSchema = z.object({
+  taskId: z.string().min(1),
+  submissionId: z.string().min(1),
+  title: z.string().min(1),
+  taskType: z.enum(['daily', 'weekly', 'event']),
+  completedByUsername: z.string().min(1),
+  proofImage: nullableTextSchema,
+  completedAt: z.string().datetime(),
+  rewards: z.object({
+    money: z.number().int().nonnegative(),
+    gameScore: z.number().int().nonnegative(),
+    strength: z.number().int().nonnegative(),
+    intelligence: z.number().int().nonnegative(),
+    charisma: z.number().int().nonnegative(),
+    endurance: z.number().int().nonnegative(),
+  }),
+});
+
 export const bossActivatedPayloadSchema = z.object({
   battleId: z.string().min(1),
   name: z.string().min(1),
@@ -89,6 +107,8 @@ export function parseNotificationPayload(
   switch (eventType) {
     case NotificationEventType.TASK_SUGGESTED:
       return taskSuggestedPayloadSchema.parse(payload);
+    case NotificationEventType.TASK_COMPLETED:
+      return taskCompletedPayloadSchema.parse(payload);
     case NotificationEventType.BOSS_ACTIVATED:
       return bossActivatedPayloadSchema.parse(payload);
     case NotificationEventType.BOSS_DEFEATED:

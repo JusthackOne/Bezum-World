@@ -10,6 +10,39 @@ function json(value: unknown): Prisma.JsonValue {
 }
 
 describe('NotificationTemplateRenderer', () => {
+  test('renders an event task completion with proof and rewards', () => {
+    const post = renderer.render({
+      eventType: NotificationEventType.TASK_COMPLETED,
+      payload: json({
+        taskId: 'task-1',
+        submissionId: 'submission-1',
+        title: 'Find <the relic>',
+        taskType: 'event',
+        completedByUsername: 'hero&friend',
+        proofImage: '/uploads/task-proofs/proof.jpg',
+        completedAt: '2026-08-07T10:30:00.000Z',
+        rewards: {
+          money: 1_000,
+          gameScore: 50,
+          strength: 2,
+          intelligence: 0,
+          charisma: 0,
+          endurance: 1,
+        },
+      }),
+    });
+
+    expect(post.image).toBe('/uploads/task-proofs/proof.jpg');
+    expect(post.messages).toHaveLength(1);
+    expect(post.messages[0]).toContain('СОБЫТИЕ ЗАВЕРШЕНО');
+    expect(post.messages[0]).toContain('Find &lt;the relic&gt;');
+    expect(post.messages[0]).toContain('Событийное');
+    expect(post.messages[0]).toContain('hero&amp;friend');
+    expect(post.messages[0]).toContain('1 000');
+    expect(post.messages[0]).toContain('07.08.2026, 13:30');
+    expect(post.messages[0]!.length).toBeLessThanOrEqual(1_024);
+  });
+
   test('renders and escapes a task suggestion media caption', () => {
     const post = renderer.render({
       eventType: NotificationEventType.TASK_SUGGESTED,

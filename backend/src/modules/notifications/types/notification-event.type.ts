@@ -10,6 +10,24 @@ export interface TaskSuggestedNotificationPayload {
   createdAt: string;
 }
 
+export interface TaskCompletedNotificationPayload {
+  taskId: string;
+  submissionId: string;
+  title: string;
+  taskType: 'daily' | 'weekly' | 'event';
+  completedByUsername: string;
+  proofImage: string | null;
+  completedAt: string;
+  rewards: {
+    money: number;
+    gameScore: number;
+    strength: number;
+    intelligence: number;
+    charisma: number;
+    endurance: number;
+  };
+}
+
 export interface BossActivatedNotificationPayload {
   battleId: string;
   name: string;
@@ -79,6 +97,10 @@ export type NotificationEvent =
   | {
       type: typeof NotificationEventType.TASK_SUGGESTED;
       payload: TaskSuggestedNotificationPayload;
+    }
+  | {
+      type: typeof NotificationEventType.TASK_COMPLETED;
+      payload: TaskCompletedNotificationPayload;
     }
   | {
       type: typeof NotificationEventType.BOSS_ACTIVATED;
