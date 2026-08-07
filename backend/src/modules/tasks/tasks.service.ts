@@ -506,30 +506,32 @@ export class TasksService {
         tx,
       );
 
-      await this.notificationsService.enqueue(
-        {
-          type: NotificationEventType.TASK_COMPLETED,
-          payload: {
-            taskId: task.id,
-            submissionId: submission.id,
-            title: task.title,
-            taskType: task.type,
-            completedByUsername: account.username,
-            proofImage: task.requiresProofImage ? submission.proofImage : null,
-            completedAt: submission.createdAt.toISOString(),
-            rewards: {
-              money: task.rewardMoney,
-              gameScore: task.rewardGameScore ?? 0,
-              strength: rewardAttributes.strength ?? 0,
-              intelligence: rewardAttributes.intelligence ?? 0,
-              charisma: rewardAttributes.charisma ?? 0,
-              endurance: rewardAttributes.endurance ?? 0,
+      if (task.type === TaskType.event) {
+        await this.notificationsService.enqueue(
+          {
+            type: NotificationEventType.TASK_COMPLETED,
+            payload: {
+              taskId: task.id,
+              submissionId: submission.id,
+              title: task.title,
+              taskType: task.type,
+              completedByUsername: account.username,
+              proofImage: task.requiresProofImage ? submission.proofImage : null,
+              completedAt: submission.createdAt.toISOString(),
+              rewards: {
+                money: task.rewardMoney,
+                gameScore: task.rewardGameScore ?? 0,
+                strength: rewardAttributes.strength ?? 0,
+                intelligence: rewardAttributes.intelligence ?? 0,
+                charisma: rewardAttributes.charisma ?? 0,
+                endurance: rewardAttributes.endurance ?? 0,
+              },
             },
           },
-        },
-        `task-completed:${submission.id}`,
-        tx,
-      );
+          `task-completed:${submission.id}`,
+          tx,
+        );
+      }
 
       return {
         submission: this.toTaskSubmissionResponse(submission),

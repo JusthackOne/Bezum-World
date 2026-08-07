@@ -99,4 +99,69 @@ describe('TasksService task completion notifications', () => {
     expect(enqueue.mock.calls[0]?.[2]).toBe(transactionClient);
     expect(createTaskCompletedEvent).toHaveBeenCalledTimes(1);
   });
+
+  test.each([TaskType.daily, TaskType.weekly])(
+    'does not enqueue a Telegram notification for a %s task',
+    async (taskType) => {
+      const transactionClient = {} as Prisma.TransactionClient;
+      const enqueue = mock(async () => undefined);
+      const createTaskCompletedEvent = mock(async () => undefined);
+      const prisma = {
+        $transaction: async <T>(callback: (tx: Prisma.TransactionClient) => Promise<T>) =>
+          callback(transactionClient),
+      } as unknown as PrismaService;
+      const taskRepository = {
+        findByIdForUpdate: mock(async () => ({
+          id: 'task-1',
+          type: taskType,
+          title: 'Regular task',
+          description: null,
+          image: null,
+          rewardMoney: 100,
+          rewardGameScore: 10,
+          rewardAttributes: {},
+          requiresProofImage: false,
+          submissionLimit: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })),
+      } as unknown as TaskRepository;
+      const taskSubmissionRepository = {
+        countByTaskAndUserInRange: mock(async () => 0),
+        create: mock(async () => ({
+          id: 'submission-1',
+          taskId: 'task-1',
+          userId: 'user-1',
+          proofImage: null,
+          grantedGameScore: 10,
+          createdAt: new Date('2026-08-07T10:30:00.000Z'),
+        })),
+      } as unknown as TaskSubmissionRepository;
+      const accountRepository = {
+        findByIdInTransaction: mock(async () => ({ id: 'user-1', username: 'hero' })),
+        applyTaskRewards: mock(async () => ({
+          balance: 100,
+          gameScore: 10,
+          strength: 0,
+          intelligence: 0,
+          charisma: 0,
+          endurance: 0,
+        })),
+      } as unknown as AccountRepository;
+      const service = new TasksService(
+        prisma,
+        taskRepository,
+        {} as TaskSuggestionRepository,
+        taskSubmissionRepository,
+        accountRepository,
+        { createTaskCompletedEvent } as unknown as EventsService,
+        { enqueue } as unknown as NotificationsService,
+      );
+
+      await service.submitTask('task-1', 'user-1', {});
+
+      expect(enqueue).not.toHaveBeenCalled();
+      expect(createTaskCompletedEvent).toHaveBeenCalledTimes(1);
+    },
+  );
 });

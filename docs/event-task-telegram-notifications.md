@@ -1,7 +1,8 @@
 # Task completion Telegram notifications
 
-When a player completes a daily, weekly, or event task, the backend creates a
-`TASK_COMPLETED` notification in the existing transactional outbox.
+When a player completes an event task, the backend creates a `TASK_COMPLETED`
+notification in the existing transactional outbox. Daily and weekly task
+completions do not create Telegram notifications.
 
 The Russian Telegram post contains the task type and title, the completing
 player's username, the granted currency, score and attribute rewards, and the
